@@ -69,9 +69,9 @@ static void print_form(obj_t *op, outstream_t *out)
 	put_string(string_value(symbol_name(op)), out);
     } else if (is_procedure(op)) {
 	put_string(L"#<proc", out);
-	if (procedure_is_syntax(op) || procedure_is_C(op)) {
+	if (procedure_is_special_form(op) || procedure_is_C(op)) {
 	    outstream_putwc(L'-', out);
-	    if (procedure_is_syntax(op))
+	    if (procedure_is_special_form(op))
 		outstream_putwc(L'S', out);
 	    if (procedure_is_C(op))
 		outstream_putwc(L'C', out);

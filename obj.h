@@ -49,21 +49,30 @@ extern void        pair_set_car(obj_t *pair, obj_t *car);
 extern void        pair_set_cdr(obj_t *pair, obj_t *cdr);
 
 /* procedure methods */
+#define NEW_EVAL 1
+
+#if NEW_EVAL
+typedef struct continuation continuation_t;
+typedef enum prim_state prim_state_t;
+typedef prim_state_t C_procedure_t(continuation_t *);
+typedef prim_state_t C_special_form_t(continuation_t *);
+#else
 typedef obj_t     *C_procedure_t(obj_t *arglist, obj_t *env);
-typedef obj_t     *C_syntax_t(obj_t *arglist, obj_t *env);
+typedef obj_t     *C_special_form_t(obj_t *arglist, obj_t *env);
+#endif
 extern obj_t      *make_procedure(obj_t *code, obj_t *arglist, obj_t *env);
 extern obj_t      *make_C_procedure(C_procedure_t *code,
 				    obj_t *arglist,
 				    obj_t *env);
-extern obj_t      *make_syntax_procedure(obj_t *code,
+extern obj_t      *make_special_form_procedure(obj_t *code,
 					 obj_t *arglist,
 					 obj_t *env);
-extern obj_t      *make_C_syntax_procedure(C_syntax_t *code,
-					   obj_t *arglist,
-					   obj_t *env);
+extern obj_t      *make_C_special_form_procedure(C_special_form_t *code,
+						 obj_t *arglist,
+						 obj_t *env);
 extern bool        is_procedure(obj_t *);
 extern bool        procedure_is_C(obj_t *);
-extern bool        procedure_is_syntax(obj_t *);
+extern bool        procedure_is_special_form(obj_t *);
 extern obj_t      *procedure_code(obj_t *);
 extern obj_t      *procedure_args(obj_t *);
 extern obj_t      *procedure_env(obj_t *);

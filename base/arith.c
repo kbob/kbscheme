@@ -2,19 +2,19 @@
 
 #include <assert.h>
 
-DEFINE_PROC("number?")
+oldDEFINE_PROC("number?")
 {
     assert(is_null(pair_cdr(ARGLIST)));
     return make_boolean(is_fixnum(pair_car(ARGLIST)));
 }
 
-DEFINE_PROC("integer?")
+oldDEFINE_PROC("integer?")
 {
     assert(is_null(pair_cdr(ARGLIST)));
     return make_boolean(is_fixnum(pair_car(ARGLIST)));
 }
 
-DEFINE_PROC("=")
+oldDEFINE_PROC("=")
 {
     int x = fixnum_value(pair_car(ARGLIST));
     while (!is_null(ARGLIST)) {
@@ -25,7 +25,7 @@ DEFINE_PROC("=")
     return make_boolean(true);
 }
 
-DEFINE_PROC("<")
+oldDEFINE_PROC("<")
 {
     int x = fixnum_value(pair_car(ARGLIST));
     ARGLIST = pair_cdr(ARGLIST);
@@ -39,7 +39,7 @@ DEFINE_PROC("<")
     return make_boolean(true);
 }
 
-DEFINE_PROC(">")
+oldDEFINE_PROC(">")
 {
     int x = fixnum_value(pair_car(ARGLIST));
     ARGLIST = pair_cdr(ARGLIST);
@@ -53,7 +53,7 @@ DEFINE_PROC(">")
     return make_boolean(true);
 }
 
-DEFINE_PROC("<=")
+oldDEFINE_PROC("<=")
 {
     int x = fixnum_value(pair_car(ARGLIST));
     ARGLIST = pair_cdr(ARGLIST);
@@ -67,7 +67,7 @@ DEFINE_PROC("<=")
     return make_boolean(true);
 }
 
-DEFINE_PROC(">=")
+oldDEFINE_PROC(">=")
 {
     int x = fixnum_value(pair_car(ARGLIST));
     ARGLIST = pair_cdr(ARGLIST);
@@ -81,7 +81,7 @@ DEFINE_PROC(">=")
     return make_boolean(true);
 }
 
-DEFINE_PROC("+")
+oldDEFINE_PROC("+")
 {
     int sum = 0;
     while (!is_null(ARGLIST)) {
@@ -91,7 +91,7 @@ DEFINE_PROC("+")
     return make_fixnum(sum);
 }
 
-DEFINE_PROC("-")
+oldDEFINE_PROC("-")
 {
     int diff = fixnum_value(pair_car(ARGLIST));
     ARGLIST = pair_cdr(ARGLIST);
@@ -104,7 +104,7 @@ DEFINE_PROC("-")
     return make_fixnum(diff);
 }
 
-DEFINE_PROC("*")
+oldDEFINE_PROC("*")
 {
     int prod = 1;
     while (!is_null(ARGLIST)) {
@@ -114,7 +114,7 @@ DEFINE_PROC("*")
     return make_fixnum(prod);
 }
 
-DEFINE_PROC("div")
+oldDEFINE_PROC("div")
 {
     int dividend = fixnum_value(pair_car(ARGLIST));
     int divisor = fixnum_value(pair_car(pair_cdr(ARGLIST)));
@@ -122,7 +122,7 @@ DEFINE_PROC("div")
     return make_fixnum(dividend / divisor);
 }
 
-DEFINE_PROC("mod")
+oldDEFINE_PROC("mod")
 {
     int dividend = fixnum_value(pair_car(ARGLIST));
     int divisor = fixnum_value(pair_car(pair_cdr(ARGLIST)));
@@ -130,7 +130,7 @@ DEFINE_PROC("mod")
     return make_fixnum(dividend % divisor);
 }
 
-DEFINE_PROC("abs")
+oldDEFINE_PROC("abs")
 {
     assert(is_null(pair_cdr(ARGLIST)));
     int x = fixnum_value(pair_car(ARGLIST));

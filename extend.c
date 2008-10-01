@@ -15,7 +15,7 @@ obj_t *cstr_to_symbol(const char *cstr)
     return make_symbol(ws);
 }
 
-void register_proc(obj_t *(*proc)(),
+void register_proc(C_procedure_t *proc,
 		   obj_t *library,
 		   const char *name)
 {
@@ -24,11 +24,11 @@ void register_proc(obj_t *(*proc)(),
     env_bind(env, cstr_to_symbol(name), BINDING_MUTABLE, code);
 }
 
-void register_syntax(obj_t *(*syntax)(),
-		     obj_t *library,
-		     const char *name)
+void register_special_form(C_special_form_t *form,
+			   obj_t *library,
+			   const char *name)
 {
     env_t *env = library_env(library);
-    obj_t *code = make_C_syntax_procedure(syntax, make_null(), env);
+    obj_t *code = make_C_special_form_procedure(form, make_null(), env);
     env_bind(env, cstr_to_symbol(name), BINDING_IMMUTABLE, code);
 }

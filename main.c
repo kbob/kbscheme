@@ -2,7 +2,7 @@
 
 #include "io.h"
 #include "eval.h"
-#include "extend.h"
+#include "lib.h"
 #include "print.h"
 #include "read.h"
 

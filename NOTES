@@ -255,3 +255,30 @@ labels in SICP section 5.4:
      signal-error
 
 * used as return address.
+
+----------------------------------
+
+eval calls
+    eval_list
+
+eval_list calls
+    eval_list
+    eval_arglist
+    eval_procedure
+
+eval_arglist calls
+    eval_arglist
+    eval
+
+eval_procedure calls
+    primitives
+    eval_apply
+
+eval_apply calls
+    eval_multi
+
+eval_multi calls
+    eval
+
+primitives call
+    eval

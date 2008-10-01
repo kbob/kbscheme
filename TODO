@@ -6,3 +6,5 @@ nonrecursive eval
 full mem model
 
 full reader
+
+make readline better.

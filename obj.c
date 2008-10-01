@@ -214,8 +214,8 @@ void pair_set_cdr(obj_t *pair, obj_t *cdr)
 /* procedure methods */
 
 typedef enum proc_flags {
-    PF_COMPILED_C = 1,
-    PF_SYNTAX     = 2,
+    PF_COMPILED_C   = 1,
+    PF_SPECIAL_FORM = 2,
 } proc_type_t;
 
 obj_t *make_procedure(obj_t *code, obj_t *arglist, obj_t *env)
@@ -227,10 +227,10 @@ obj_t *make_procedure(obj_t *code, obj_t *arglist, obj_t *env)
     return op;
 }
 
-obj_t *make_syntax_procedure(obj_t *code, obj_t *arglist, obj_t *env)
+obj_t *make_special_form_procedure(obj_t *code, obj_t *arglist, obj_t *env)
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
-    op->ob_subtype = PF_SYNTAX;
+    op->ob_subtype = PF_SPECIAL_FORM;
     op->ob_u.obu_procedure.obup_code = code;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
@@ -245,10 +245,12 @@ obj_t *make_C_procedure(C_procedure_t *code, obj_t *arglist, obj_t *env)
     return op;
 }
 
-obj_t *make_C_syntax_procedure(C_syntax_t *code, obj_t *arglist, obj_t *env)
+obj_t *make_C_special_form_procedure(C_special_form_t *code,
+				     obj_t *arglist,
+				     obj_t *env)
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
-    op->ob_subtype = PF_COMPILED_C | PF_SYNTAX;
+    op->ob_subtype = PF_COMPILED_C | PF_SPECIAL_FORM;
     op->ob_u.obu_procedure.obup_code = (obj_t *) code;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
@@ -265,10 +267,10 @@ bool procedure_is_C(obj_t *op)
     return (op->ob_subtype & PF_COMPILED_C) != 0;
 }
 
-bool procedure_is_syntax(obj_t *op)
+bool procedure_is_special_form(obj_t *op)
 {
     assert(is_procedure(op));
-    return (op->ob_subtype & PF_SYNTAX) != 0;
+    return (op->ob_subtype & PF_SPECIAL_FORM) != 0;
 }
 
 obj_t *procedure_code(obj_t *op)

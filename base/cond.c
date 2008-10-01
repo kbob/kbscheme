@@ -2,7 +2,7 @@
 
 #include "eval.h"
 
-DEFINE_SYNTAX("if")
+oldDEFINE_SPECIAL_FORM("if")
 {
     obj_t *test = pair_car(ARGLIST);
     obj_t *truth = eval(test, ENV);

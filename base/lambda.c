@@ -4,20 +4,20 @@
 
 #include "eval.h"
 
-DEFINE_SYNTAX("lambda")
+oldDEFINE_SPECIAL_FORM("lambda")
 {
     obj_t *params = pair_car(ARGLIST);
     obj_t *body = pair_cdr(ARGLIST);
     return make_procedure(body, params, ENV);
 }
 
-DEFINE_SYNTAX("quote")
+oldDEFINE_SPECIAL_FORM("quote")
 {
     assert(is_null(pair_cdr(ARGLIST)));
     return pair_car(ARGLIST);
 }
 
-DEFINE_SYNTAX("define")
+oldDEFINE_SPECIAL_FORM("define")
 {
     obj_t *var = pair_car(ARGLIST);
     obj_t *rest = pair_cdr(ARGLIST);
@@ -36,7 +36,7 @@ DEFINE_SYNTAX("define")
     return make_null();
 }
 
-DEFINE_SYNTAX("set!")
+oldDEFINE_SPECIAL_FORM("set!")
 {
     obj_t *var = pair_car(ARGLIST);
     binding_t *binding = env_lookup(ENV, var);

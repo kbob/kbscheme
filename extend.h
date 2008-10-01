@@ -16,26 +16,26 @@
     } \
     static obj_t *CAT_(proc_, __LINE__) (obj_t *ARGLIST, env_t *ENV)
 
-#define DEFINE_LIBRARY_SYNTAX(library, name) \
-    static obj_t *CAT_(syntax_, __LINE__) (obj_t *, env_t *);	\
+#define DEFINE_LIBRARY_SPECIAL_FORM(library, name) \
+    static obj_t *CAT_(special_form_, __LINE__) (obj_t *, env_t *);	\
     __attribute__((constructor)) \
-    static void CAT_(register_syntax_, __LINE__)(void) \
+    static void CAT_(register_special_form_, __LINE__)(void) \
     { \
-        register_syntax(CAT_(syntax_, __LINE__), library, name); \
+        register_special_form(CAT_(special_form_, __LINE__), library, name); \
     } \
-    static obj_t *CAT_(syntax_, __LINE__) (obj_t *ARGLIST, env_t *ENV)
+    static obj_t *CAT_(special_form_, __LINE__) (obj_t *ARGLIST, env_t *ENV)
 
-#define DEFINE_PROC(name) \
+#define oldDEFINE_PROC(name) \
     DEFINE_LIBRARY_PROC(r6rs_base_library(), name)
 
-#define DEFINE_SYNTAX(name) \
-    DEFINE_LIBRARY_SYNTAX(r6rs_base_library(), name)
+#define oldDEFINE_SPECIAL_FORM(name) \
+    DEFINE_LIBRARY_SPECIAL_FORM(r6rs_base_library(), name)
 
 extern void register_proc(C_procedure_t,
 			  lib_t *library,
 			  const char *name);
 
-extern void register_syntax(C_syntax_t,
+extern void register_special_form(C_special_form_t,
 			    lib_t *library,
 			    const char *name);
 
