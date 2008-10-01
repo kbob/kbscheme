@@ -1,0 +1,257 @@
+Definitions
+	'form' - a syntactic part of a program
+	"subr" - a built-in function
+	"special form" - a function that is handled specially by eval,
+			 often because its args should not be evaluated.
+	"macro" - a function called from read, not from eval.
+	"lexpr" - ???
+	"environment - ???
+    	"dynamic extent" the time a function activation is alive.
+
+Data
+	object
+	  abstract superclass
+	    eq?()
+	boolean
+	integer
+	    new()
+	    number?()
+	    c_int()
+	character
+	pair (cons)
+	    new()
+	    consp()
+	    car()
+	    cdr()
+	    setcar()
+	    setcdr()
+	symbol (atom)
+	    new()
+	    symbol-bound?()
+	    symbol-value(sym, value, env=None)
+	    set-symbol_value(sym. value, value, env=None)
+	activation frame
+	exception
+	built-in atoms
+	   #t #f lambda
+	transformer
+    	dynamic environment
+	    continuation
+	    exception handler
+    	    variable bindings
+    	    other?
+	later...
+	    string
+	    vector
+	    other numeric types
+
+Program
+	read-eval-print
+	read
+	  read-token
+	string->symbol (aka intern)
+	eval
+	  eval-variable
+	  eval-list
+	print
+	bind (global)
+	math primitives
+	string primitives
+
+Special forms
+	define
+	lambda
+	let
+
+Resources
+
+    http://srfi.schemers.org/
+    http://srfi.schemers.org/srfi-18/
+
+Layers
+
+    storage
+    storage: blocks of data, format objects.
+
+----------------------------------
+
+Notes
+
+Recognizing special forms.
+
+    It seems like there are three kinds of functions.
+    Regular functions, syntaxes (syntaces?), and, um,
+    special forms.
+
+    SIOD has these.
+
+	#define tc_subr_0 4
+	#define tc_subr_1 5
+	#define tc_subr_2 6
+	#define tc_subr_3 7
+	#define tc_lsubr  8
+	#define tc_fsubr  9
+	#define tc_msubr  10
+	#define tc_closure 11
+
+	tc_subr_0..3 is a regular function of 0..3 arguments.
+	tc_lsubrs are... gc-status
+	tc_fsubrs are... define lambda set! quote the-environment
+	tc_msubrs are... if begin and or let-internal
+	tc_closures are created at runtime.
+
+    I'm certain I don't see the difference yet.
+
+Section 5.2, para 3.
+
+    "Variable definitions appearing within the body of such an
+    expression, or within the bodies of a library or top-level
+    program, are treated as a set of letrec* bindings"
+
+    "such an expression" refers to expressions that declare local
+    variables, e.g., lambda, let, and friends.  So a variable
+    created by a definition is just another local variable.
+    And a definition can appear anywhere.
+
+Symbol Table Layout.
+
+    Top level and each library have their own environment.  (Q.  Does
+    a library's env start empty?  Can't be quite empty...)  Binding
+    expressions push a scope onto the current environment.  Definitions
+    create an entry in the current scope.
+
+    The absolute simplest implementation would have the env as a list
+    of scopes, and each scope is a list of (name . value) pairs.
+
+    def lookup(name):
+	for scope in env:
+	    for var, value in scope:
+	       if var == name:
+		    return value
+
+    But...  name is a symbol.  Each symbol is a unique object.  Can
+    we turn it inside out where we start from the symbol and find the
+    current binding?  In constant time, even?  Need to be
+    thread-safe...
+
+    In SIOD, define takes an optional env.  If env is null, then
+    define just writes the symbol's value cell.  If env is non-null,
+    then define does this.
+
+        (set! env (cons (cons var (car env)) (cons val (cdr env))))
+
+    So env has two parallel lists.  A list of vars (symbols) and
+    a list of values.  At environment exit time, those would just
+    be peeled back.
+
+    That's cool.  Symbol lookup is constant time.  Symbol definition
+    is constant time.  Scope entry is constant time.  Scope exit
+    is O(number of name conflicts), which is normally small.
+
+    The env is part of the reader's state, so the reader has
+    to have per-thread (probably automatic) state.
+
+Section 5.10 says that some storage is immutable.  Figure out how to do that...
+
+----------------------------------
+9/24/2008
+
+Extensions
+define new in-memory object formats.
+define new scheme data types.
+define new scheme functions.
+define new scheme syntax.
+
+A scheme function has:
+   a namespace (library),
+   a name,
+   an arg list,
+   code.
+
+A scheme syntax has:
+   a namespace (library),
+   a name,
+   an arg list,
+   code.
+
+A namespace is a Scheme <library name> form, as a C string.
+E.g., "(rnrs base (6))".
+
+Imagine two include files:
+   scheme-extension.h - used to extend the Scheme core
+   scheme.h - used to embed Scheme.
+
+So,something like this.
+#include "extend.h"
+
+DEFINE_PROC("boolean?", (x))
+{
+   return make_boolean(is_boolean(x));
+}
+
+DEFINE_SYNTAX("set!", (name value))
+{
+    
+}
+
+DEFINE_LIBRARY_PROC("foo", (mylib sublib (1 2 3)))
+{
+    return make_boolean(false);
+}
+
+----------------------------------
+9/28/2008
+
+primitives have the following macros.
+    ARGLIST
+    ENV
+primitives have the following control-flow macros.
+    RETURN(value);
+    YIELD(value);    /* only used for multi-value functions */
+    RAISE(condition);
+    RAISE_CONTINUABLE(condition);
+The last three leave all local variables in an undefined state.
+(Where's a good place to save them?)
+    EVAL(object);
+    SAVE(variable);  /* var must be type (obj_t *) */
+    RESTORE(variable);
+
+Implement the stack as a list?
+
+----------------------------------
+9/28/2008
+
+labels in SICP section 5.4:
+     eval-dispatch
+     ev-self-eval
+     ev-variable
+     ev-quoted
+     ev-lambda
+     ev-application
+*    ev-appl-did-operator
+     ev-appl-operand-loop
+*    ev-appl-accumulate-arg
+     ev-appl-last-arg
+*    ev-appl-accum-last-arg
+     apply-dispatch
+     primitive-apply
+     compound-apply
+     ev-begin
+     ev-sequence
+*    ev-sequence-continue
+     ev-sequence-last-expr
+     ev-if
+*    ev-if-decide
+     ev-if-alternative
+     ev-if-consequent
+     ev-assignment
+*    ev-assignment-1
+     ev-definition
+*    ev-definition-1
+     read-eval-print-loop
+*    print-result
+     unknown-expression-type
+     unknown-procedure-type
+     signal-error
+
+* used as return address.
