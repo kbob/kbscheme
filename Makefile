@@ -13,7 +13,8 @@ scheme:	$(OFILES) Makefile
 	$(CC) -o $@ $(LDFLAGS) $(OFILES) $(LIBS)
 
 clean:
-	rm -f *~ */*~ *.o .*.d */*.o */.*.d a.out core $(TARGETS)
+	rm -f .coverage *~ */*~ *.o .*.d */*.o */.*.d a.out */a.out core \
+	      $(TARGETS)
 
 .%.d: %.c
 	@rm -f $@ && \
