@@ -6,6 +6,7 @@
 
 #include "bind.h"
 #include "print.h"			/* XXX */
+#include "proc.h"
 
 static bool is_self_evaluating(obj_t *expr)
 {
@@ -17,12 +18,12 @@ static bool is_self_evaluating(obj_t *expr)
 }
 
 #if !NEW_EVAL
+
 static obj_t *eval_symbol(obj_t *expr, obj_t *env)
 {
     binding_t *binding = env_lookup(env, expr);
     return binding_value(binding);
 }
-#endif
 
 static obj_t *eval_arglist(obj_t *arglist, env_t *env)
 {
@@ -97,8 +98,6 @@ static obj_t *eval_list(obj_t *expr, obj_t *env)
     assert(false && "can't apply");
 }
 
-#if !NEW_EVAL
-
 obj_t *eval(obj_t *expr, obj_t *env)
 {
     if (is_self_evaluating(expr))
@@ -117,127 +116,233 @@ bool is_application(obj_t *expr)
 
 #else
 
-// Cheat: create continuations w/ malloc() but pretend they're
-// collected.  Then they can be C structs.
-
-typedef enum eval_state {
-    ES_DONE,
-    ES_DID_OPERATOR,
-    ES_ACCUM_ARG,
-    ES_ACCUM_LAST_ARG,
-} eval_state_t;
-
-enum prim_state {
-    PS_RETURN,
-    PS_EVAL,
-    PS_TAIL_EVAL,
-    PS_YIELD,
-    PS_RAISE,
-    PS_RAISE_CONTINUABLE
-};
-
-struct continuation {
-    continuation_t *c_parent;
-    eval_state_t    c_state;
-    obj_t          *c_exp;
-    obj_t          *c_env;
-    obj_t          *c_val;
-    obj_t          *c_proc;
-    obj_t          *c_argl;
-    obj_t          *c_nxarg;
-    obj_t          *c_tmp;
-};
-
-#define C_STATE        (cont->c_state)
-#define C_EXP          (cont->c_exp)
-#define C_ENV          (cont->c_env)
-#define C_VAL          (cont->c_val)
-#define C_PROC         (cont->c_proc)
-#define C_ARGL         (cont->c_argl)
-#define C_NXARG        (cont->c_nxarg)
-#define C_TMP          (cont->c_tmp)
-
-#define C_SET_STATE(x) (cont->c_state = (x))
-#define C_SET_EXP(x)   (cont->c_exp = (x))
-#define C_SET_ENV(x)   (cont->c_env = (x))
-#define C_SET_VAL(x)   (cont->c_val = (x))
-#define C_SET_PROC(x)  (cont->c_proc = (x))
-#define C_SET_ARGL(x)  (cont->c_argl = (x))
-#define C_SET_NXARG(x) (cont->c_nxarg = (x))
-#define C_SET_TMP(x)   (cont->c_tmp = (x))
-
-#define RAISE(condition) (printf("error at line %d\n", __LINE__), exit(1))
-
-continuation_t *make_continuation(continuation_t *parent)
+eval_frame_t *make_frame(eval_frame_t *parent)
 {
-    continuation_t *cont = malloc(sizeof *cont); /* XXX pretend this is GC'd */
-    cont->c_parent = parent;
+    eval_frame_t *FRAME = malloc(sizeof *FRAME);
+					/* XXX pretend this is GC'd */
+    F_SET_PARENT(parent);
     if (parent) {
-	C_SET_STATE(parent->c_state);
-	C_SET_EXP(parent->c_exp);
-	C_SET_ENV(parent->c_env);
-	C_SET_VAL(parent->c_val);
-	C_SET_PROC(parent->c_proc);
-	C_SET_ARGL(parent->c_argl);
-	C_SET_NXARG(parent->c_nxarg);
-	C_SET_TMP(parent->c_tmp);
+	F_SET_CONT(parent->ef_continue);
+	F_SET_EXP(parent->ef_expression);
+	F_SET_ENV(parent->ef_environment);
+	F_SET_VAL(parent->ef_value);
+	F_SET_PROC(parent->ef_procedure);
+	F_SET_ARGL(parent->ef_arglist);
+	F_SET_NXA(parent->ef_next_arg);
     } else {
-	C_SET_STATE(ES_DONE);
-	C_SET_EXP(make_null());
-	C_SET_ENV(make_null());
-	C_SET_VAL(make_null());
-	C_SET_PROC(make_null());
-	C_SET_ARGL(make_null());
-	C_SET_NXARG(make_null());
-	C_SET_TMP(make_null());
+	F_SET_CONT(NULL);
+	F_SET_EXP(make_null());
+	F_SET_ENV(make_null());
+	F_SET_VAL(make_null());
+	F_SET_PROC(make_null());
+	F_SET_ARGL(make_null());
+	F_SET_NXA(make_null());
     }
-    return cont;
+    return FRAME;
 }
 
 // Registers: EXP ENV VAL STATE PROC ARGL UNEV TMP
+// New Registers: CONT EXP ENV VAL MORE
 // States: START DONE DID_OPERATOR ACCUM_ARG LAST_ARG
 // Proc/SF states: RETURN EVAL TAIL_EVAL YIELD RAISE (RAISE_CONTINUABLE?)
 
-// How does TMP interact with call/cc?
-
-static obj_t *eval_symbol(continuation_t *cont)
+static obj_t *eval_symbol(eval_frame_t *FRAME)
 {
-    binding_t *binding = env_lookup(C_ENV, C_EXP);
+    binding_t *binding = env_lookup(F_ENV, F_EXP);
     return binding_value(binding);
 }
 
-static obj_t *eval_application(continuation_t **cont)
+static bool is_application(obj_t *expr)
 {
-    
+    return is_pair(expr);
+}
+
+DECLARE_BLOCK(b_eval);
+DECLARE_BLOCK(b_have_operator);
+DECLARE_BLOCK(b_next_arg);
+DECLARE_BLOCK(b_rest_arg);
+DECLARE_BLOCK(b_sequence_continue);
+
+const char *block_name(C_procedure_t *block)
+{
+    if (block == b_eval)
+	return "b_eval";
+    if (block == b_have_operator)
+	return "b_have_operator";
+    if (block == b_next_arg)
+	return "b_next_arg";
+    if (block == b_rest_arg)
+	return "b_rest_arg";
+    if (block == b_sequence_continue)
+	return "b_sequence_continue";
+    if (block == NULL)
+	return "NULL";
+    return "???";
+}
+
+void print_stack(const char *label, eval_frame_t *FRAME)
+{
+    printf("%s: stack = ", label);
+    const char *sep = "";
+    for ( ; FRAME; FRAME = F_PARENT, sep = " -> ") {
+	printf("%s%s", sep, block_name(F_CONT));
+	if (F_CONT || F_EXP) {
+	    printf("(");
+	    princ_stdout(F_EXP);
+	    printf(")");
+	}
+    } 
+    printf("\n");
+}
+
+eval_frame_t *eval_application(eval_frame_t *FRAME)
+{
+    F_SET_CONT(b_have_operator);
+    FRAME = make_frame(FRAME);
+    F_SET_NXA(pair_cdr(F_EXP));
+    F_SET_EXP(pair_car(F_EXP));
+    F_SET_CONT(b_eval);
+    return FRAME;
+}
+
+DEFINE_EXTERN_BLOCK(b_eval)
+{
+    if (is_self_evaluating(F_EXP))
+	RETURN(F_EXP);
+    if (is_symbol(F_EXP))
+	RETURN(eval_symbol(FRAME));
+    if (is_application(F_EXP))
+	return eval_application(FRAME);
+    RAISE(&syntax);
+}
+
+eval_frame_t *eval_sequence(eval_frame_t *FRAME)
+{
+    F_SET_EXP(pair_car(F_NXA));
+    F_SET_NXA(pair_cdr(F_NXA));
+    if (is_null(F_NXA))
+	TAIL_EVAL(F_EXP, F_ENV);
+    F_SET_CONT(b_sequence_continue);
+    EVAL(F_EXP, F_ENV);
+}
+
+DEFINE_BLOCK(b_sequence_continue)
+{
+    return eval_sequence(FRAME);
+}
+
+eval_frame_t *call_proc(eval_frame_t *FRAME)
+{
+    if (procedure_is_C(F_PROC))
+	return (*(C_procedure_t *)procedure_code(F_PROC))(FRAME);
+    else {
+	FRAME = make_frame(FRAME);
+	F_SET_NXA(procedure_code(F_PROC));
+	F_SET_ENV(make_env(procedure_env(F_PROC)));
+	obj_t *formals = procedure_args(F_PROC);
+	obj_t *arglist = F_ARGL;
+	while (formals) {
+	    if (is_pair(formals)) {
+		obj_t *formal_name = pair_car(formals);
+		obj_t *actual_value = pair_car(arglist);
+		env_bind(F_ENV, formal_name, BINDING_MUTABLE, actual_value);
+		formals = pair_cdr(formals);
+		arglist = pair_cdr(arglist);
+	    } else {
+		assert(is_symbol(formals));
+		env_bind(F_ENV, formals, BINDING_MUTABLE, arglist);
+		break;
+	    }
+	}
+	return eval_sequence(FRAME);
+    }
+}
+
+DEFINE_BLOCK(b_have_operator)
+{
+    F_SET_PROC(F_VAL);
+    F_SET_ARGL(make_null());
+    F_SET_NXA(pair_cdr(F_EXP));
+    F_SET_ARGT(make_null());
+    if (procedure_is_special_form(F_PROC) || is_null(F_NXA)) {
+	/* special form or nilary procedure: call now. */
+	F_SET_ARGL(F_NXA);
+	return call_proc(FRAME);
+    } else {
+	/* evaluate first argument */
+	/* XXX merge code w/ b_next_arg */
+	obj_t *exp;
+	F_SET_ARGL(make_null());
+	if (is_pair(F_NXA)) {
+	    F_SET_CONT(b_next_arg);
+	    exp = pair_car(F_NXA);
+	    F_SET_NXA(pair_cdr(F_NXA));
+	} else {
+	    F_SET_CONT(b_rest_arg);
+	    exp = F_NXA;
+	    F_SET_NXA(make_null());
+	}
+	EVAL(exp, F_ENV);
+    }
+}
+
+DEFINE_BLOCK(b_next_arg)
+{
+    obj_t *exp;
+    obj_t *last_arg = make_pair(F_VAL, make_null());
+    if (is_null(F_ARGT)) {
+	F_SET_ARGL(last_arg);
+    } else {
+	pair_set_cdr(F_ARGT, last_arg);
+    }
+    F_SET_ARGT(last_arg);
+    if (is_null(F_NXA))
+	return call_proc(FRAME);
+    if (is_pair(F_NXA)) {
+	exp = pair_car(F_NXA);
+	F_SET_NXA(pair_cdr(F_NXA));
+    } else {
+	F_SET_CONT(b_rest_arg);
+	exp = F_NXA;
+	F_SET_NXA(make_null());
+    }
+    EVAL(exp, F_ENV);
+}
+
+DEFINE_BLOCK(b_rest_arg)
+{
+    assert(false && "rest arg not implemented");
+}
+
+int stack_depth(eval_frame_t *FRAME)
+{
+    int n = 0;
+    while (FRAME) {
+	n++;
+	FRAME = F_PARENT;
+    }
+    return n;
 }
 
 obj_t *eval(obj_t *expr, obj_t *env)
 {
-    continuation_t *cont = make_continuation(NULL);
-    obj_t *val;
-    C_SET_EXP(expr);
-    C_SET_ENV(env);
-    while (true) {
-	printf("C_EXP => ");
-	princ(C_EXP, make_file_outstream(stdout));
-	printf("\n");
-	if (is_self_evaluating(C_EXP))
-	    val = C_EXP;
-	else if (is_symbol(C_EXP))
-	    val = eval_symbol(cont);
-	else if (is_application(C_EXP)) {
-	    
-	} else
-	    RAISE(&syntax);
-
-	switch (C_STATE) {
-	default:
-	    assert(false && "unknown eval state");
-
-	case ES_DONE:
-	    return C_VAL;
-	}
+    eval_frame_t *FRAME = make_frame(make_frame(NULL));
+    F_SET_CONT(b_eval);
+    F_SET_EXP(expr);
+    F_SET_ENV(env);
+    while (F_CONT) {
+	// XXX mix in setjmp() and a signal flag here.
+#if 1
+	print_stack("eval", FRAME);
+        printf("   F_EXP => ");
+        print_stdout(F_EXP);
+        printf("   F_VAL => ");
+        print_stdout(F_VAL);
+        printf("\n");
+#endif
+	FRAME = (*F_CONT)(FRAME);
     }
+    return F_VAL;
 }
 
 #endif

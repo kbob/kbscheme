@@ -1,138 +1,139 @@
-#include "extend.h"
-
 #include <assert.h>
 
-oldDEFINE_PROC("number?")
+#include "extend.h"			/* XXX */
+#include "proc.h"
+
+DEFINE_PROC("number?")
 {
-    assert(is_null(pair_cdr(ARGLIST)));
-    return make_boolean(is_fixnum(pair_car(ARGLIST)));
+    assert(is_null(pair_cdr(F_ARGL)));
+    RETURN(make_boolean(is_fixnum(pair_car(F_ARGL))));
 }
 
-oldDEFINE_PROC("integer?")
+DEFINE_PROC("integer?")
 {
-    assert(is_null(pair_cdr(ARGLIST)));
-    return make_boolean(is_fixnum(pair_car(ARGLIST)));
+    assert(is_null(pair_cdr(F_ARGL)));
+    RETURN(make_boolean(is_fixnum(pair_car(F_ARGL))));
 }
 
-oldDEFINE_PROC("=")
+DEFINE_PROC("=")
 {
-    int x = fixnum_value(pair_car(ARGLIST));
-    while (!is_null(ARGLIST)) {
-	if (fixnum_value(pair_car(ARGLIST)) != x)
-	    return make_boolean(false);
-	ARGLIST = pair_cdr(ARGLIST);
+    int x = fixnum_value(pair_car(F_ARGL));
+    while (!is_null(F_ARGL)) {
+	if (fixnum_value(pair_car(F_ARGL)) != x)
+	    RETURN(make_boolean(false));
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_boolean(true);
+    RETURN(make_boolean(true));
 }
 
-oldDEFINE_PROC("<")
+DEFINE_PROC("<")
 {
-    int x = fixnum_value(pair_car(ARGLIST));
-    ARGLIST = pair_cdr(ARGLIST);
-    while (!is_null(ARGLIST)) {
-	int y = fixnum_value(pair_car(ARGLIST));
+    int x = fixnum_value(pair_car(F_ARGL));
+    F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(F_ARGL)) {
+	int y = fixnum_value(pair_car(F_ARGL));
 	if (!(x < y))
-	    return make_boolean(false);
+	    RETURN(make_boolean(false));
 	x = y;
-	ARGLIST = pair_cdr(ARGLIST);
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_boolean(true);
+    RETURN(make_boolean(true));
 }
 
-oldDEFINE_PROC(">")
+DEFINE_PROC(">")
 {
-    int x = fixnum_value(pair_car(ARGLIST));
-    ARGLIST = pair_cdr(ARGLIST);
-    while (!is_null(ARGLIST)) {
-	int y = fixnum_value(pair_car(ARGLIST));
+    int x = fixnum_value(pair_car(F_ARGL));
+    F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(F_ARGL)) {
+	int y = fixnum_value(pair_car(F_ARGL));
 	if (!(x > y))
-	    return make_boolean(false);
+	    RETURN(make_boolean(false));
 	x = y;
-	ARGLIST = pair_cdr(ARGLIST);
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_boolean(true);
+    RETURN(make_boolean(true));
 }
 
-oldDEFINE_PROC("<=")
+DEFINE_PROC("<=")
 {
-    int x = fixnum_value(pair_car(ARGLIST));
-    ARGLIST = pair_cdr(ARGLIST);
-    while (!is_null(ARGLIST)) {
-	int y = fixnum_value(pair_car(ARGLIST));
+    int x = fixnum_value(pair_car(F_ARGL));
+    F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(F_ARGL)) {
+	int y = fixnum_value(pair_car(F_ARGL));
 	if (!(x <= y))
-	    return make_boolean(false);
+	    RETURN(make_boolean(false));
 	x = y;
-	ARGLIST = pair_cdr(ARGLIST);
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_boolean(true);
+    RETURN(make_boolean(true));
 }
 
-oldDEFINE_PROC(">=")
+DEFINE_PROC(">=")
 {
-    int x = fixnum_value(pair_car(ARGLIST));
-    ARGLIST = pair_cdr(ARGLIST);
-    while (!is_null(ARGLIST)) {
-	int y = fixnum_value(pair_car(ARGLIST));
+    int x = fixnum_value(pair_car(F_ARGL));
+    F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(F_ARGL)) {
+	int y = fixnum_value(pair_car(F_ARGL));
 	if (!(x >= y))
-	    return make_boolean(false);
+	    RETURN(make_boolean(false));
 	x = y;
-	ARGLIST = pair_cdr(ARGLIST);
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_boolean(true);
+    RETURN(make_boolean(true));
 }
 
-oldDEFINE_PROC("+")
+DEFINE_PROC("+")
 {
     int sum = 0;
-    while (!is_null(ARGLIST)) {
-	sum += fixnum_value(pair_car(ARGLIST));
-	ARGLIST = pair_cdr(ARGLIST);
+    while (!is_null(F_ARGL)) {
+	sum += fixnum_value(pair_car(F_ARGL));
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_fixnum(sum);
+    RETURN(make_fixnum(sum));
 }
 
-oldDEFINE_PROC("-")
+DEFINE_PROC("-")
 {
-    int diff = fixnum_value(pair_car(ARGLIST));
-    ARGLIST = pair_cdr(ARGLIST);
-    if (is_null(ARGLIST))
-	return make_fixnum(-diff);
-    while (!is_null(ARGLIST)) {
-	diff -= fixnum_value(pair_car(ARGLIST));
-	ARGLIST = pair_cdr(ARGLIST);
+    int diff = fixnum_value(pair_car(F_ARGL));
+    F_ARGL = pair_cdr(F_ARGL);
+    if (is_null(F_ARGL))
+	RETURN(make_fixnum(-diff));
+    while (!is_null(F_ARGL)) {
+	diff -= fixnum_value(pair_car(F_ARGL));
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_fixnum(diff);
+    RETURN(make_fixnum(diff));
 }
 
-oldDEFINE_PROC("*")
+DEFINE_PROC("*")
 {
     int prod = 1;
-    while (!is_null(ARGLIST)) {
-	prod *= fixnum_value(pair_car(ARGLIST));
-	ARGLIST = pair_cdr(ARGLIST);
+    while (!is_null(F_ARGL)) {
+	prod *= fixnum_value(pair_car(F_ARGL));
+	F_ARGL = pair_cdr(F_ARGL);
     }
-    return make_fixnum(prod);
+    RETURN(make_fixnum(prod));
 }
 
-oldDEFINE_PROC("div")
+DEFINE_PROC("div")
 {
-    int dividend = fixnum_value(pair_car(ARGLIST));
-    int divisor = fixnum_value(pair_car(pair_cdr(ARGLIST)));
-    assert(is_null(pair_cdr(pair_cdr(ARGLIST))));
-    return make_fixnum(dividend / divisor);
+    int dividend = fixnum_value(pair_car(F_ARGL));
+    int divisor = fixnum_value(pair_car(pair_cdr(F_ARGL)));
+    assert(is_null(pair_cdr(pair_cdr(F_ARGL))));
+    RETURN(make_fixnum(dividend / divisor));
 }
 
-oldDEFINE_PROC("mod")
+DEFINE_PROC("mod")
 {
-    int dividend = fixnum_value(pair_car(ARGLIST));
-    int divisor = fixnum_value(pair_car(pair_cdr(ARGLIST)));
-    assert(is_null(pair_cdr(pair_cdr(ARGLIST))));
-    return make_fixnum(dividend % divisor);
+    int dividend = fixnum_value(pair_car(F_ARGL));
+    int divisor = fixnum_value(pair_car(pair_cdr(F_ARGL)));
+    assert(is_null(pair_cdr(pair_cdr(F_ARGL))));
+    RETURN(make_fixnum(dividend % divisor));
 }
 
-oldDEFINE_PROC("abs")
+DEFINE_PROC("abs")
 {
-    assert(is_null(pair_cdr(ARGLIST)));
-    int x = fixnum_value(pair_car(ARGLIST));
-    return make_fixnum(x < 0 ? -x : x);
+    assert(is_null(pair_cdr(F_ARGL)));
+    int x = fixnum_value(pair_car(F_ARGL));
+    RETURN(make_fixnum(x < 0 ? -x : x));
 }

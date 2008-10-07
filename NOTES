@@ -282,3 +282,20 @@ eval_multi calls
 
 primitives call
     eval
+
+----------------------------------
+10/01/2008
+
+eval simple object:
+    build one frame: { cont=0, exp,env=..., val=0 }
+    call b_eval.
+    b_eval sets val=..., calls RETURN.
+
+eval nilary procedure:
+    build one frame: { cont=0, exp,env=..., val=0 }
+    call b_eval.
+    b_eval pushes 2nd frame: { cont=b_have_operator, exp=... } -> { cont=0, exp,env=..., val=0}
+    call b_eval. <====???
+    b_eval sets val=#<proc '='>, calls RETURN.
+    call b_have_operator.
+

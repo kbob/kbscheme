@@ -1,7 +1,9 @@
-macros
-
 nonrecursive eval
     define C procedure API.
+    threaded model?
+
+macros
+    See file:///home/kbob/r6rs/html/r6rs-lib-html/r6rs-lib-Z-H-1.html#node_toc_node_sec_12.3
 
 full mem model
 

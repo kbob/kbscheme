@@ -33,9 +33,8 @@ static void print_fixnum(int i, int base, outstream_t *out)
     outstream_putwc(L"0123456789abcdef"[i % base], out);
 }
 
-static void print_pair(obj_t *op, outstream_t *out)
+static void print_list_interior(obj_t *op, outstream_t *out)
 {
-    outstream_putwc(L'(', out);
     while (!is_null(op)) {
 	print_form(pair_car(op), out);
 	op = pair_cdr(op);
@@ -48,7 +47,33 @@ static void print_pair(obj_t *op, outstream_t *out)
 	}
 	outstream_putwc(L' ', out);
     }
+}
+
+static void print_pair(obj_t *op, outstream_t *out)
+{
+    outstream_putwc(L'(', out);
+    print_list_interior(op, out);
     outstream_putwc(L')', out);
+}
+
+static void print_procedure(obj_t *op, outstream_t *out)
+{
+    if (procedure_is_special_form(op) || procedure_is_C(op)) {
+	put_string(L"#<proc-", out);
+	if (procedure_is_special_form(op))
+	    outstream_putwc(L'S', out);
+	if (procedure_is_C(op))
+	    outstream_putwc(L'C', out);
+	outstream_putwc(L' ', out);
+	print_fixnum((int) op, 0x10, out);
+	outstream_putwc(L'>', out);
+    } else {
+	put_string(L"(lambda ", out);
+	print_form(procedure_args(op), out);
+	put_string(L" ", out);
+	print_list_interior(procedure_code(op), out);
+	put_string(L")", out);
+    }
 }
 
 static void print_form(obj_t *op, outstream_t *out)
@@ -68,17 +93,7 @@ static void print_form(obj_t *op, outstream_t *out)
     } else if (is_symbol(op)) {
 	put_string(string_value(symbol_name(op)), out);
     } else if (is_procedure(op)) {
-	put_string(L"#<proc", out);
-	if (procedure_is_special_form(op) || procedure_is_C(op)) {
-	    outstream_putwc(L'-', out);
-	    if (procedure_is_special_form(op))
-		outstream_putwc(L'S', out);
-	    if (procedure_is_C(op))
-		outstream_putwc(L'C', out);
-	}
-	outstream_putwc(L' ', out);
-	print_fixnum((int) op, 0x10, out);
-	outstream_putwc(L'>', out);
+	print_procedure(op, out);
     } else {
 	fprintf(stderr, "object type %d\n", * (char *) op);
 	assert(false && "unknown object");

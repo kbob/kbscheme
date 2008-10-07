@@ -37,6 +37,7 @@ static obj_t *alloc_obj(obj_type_t type)
     obj_t *op = (obj_t *) malloc(sizeof *op);
     assert(op);
     op->ob_type = type;
+    op->ob_subtype = 0;
     return op;
 }
 
@@ -245,7 +246,7 @@ obj_t *make_C_procedure(C_procedure_t *code, obj_t *arglist, obj_t *env)
     return op;
 }
 
-obj_t *make_C_special_form_procedure(C_special_form_t *code,
+obj_t *make_C_special_form_procedure(C_procedure_t *code,
 				     obj_t *arglist,
 				     obj_t *env)
 {

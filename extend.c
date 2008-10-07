@@ -1,3 +1,5 @@
+/* XXX this file is obsolete. */
+
 #include "extend.h"
 
 #include <assert.h>
@@ -7,7 +9,7 @@
 #include "bind.h"
 #include "lib.h"
 
-obj_t *cstr_to_symbol(const char *cstr)
+static inline obj_t *cstr_to_symbol(const char *cstr)
 {
     size_t len = mbstowcs(NULL, cstr, 0);
     wchar_t *ws = alloca((len + 1) * sizeof *ws);
@@ -15,20 +17,20 @@ obj_t *cstr_to_symbol(const char *cstr)
     return make_symbol(ws);
 }
 
-void register_proc(C_procedure_t *proc,
-		   obj_t *library,
-		   const char *name)
+/* XXX obsolete */
+void register_proc(C_procedure_t *proc, obj_t *library, const char *name)
 {
-    env_t *env = library_env(library);
-    obj_t *code = make_C_procedure(proc, make_null(), env);
-    env_bind(env, cstr_to_symbol(name), BINDING_MUTABLE, code);
+    // env_t *env = library_env(library);
+    // obj_t *code = make_C_procedure(proc, make_null(), env);
+    // env_bind(env, cstr_to_symbol(name), BINDING_MUTABLE, code);
 }
 
-void register_special_form(C_special_form_t *form,
+/* XXX obsolete */
+void register_special_form(C_procedure_t *form,
 			   obj_t *library,
 			   const char *name)
 {
-    env_t *env = library_env(library);
-    obj_t *code = make_C_special_form_procedure(form, make_null(), env);
-    env_bind(env, cstr_to_symbol(name), BINDING_IMMUTABLE, code);
+    // env_t *env = library_env(library);
+    // obj_t *code = make_C_special_form_procedure(form, make_null(), env);
+    // env_bind(env, cstr_to_symbol(name), BINDING_IMMUTABLE, code);
 }

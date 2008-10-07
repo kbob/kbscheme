@@ -1,7 +1,7 @@
 CPPFLAGS = -D_GNU_SOURCE -I.
 CFLAGS = -g -Wall -Werror
 YFILES = yread.y
-CFILES = main.c bind.c extend.c eval.c io.c lib.c obj.c print.c read.c \
+CFILES = main.c bind.c extend.c eval.c io.c lib.c obj.c print.c proc.c read.c \
          base/arith.c base/cond.c base/lambda.c
 OFILES = $(CFILES:.c=.o) $(YFILES:.y=.o)
 LIBS = -lreadline
@@ -13,7 +13,7 @@ scheme:	$(OFILES) Makefile
 	$(CC) -o $@ $(LDFLAGS) $(OFILES) $(LIBS)
 
 clean:
-	rm -f *~ */*~ *.o .*.d */*.o */.*.d core $(TARGETS)
+	rm -f *~ */*~ *.o .*.d */*.o */.*.d a.out core $(TARGETS)
 
 .%.d: %.c
 	@rm -f $@ && \
