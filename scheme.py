@@ -1,5 +1,13 @@
 #!/usr/bin/python
 
+"""Minimal Scheme interpreter.
+
+   There is no reader; you have to build Scheme expressions using
+   Python.  This primarily exists to demonstrate a non-recursive
+   Scheme evaluator which could support
+   call-with-current-continuation, aka call/cc.
+"""
+
 import pprint
 
 
@@ -7,32 +15,42 @@ import pprint
 
 
 class Nil:
+
     def __repr__(self):
         return '()'
+
     def __nonzero__(self):
         raise NotImplementedError
-Nil = Nil()
+
+Nil = Nil()                             # singleton
 
 
 class Pair:
+
     def __init__(self, car, cdr):
         self._car, self._cdr = car, cdr
-    def car(self): return self._car
-    def cdr(self): return self._cdr
-    def setcar(self, p): self._car = p
-    def setcdr(self, p): self._cdr = p
+
     def __repr__(self):
-        s = '('
-        p = self
-        fmt = '%r'
-        while is_pair(p):
-            s += fmt % p.car()
-            p = p.cdr()
-            fmt = ' %r'
-        if p != Nil:
-            s += ' . %r' % p
-        s += ')'
-        return s
+        def pieces(p):
+            while is_pair(p):
+                yield repr(p.car())
+                p = p.cdr()
+            if not is_null(p):
+                yield '.'
+                yield repr(p)
+        return '(%s)' % ' '.join(pieces(self))
+
+    def car(self):
+        return self._car
+
+    def cdr(self):
+        return self._cdr
+
+    def setcar(self, p):
+        self._car = p
+
+    def setcdr(self, p):
+        self._cdr = p
 
 def cons(car, cdr):
     return Pair(car, cdr)
@@ -50,9 +68,6 @@ class Symbol(object):
     def __init__(self, name):
         self.name = name
 
-    def __str__(self):
-        return self.name
-
     def __repr__(self):
         return self.name
 
@@ -63,11 +78,10 @@ class Env:
         self.bindings = {}
     def __repr__(self):
         def ancestors(env):
-            if env:
-                return ' => %r%s' % (env.bindings, ancestors(env.parent))
-            else:
-                return ''
-        return '<Env %r%s>' % (self.bindings, ancestors(self.parent))
+            while not is_null(env):
+                yield 'base' if env is base_env else repr(env.bindings)
+                env = env.parent
+        return '<Env %s>' % ' => '.join(ancestors(self))
     def bind(self, sym, value):
         assert sym not in self.bindings
         self.bindings[sym] = value
@@ -96,16 +110,23 @@ class Procedure(object):
 
 
 class Frame:
+
+    """A continuation frame.
+    
+       Scheme's call 'stack' is actually a graph of continuation
+       frames.  Each frame points at its parent (caller) but because a
+       frame may outlive its return, it can't be freed in strict LIFO
+       order like stack elements.
+    """
+
     def __init__(self, parent, cont, **kwargs):
         self.parent = parent
         self.cont = cont
         self.regs = kwargs
     def __repr__(self):
-        # return ('<Frame parent=%(parent)r\n'
-        #         '       cont=%(cont)r\n'
-        #         '       regs=%(regs)r>' % self.__dict__)
+        cont = Nil if is_null(self.cont) else self.cont.func_name
         return ('<Frame cont=%(cont)r\n'
-                '       regs=%(regs)r>' % self.__dict__)
+                '       regs=%(regs)r>' % dict(cont=cont, regs=self.regs))
 
 
 def is_null(exp):
@@ -243,7 +264,7 @@ def eval_sequence(seq, env, val=Nil):
 # end Scheme evaluator
 
 
-base_env = Env(None)
+base_env = Env(Nil)
 
 def bind_proc(name, is_special_form=False):
     def wrap(func):
@@ -289,6 +310,7 @@ def do_eval(exp):
     global f
     f = Frame(Nil, Nil)
     f = Frame(f, eval, exp=exp, env=base_env)
+    # print
     # pprint.pprint(f)
     while f.cont != Nil:
         f = f.cont(**f.regs)
@@ -341,8 +363,8 @@ test_eval('(lambda ())', is_procedure, L(lammie, L()))
 # ((lambda ())) => ()
 test_eval('((lambda ()))', Nil, L(L(lammie, L())))
 
-# ((lambda (x)) 3) => ()
-test_eval('((lambda (x)) 3)', Nil, L(L(lammie, L(x)), 3))
+# ((lambda (x)) 4) => ()
+test_eval('((lambda (x)) 4)', Nil, L(L(lammie, L(x)), 4))
 
 # ((lambda (x) (+ x 3)) 4) => 7
 test_eval('((lambda (x) (+ x 3)) 4)', 7,
