@@ -51,7 +51,8 @@ static token_t scan(instream_t *ip)
 	while ((wc = instream_getwc(ip)) != WEOF && iswdigit(wc)) {
 	    ival = 10 * ival + wctob(wc) - '0';
 	}
-	instream_ungetwc(wc, ip);
+	if (wc != WEOF)
+	    instream_ungetwc(wc, ip);
 	return make_token(TOK_FIXNUM, make_fixnum(ival));
     }
     if (iswgraph(wc)) {
@@ -69,7 +70,8 @@ static token_t scan(instream_t *ip)
 	    buf[pos++] = wc;
 	}
 	buf[pos] = L'\0';
-	instream_ungetwc(wc, ip);
+	if (wc != WEOF)
+	    instream_ungetwc(wc, ip);
 	return make_token(TOK_SYMBOL, make_symbol(buf));
     }
     fprintf(stderr, "unexpected char %lc = %d\n", wc, wc);

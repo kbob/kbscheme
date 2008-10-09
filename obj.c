@@ -24,7 +24,7 @@ struct object {
 	struct { wchar_t *obus_value; }          obu_string;
 	struct { obj_t *obus_name; }             obu_symbol;
 	struct { obj_t *obup_car, *obup_cdr; }   obu_pair;
-	struct { obj_t *obup_code, *obup_more; } obu_procedure;
+	struct { obj_t *obup_body, *obup_more; } obu_procedure;
     } ob_u;
 };
 
@@ -219,20 +219,20 @@ typedef enum proc_flags {
     PF_SPECIAL_FORM = 2,
 } proc_type_t;
 
-obj_t *make_procedure(obj_t *code, obj_t *arglist, obj_t *env)
+obj_t *make_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
     op->ob_subtype = 0;
-    op->ob_u.obu_procedure.obup_code = code;
+    op->ob_u.obu_procedure.obup_body = body;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
 }
 
-obj_t *make_special_form_procedure(obj_t *code, obj_t *arglist, obj_t *env)
+obj_t *make_special_form_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
     op->ob_subtype = PF_SPECIAL_FORM;
-    op->ob_u.obu_procedure.obup_code = code;
+    op->ob_u.obu_procedure.obup_body = body;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
 }
@@ -241,7 +241,7 @@ obj_t *make_C_procedure(C_procedure_t *code, obj_t *arglist, obj_t *env)
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
     op->ob_subtype = PF_COMPILED_C;
-    op->ob_u.obu_procedure.obup_code = (obj_t *) code;
+    op->ob_u.obu_procedure.obup_body = (obj_t *) code;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
 }
@@ -252,7 +252,7 @@ obj_t *make_C_special_form_procedure(C_procedure_t *code,
 {
     obj_t *op = alloc_obj(OB_PROCEDURE);
     op->ob_subtype = PF_COMPILED_C | PF_SPECIAL_FORM;
-    op->ob_u.obu_procedure.obup_code = (obj_t *) code;
+    op->ob_u.obu_procedure.obup_body = (obj_t *) code;
     op->ob_u.obu_procedure.obup_more = make_pair(arglist, env);
     return op;
 }
@@ -274,10 +274,10 @@ bool procedure_is_special_form(obj_t *op)
     return (op->ob_subtype & PF_SPECIAL_FORM) != 0;
 }
 
-obj_t *procedure_code(obj_t *op)
+obj_t *procedure_body(obj_t *op)
 {
     assert(is_procedure(op));
-    return op->ob_u.obu_procedure.obup_code;
+    return op->ob_u.obu_procedure.obup_body;
 }
 
 obj_t *procedure_args(obj_t *op)

@@ -5,8 +5,6 @@
 #ifndef MEM_INCLUDED
 #define MEM_INCLUDED
 
-#define NEW_EVAL 1
-
 #include <stddef.h>			/* for wchar_t */
 
 #include "bool.h"
@@ -51,13 +49,9 @@ extern void        pair_set_car(obj_t *pair, obj_t *car);
 extern void        pair_set_cdr(obj_t *pair, obj_t *cdr);
 
 /* procedure methods */
-#if NEW_EVAL
 typedef struct eval_frame eval_frame_t;
 typedef eval_frame_t *C_procedure_t(eval_frame_t *);
-#else
-typedef obj_t     *C_procedure_t(obj_t *arglist, obj_t *env);
-typedef obj_t     *C_special_form_t(obj_t *arglist, obj_t *env);
-#endif
+
 extern obj_t      *make_procedure(obj_t *code, obj_t *arglist, obj_t *env);
 extern obj_t      *make_C_procedure(C_procedure_t *code,
 				    obj_t *arglist,
@@ -71,7 +65,7 @@ extern obj_t      *make_C_special_form_procedure(C_procedure_t *code,
 extern bool        is_procedure(obj_t *);
 extern bool        procedure_is_C(obj_t *);
 extern bool        procedure_is_special_form(obj_t *);
-extern obj_t      *procedure_code(obj_t *);
+extern obj_t      *procedure_body(obj_t *);
 extern obj_t      *procedure_args(obj_t *);
 extern obj_t      *procedure_env(obj_t *);
 

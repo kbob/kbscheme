@@ -33,26 +33,25 @@ static void print_fixnum(int i, int base, outstream_t *out)
     outstream_putwc(L"0123456789abcdef"[i % base], out);
 }
 
-static void print_list_interior(obj_t *op, outstream_t *out)
+static void print_list_interior(obj_t *op, wchar_t *sep, outstream_t *out)
 {
     while (!is_null(op)) {
+	put_string(sep, out);
 	print_form(pair_car(op), out);
 	op = pair_cdr(op);
-	if (is_null(op))
-	    break;
-	if (!is_pair(op)) {
-	    put_string(L" . ", out);
+	if (!is_null(op) && !is_pair(op)) {
+	    put_string(L". ", out);
 	    print_form(op, out);
 	    break;
 	}
-	outstream_putwc(L' ', out);
+	sep = L"_";
     }
 }
 
 static void print_pair(obj_t *op, outstream_t *out)
 {
     outstream_putwc(L'(', out);
-    print_list_interior(op, out);
+    print_list_interior(op, L"", out);
     outstream_putwc(L')', out);
 }
 
@@ -64,14 +63,13 @@ static void print_procedure(obj_t *op, outstream_t *out)
 	    outstream_putwc(L'S', out);
 	if (procedure_is_C(op))
 	    outstream_putwc(L'C', out);
-	outstream_putwc(L' ', out);
-	print_fixnum((int) op, 0x10, out);
+	// outstream_putwc(L' ', out);
+	// print_fixnum((int) op, 0x10, out);
 	outstream_putwc(L'>', out);
     } else {
 	put_string(L"(lambda ", out);
 	print_form(procedure_args(op), out);
-	put_string(L" ", out);
-	print_list_interior(procedure_code(op), out);
+	print_list_interior(procedure_body(op), L" ", out);
 	put_string(L")", out);
     }
 }

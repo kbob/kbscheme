@@ -1,6 +1,8 @@
 #ifndef PROC_INCLUDED
 #define PROC_INCLUDED
 
+#define OLD_EVAL 0
+
 /*
  * Macros to define procedures, special forms, and blocks.
  * Procedures and special forms have Scheme bindings.
@@ -132,24 +134,25 @@
 
 /* eval_frame_t member accessors */
 #define F_PARENT        (FRAME->ef_parent)
-#define F_CONT          (FRAME->ef_continue)
-#define F_EXP           (FRAME->ef_expression)
-#define F_ENV           (FRAME->ef_environment)
+#define F_CONT          (FRAME->ef_continuation)
 #define F_VAL           (FRAME->ef_value)
+#define F_SUBJ           (FRAME->ef_subject)
+#define F_EXP F_SUBJ
+#define F_ENV           (FRAME->ef_environment)
 #define F_PROC          (FRAME->ef_procedure)
 #define F_ARGL          (FRAME->ef_arglist)
-#define F_ARGT          (FRAME->ef_argtail)
+#define F_ARGT          (FRAME->ef_last_arg)
 #define F_NXA           (FRAME->ef_next_arg)
 
 /* eval_frame_t member setters */
 #define F_SET_PARENT(x) (FRAME->ef_parent = (x))
-#define F_SET_CONT(x)   (FRAME->ef_continue = (x))
-#define F_SET_EXP(x)    (FRAME->ef_expression = (x))
-#define F_SET_ENV(x)    (FRAME->ef_environment = (x))
+#define F_SET_CONT(x)   (FRAME->ef_continuation = (x))
 #define F_SET_VAL(x)    (FRAME->ef_value = (x))
+#define F_SET_EXP(x)    (FRAME->ef_subject = (x))
+#define F_SET_ENV(x)    (FRAME->ef_environment = (x))
 #define F_SET_PROC(x)   (FRAME->ef_procedure = (x))
 #define F_SET_ARGL(x)   (FRAME->ef_arglist = (x))
-#define F_SET_ARGT(x)   (FRAME->ef_argtail = (x))
+#define F_SET_ARGT(x)   (FRAME->ef_last_arg = (x))
 #define F_SET_NXA(x)    (FRAME->ef_next_arg = (x))
 
 #define RETURN(val) \
@@ -170,6 +173,9 @@
         F_SET_ENV(env__); \
         return FRAME; \
     } while (0)
+#undef XXX_EVAL
+#define XXX_EVAL(exp, env) \
+    return MAKE_CALL_FRAME(MAKE_EVAL_FRAME, (exp), (env))
 
 #define TAIL_EVAL(exp, env) \
     do { \
@@ -187,14 +193,14 @@
 
 struct eval_frame {
     eval_frame_t  *ef_parent;
-    C_procedure_t *ef_continue;
-    obj_t         *ef_expression;
-    env_t         *ef_environment;
+    C_procedure_t *ef_continuation;
     obj_t         *ef_value;
+    obj_t         *ef_subject;
+    env_t         *ef_environment;
     obj_t         *ef_procedure;
     obj_t         *ef_arglist;
-    obj_t         *ef_argtail;
-    obj_t         *ef_next_arg;
+    obj_t         *ef_last_arg;
+    obj_t         *ef_next_arg;		// XXX delete
 };
 
 extern void bind_proc(C_procedure_t, lib_t *library, const char *name);

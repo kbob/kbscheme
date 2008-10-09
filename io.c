@@ -28,6 +28,13 @@ typedef struct readline_instream {
     mbstate_t         ri_ps;
 } readline_instream_t;
 
+typedef struct string_instream {
+    instream_t        si_instream;
+    const wchar_t    *si_inbuf;
+    size_t            si_size;
+    size_t            si_pos;
+} string_instream_t;
+
 struct outstream {
     out_putwc_proc_t  out_putwc;
 };
@@ -36,6 +43,13 @@ typedef struct file_outstream {
     outstream_t       fo_outstream;
     FILE             *fo_file;
 } file_outstream_t;
+
+typedef struct string_outstream {
+    outstream_t       so_outstream;
+    wchar_t          *so_outbuf;
+    size_t            so_size;
+    size_t            so_pos;
+} string_outstream_t;
 
 static void init_instream(instream_t *ip,
 			  in_getwc_proc_t get,
@@ -134,6 +148,36 @@ instream_t *make_readline_instream(void)
     return ip;
 }
 
+/* string instream methods */
+
+static wint_t string_getwc(instream_t *ip)
+{
+    string_instream_t *sp = (string_instream_t *) ip;
+    if (sp->si_pos >= sp->si_size)
+	return WEOF;
+    return sp->si_inbuf[sp->si_pos++];
+}
+
+static wint_t string_ungetwc(wint_t wc, instream_t *ip)
+{
+    string_instream_t *sp = (string_instream_t *) ip;
+    assert(sp->si_pos > 0);
+    assert(wc == sp->si_inbuf[sp->si_pos - 1]);
+    --sp->si_pos;
+    return wc;
+}
+
+instream_t *make_string_instream(const wchar_t *str, size_t size)
+{
+    string_instream_t *sp = (string_instream_t *) malloc(sizeof *sp);
+    instream_t *ip = &sp->si_instream;
+    init_instream(ip, string_getwc, string_ungetwc);
+    sp->si_inbuf = str;
+    sp->si_pos = 0;
+    sp->si_size = size;
+    return ip;
+}
+
 /* file outstream methods */
 
 static wint_t file_putwc(wchar_t wc, outstream_t *out)
@@ -157,6 +201,29 @@ outstream_t *make_file_outstream(FILE *f)
     outstream_t *out = &fp->fo_outstream;
     init_outstream(out, file_putwc);
     fp->fo_file = f;
+    return out;
+}
+
+/* string outstream methods */
+
+static wint_t string_putwc(wchar_t wc, outstream_t *out)
+{
+    string_outstream_t *sp = (string_outstream_t *) out;
+    if (sp->so_pos >= sp->so_size - 1)
+	return WEOF;
+    sp->so_outbuf[sp->so_pos++] = wc;
+    sp->so_outbuf[sp->so_pos] = L'\0';
+    return wc;
+}
+
+outstream_t *make_string_outstream(wchar_t *outbuf, size_t size)
+{
+    string_outstream_t *sp = (string_outstream_t *) malloc(sizeof *sp);
+    outstream_t *out = &sp->so_outstream;
+    init_outstream(out, string_putwc);
+    sp->so_outbuf = outbuf;
+    sp->so_pos = 0;
+    sp->so_size = size;
     return out;
 }
 
