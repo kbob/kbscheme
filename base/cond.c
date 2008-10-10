@@ -1,22 +1,22 @@
-#include "extend.h"
+#include "proc.h"
 
 #include "eval.h"
 
-oldDEFINE_SPECIAL_FORM("if")
+DEFINE_SPECIAL_FORM("if")
 {
-    obj_t *test = pair_car(ARGLIST);
-    obj_t *truth = eval(test, ENV);
-    obj_t *cdr = pair_cdr(ARGLIST);
+    obj_t *test = pair_car(F_SUBJ);
+    obj_t *truth = eval(test, F_ENV);
+    obj_t *cdr = pair_cdr(F_SUBJ);
     if (!is_boolean(truth) || boolean_value(truth)) {
 	obj_t *consequent = pair_car(cdr);
-	return eval(consequent, ENV);
+	TAIL_EVAL(consequent, F_ENV);
     } else {
 	obj_t *cddr = pair_cdr(cdr);
 	if (is_null(cddr))
-	    return cddr;
+	    RETURN(cddr);
 	else {
 	    obj_t *alternate = pair_car(cddr);
-	    return eval(alternate, ENV);
+	    TAIL_EVAL(alternate, F_ENV);
 	}
     }    
 }

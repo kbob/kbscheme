@@ -44,7 +44,7 @@ static void print_list_interior(obj_t *op, wchar_t *sep, outstream_t *out)
 	    print_form(op, out);
 	    break;
 	}
-	sep = L"_";
+	sep = L" ";
     }
 }
 

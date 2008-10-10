@@ -1,139 +1,148 @@
 #include <assert.h>
 
-#include "extend.h"			/* XXX */
 #include "proc.h"
 
 DEFINE_PROC("number?")
 {
-    assert(is_null(pair_cdr(F_ARGL)));
-    RETURN(make_boolean(is_fixnum(pair_car(F_ARGL))));
+    assert(is_null(pair_cdr(F_SUBJ)));
+    RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
 DEFINE_PROC("integer?")
 {
-    assert(is_null(pair_cdr(F_ARGL)));
-    RETURN(make_boolean(is_fixnum(pair_car(F_ARGL))));
+    assert(is_null(pair_cdr(F_SUBJ)));
+    RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
 DEFINE_PROC("=")
 {
-    int x = fixnum_value(pair_car(F_ARGL));
-    while (!is_null(F_ARGL)) {
-	if (fixnum_value(pair_car(F_ARGL)) != x)
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    while (!is_null(p)) {
+	if (fixnum_value(pair_car(p)) != x)
 	    RETURN(make_boolean(false));
-	F_ARGL = pair_cdr(F_ARGL);
+	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC("<")
 {
-    int x = fixnum_value(pair_car(F_ARGL));
-    F_ARGL = pair_cdr(F_ARGL);
-    while (!is_null(F_ARGL)) {
-	int y = fixnum_value(pair_car(F_ARGL));
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
 	if (!(x < y))
 	    RETURN(make_boolean(false));
 	x = y;
-	F_ARGL = pair_cdr(F_ARGL);
+	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(">")
 {
-    int x = fixnum_value(pair_car(F_ARGL));
-    F_ARGL = pair_cdr(F_ARGL);
-    while (!is_null(F_ARGL)) {
-	int y = fixnum_value(pair_car(F_ARGL));
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
 	if (!(x > y))
 	    RETURN(make_boolean(false));
 	x = y;
-	F_ARGL = pair_cdr(F_ARGL);
+	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC("<=")
 {
-    int x = fixnum_value(pair_car(F_ARGL));
-    F_ARGL = pair_cdr(F_ARGL);
-    while (!is_null(F_ARGL)) {
-	int y = fixnum_value(pair_car(F_ARGL));
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
 	if (!(x <= y))
 	    RETURN(make_boolean(false));
 	x = y;
-	F_ARGL = pair_cdr(F_ARGL);
+	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(">=")
 {
-    int x = fixnum_value(pair_car(F_ARGL));
-    F_ARGL = pair_cdr(F_ARGL);
-    while (!is_null(F_ARGL)) {
-	int y = fixnum_value(pair_car(F_ARGL));
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
 	if (!(x >= y))
 	    RETURN(make_boolean(false));
 	x = y;
-	F_ARGL = pair_cdr(F_ARGL);
+	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
+#include <stdio.h>			/* XXX */
+
 DEFINE_PROC("+")
 {
+    obj_t *p = F_SUBJ;
     int sum = 0;
-    while (!is_null(F_ARGL)) {
-	sum += fixnum_value(pair_car(F_ARGL));
-	F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(p)) {
+	sum += fixnum_value(pair_car(p));
+	p = pair_cdr(p);
     }
     RETURN(make_fixnum(sum));
 }
 
 DEFINE_PROC("-")
 {
-    int diff = fixnum_value(pair_car(F_ARGL));
-    F_ARGL = pair_cdr(F_ARGL);
-    if (is_null(F_ARGL))
+    obj_t *p = F_SUBJ;
+    int diff = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    if (is_null(p))
 	RETURN(make_fixnum(-diff));
-    while (!is_null(F_ARGL)) {
-	diff -= fixnum_value(pair_car(F_ARGL));
-	F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(p)) {
+	diff -= fixnum_value(pair_car(p));
+	p = pair_cdr(p);
     }
     RETURN(make_fixnum(diff));
 }
 
 DEFINE_PROC("*")
 {
+    obj_t *p = F_SUBJ;
     int prod = 1;
-    while (!is_null(F_ARGL)) {
-	prod *= fixnum_value(pair_car(F_ARGL));
-	F_ARGL = pair_cdr(F_ARGL);
+    while (!is_null(p)) {
+	prod *= fixnum_value(pair_car(p));
+	p = pair_cdr(p);
     }
     RETURN(make_fixnum(prod));
 }
 
 DEFINE_PROC("div")
 {
-    int dividend = fixnum_value(pair_car(F_ARGL));
-    int divisor = fixnum_value(pair_car(pair_cdr(F_ARGL)));
-    assert(is_null(pair_cdr(pair_cdr(F_ARGL))));
+    int dividend = fixnum_value(pair_car(F_SUBJ));
+    int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    assert(is_null(pair_cdr(pair_cdr(F_SUBJ))));
     RETURN(make_fixnum(dividend / divisor));
 }
 
 DEFINE_PROC("mod")
 {
-    int dividend = fixnum_value(pair_car(F_ARGL));
-    int divisor = fixnum_value(pair_car(pair_cdr(F_ARGL)));
-    assert(is_null(pair_cdr(pair_cdr(F_ARGL))));
+    int dividend = fixnum_value(pair_car(F_SUBJ));
+    int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    assert(is_null(pair_cdr(pair_cdr(F_SUBJ))));
     RETURN(make_fixnum(dividend % divisor));
 }
 
 DEFINE_PROC("abs")
 {
-    assert(is_null(pair_cdr(F_ARGL)));
-    int x = fixnum_value(pair_car(F_ARGL));
+    assert(is_null(pair_cdr(F_SUBJ)));
+    int x = fixnum_value(pair_car(F_SUBJ));
     RETURN(make_fixnum(x < 0 ? -x : x));
 }

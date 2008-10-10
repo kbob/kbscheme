@@ -1,45 +1,25 @@
 #include <assert.h>
 
 #include "eval.h"
-#include "extend.h"			/* XXX */
 #include "proc.h"
 
 DEFINE_SPECIAL_FORM("lambda")
 {
-    obj_t *params = pair_car(F_ARGL);
-    obj_t *body = pair_cdr(F_ARGL);
+    obj_t *params = pair_car(F_SUBJ);
+    obj_t *body = pair_cdr(F_SUBJ);
     RETURN(make_procedure(body, params, F_ENV));
 }
 
-oldDEFINE_SPECIAL_FORM("quote")
+DEFINE_SPECIAL_FORM("quote")
 {
-    assert(is_null(pair_cdr(ARGLIST)));
-    return pair_car(ARGLIST);
-}
-
-oldDEFINE_SPECIAL_FORM("define")
-{
-    obj_t *var = pair_car(ARGLIST);
-    obj_t *rest = pair_cdr(ARGLIST);
-    obj_t *value;
-    if (is_pair(var)) {
-	obj_t *formals = pair_cdr(var);
-	var = pair_car(var);
-	value = make_procedure(rest, formals, ENV);
-    } else if (is_null(rest)) {
-	value = rest;
-    } else {
-	assert(is_null(pair_cdr(rest)));
-	value = eval(pair_car(rest), ENV);
-    }
-    env_bind(ENV, var, BINDING_MUTABLE, value);
-    return make_null();
+    assert(is_null(pair_cdr(F_SUBJ)));
+    RETURN(pair_car(F_SUBJ));
 }
 
 DEFINE_SPECIAL_FORM("define")
 {
-    obj_t *var = pair_car(F_ARGL);
-    obj_t *rest = pair_cdr(F_ARGL);
+    obj_t *var = pair_car(F_SUBJ);
+    obj_t *rest = pair_cdr(F_SUBJ);
     obj_t *value;
     if (is_pair(var)) {
 	obj_t *formals = pair_cdr(var);
@@ -55,12 +35,12 @@ DEFINE_SPECIAL_FORM("define")
     RETURN(make_null());
 }
 
-oldDEFINE_SPECIAL_FORM("set!")
+DEFINE_SPECIAL_FORM("set!")
 {
-    obj_t *var = pair_car(ARGLIST);
-    binding_t *binding = env_lookup(ENV, var);
+    obj_t *var = pair_car(F_SUBJ);
+    binding_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
-    obj_t *value = eval(pair_car(pair_cdr(ARGLIST)), ENV);
+    obj_t *value = eval(pair_car(pair_cdr(F_SUBJ)), F_ENV);
     binding_set(binding, value);
-    return make_null();
+    RETURN(make_null());
 }
