@@ -64,7 +64,7 @@ static bool is_application(obj_t *expr)
 
 static obj_t *eval_symbol(eval_frame_t *FRAME)
 {
-    binding_t *binding = env_lookup(F_ENV, F_EXP);
+    binding_t *binding = env_lookup(F_ENV, F_SUBJ);
     return binding_value(binding);
 }
 
@@ -91,9 +91,9 @@ void print_stack(const char *label, eval_frame_t *FRAME)
     const char *sep = "";
     for ( ; FRAME; FRAME = F_PARENT, sep = " -> ") {
 	printf("%s%s", sep, block_name(F_CONT));
-	if (F_CONT || F_EXP) {
+	if (F_CONT || F_SUBJ) {
 	    printf("(");
-	    princ_stdout(F_EXP);
+	    princ_stdout(F_SUBJ);
 	    printf(")");
 	}
     } 
@@ -130,13 +130,13 @@ inline eval_frame_t *eval_application(eval_frame_t *FRAME,
 
 DEFINE_EXTERN_BLOCK(b_eval)
 {
-    if (is_self_evaluating(F_EXP))
-	RETURN(F_EXP);
-    if (is_symbol(F_EXP))
+    if (is_self_evaluating(F_SUBJ))
+	RETURN(F_SUBJ);
+    if (is_symbol(F_SUBJ))
 	RETURN(eval_symbol(FRAME));
-    if (is_application(F_EXP)) {
-	obj_t *proc = pair_car(F_EXP);
-	obj_t *args = pair_cdr(F_EXP);
+    if (is_application(F_SUBJ)) {
+	obj_t *proc = pair_car(F_SUBJ);
+	obj_t *args = pair_cdr(F_SUBJ);
 	CALL_THEN_GOTO((b_eval, proc, F_ENV),
 		       (b_accum_operator, args, F_ENV));
     }
@@ -194,8 +194,8 @@ obj_t *eval(obj_t *expr, env_t *env)
 	/* XXX mix in setjmp() and a signal flag here. */
 #ifdef EVAL_TRACE
 	print_stack("eval", FRAME);
-	printf("   F_EXP => ");
-	print_stdout(F_EXP);
+	printf("   F_SUBJ => ");
+	print_stdout(F_SUBJ);
 	printf("   F_VAL => ");
 	print_stdout(F_VAL);
 	printf("\n");

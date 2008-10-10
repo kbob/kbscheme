@@ -3,47 +3,6 @@
 #include <stdlib.h>
 #include <wchar.h>
 
-/* XXX Excise these someday. */
-DEFINE_PROC("p")
-{ return 0; }
-
-DEFINE_SPECIAL_FORM("sf")
-{ return 0; }
-
-DEFINE_BLOCK(b)
-{ return 0; }
-
-DECLARE_BLOCK(b)
-
-DEFINE_EXTERN_PROC(xp, "xp")
-{ return 0; }
-
-DEFINE_STATIC_PROC(sp, "sp")
-{ return 0; }
-
-DEFINE_ANONYMOUS_PROC("ap")
-{ return 0; }
-
-DEFINE_EXTERN_SPECIAL_FORM(xsf, "xsf")
-{ return 0; }
-
-DEFINE_STATIC_SPECIAL_FORM(ssf, "ssf")
-{ return 0; }
-
-DEFINE_ANONYMOUS_SPECIAL_FORM("asf")
-{ return 0; }
-
-DECLARE_EXTERN_BLOCK(xb)
-DECLARE_STATIC_BLOCK(sb)
-DECLARE_EXTERN_BLOCK(xb);
-DECLARE_STATIC_BLOCK(sb);
-
-DEFINE_EXTERN_BLOCK(xb)
-{ return b(sb(FRAME)); }
-
-DEFINE_STATIC_BLOCK(sb)
-{ return 0; }
-
 static obj_t *cstr_to_symbol(const char *cstr)
 {
     /* XXX should use Unicode strings? */

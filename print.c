@@ -40,7 +40,7 @@ static void print_list_interior(obj_t *op, wchar_t *sep, outstream_t *out)
 	print_form(pair_car(op), out);
 	op = pair_cdr(op);
 	if (!is_null(op) && !is_pair(op)) {
-	    put_string(L". ", out);
+	    put_string(L" . ", out);
 	    print_form(op, out);
 	    break;
 	}

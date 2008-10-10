@@ -18,7 +18,7 @@ static inline void princ_stdout(obj_t *op)	/* XXX */
 static inline void print_stdout(obj_t *op)	/* XXX */
 {						/* XXX */
     princ_stdout(op);				/* XXX */
-    printf("\n");
+    printf("\n");				/* XXX */
 }						/* XXX */
 
 #endif /* !PRINT_INCLUDED */

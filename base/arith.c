@@ -86,8 +86,6 @@ DEFINE_PROC(">=")
     RETURN(make_boolean(true));
 }
 
-#include <stdio.h>			/* XXX */
-
 DEFINE_PROC("+")
 {
     obj_t *p = F_SUBJ;
