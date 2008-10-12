@@ -1,7 +1,5 @@
 #include "mem_fixvec.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <string.h>
 
@@ -148,5 +146,3 @@ obj_t *alloc_fixvec4(mem_ops_t *ops,
     vec->fv4_ptrs[3] = ptr3;
     return obj;
 }
-
-#endif /* !OLD_MEM */

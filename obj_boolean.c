@@ -4,8 +4,6 @@
 
 #include "mem.h"
 
-#if !OLD_MEM
-
 typedef struct bool_obj {
     obj_header_t bool_header;
 } bool_obj_t;
@@ -95,5 +93,3 @@ bool boolean_value(obj_t *op)
     assert(is_boolean(op));
     return OBJ_MEM_OPS(op) == &true_ops;
 }
-
-#endif

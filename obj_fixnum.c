@@ -1,10 +1,7 @@
 #include "obj_fixnum.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 
-#include "mem.h"
 #include "mem_scalar.h"
 
 typedef struct fixnum_obj {
@@ -40,5 +37,3 @@ int fixnum_value(obj_t *op)
     assert(is_fixnum(op));
     return ((fixnum_obj_t *)op)->fixnum_value;
 }
-
-#endif

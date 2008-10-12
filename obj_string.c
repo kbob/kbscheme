@@ -1,7 +1,5 @@
 #include "obj_string.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <wchar.h>
 
@@ -47,5 +45,3 @@ const wchar_t *string_value(obj_t *op)
     assert(is_string(op));
     return ((string_obj_t *)op)->string_value;
 }
-
-#endif

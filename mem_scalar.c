@@ -1,7 +1,5 @@
 #include "mem_scalar.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <string.h>
 
@@ -59,5 +57,3 @@ void mem_scalar_create_ops(mem_ops_t *ops,
     if (free_op)
 	ops->mo_free = free_op;
 }
-
-#endif

@@ -1,7 +1,5 @@
 #include "mem.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <errno.h>
 #include <stdio.h>
@@ -51,5 +49,3 @@ void mem_record_root(obj_t **root, wchar_t *name, root_constructor_t init)
 {
     // printf("root %ls at %p init %p\n", name, root, init);
 }
-
-#endif

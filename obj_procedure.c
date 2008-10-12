@@ -1,7 +1,5 @@
 #include "obj_procedure.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <string.h>
 
@@ -174,5 +172,3 @@ obj_t *procedure_env(obj_t *obj)
     assert(is_procedure(obj));
     return ((proc_obj_t *)obj)->proc_env;
 }
-
-#endif

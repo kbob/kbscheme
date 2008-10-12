@@ -9,9 +9,13 @@ DONE	Change mem_init_op to allow NULL.
 DONE	nonrecursive eval
  DONE	    define C procedure API.
  DONE	    threaded model?
+ DONE	    documentation
 
 	full mem model
-	
+ DONE	    define obj ops.
+ DONE	    rewrite base objects.
+	    rewrite frames to use objects.
+	    look into rewriting binding or env.
 
 	macros
 	    See file:///home/kbob/r6rs/html/r6rs-lib-html/r6rs-lib-Z-H-13.html#node_sec_12.3

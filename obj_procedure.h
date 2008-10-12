@@ -2,7 +2,6 @@
 #define OBJ_PROCEDURE_INCLUDED
 
 #include "obj.h"
-#if !OLD_MEM
 
 typedef struct eval_frame eval_frame_t;
 typedef eval_frame_t *C_procedure_t(eval_frame_t *);
@@ -23,7 +22,5 @@ extern bool   procedure_is_special_form(obj_t *);
 extern obj_t *procedure_body(obj_t *);
 extern obj_t *procedure_args(obj_t *);
 extern obj_t *procedure_env(obj_t *);
-
-#endif
 
 #endif /* !OBJ_PROCEDURE_INCLUDED */

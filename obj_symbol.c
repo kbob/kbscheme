@@ -1,12 +1,11 @@
 #include "obj_symbol.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <wchar.h>
 
 #include "mem_fixvec.h"
-#include "types.h"
+#include "obj_pair.h"
+#include "obj_string.h"
 
 static mem_ops_t symbol_ops;
 
@@ -48,5 +47,3 @@ obj_t *symbol_name(obj_t *obj)
     assert(is_symbol(obj));
     return OBJ_MEM_OPS(obj)->mo_get_ptr(obj, 0);
 }
-
-#endif

@@ -1,7 +1,5 @@
 #include "obj_character.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 #include <stddef.h>
 
@@ -41,5 +39,3 @@ wchar_t character_value(obj_t *op)
     assert(is_character(op));
     return ((character_obj_t *)op)->character_value;
 }
-
-#endif

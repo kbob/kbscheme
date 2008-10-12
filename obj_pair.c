@@ -1,7 +1,5 @@
 #include "obj_pair.h"
 
-#if !OLD_MEM
-
 #include <assert.h>
 
 #include "mem_fixvec.h"
@@ -43,5 +41,3 @@ void pair_set_cdr(obj_t *pair, obj_t *cdr)
     assert(is_pair(pair));
     OBJ_MEM_OPS(pair)->mo_set_ptr(pair, 1, cdr);
 }
-
-#endif

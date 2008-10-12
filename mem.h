@@ -1,9 +1,6 @@
 #ifndef MEM_INCLUDED
 #define MEM_INCLUDED
 
-#include "obj.h"			// XXX
-#if !OLD_MEM
-
 #include <stddef.h>
 #include <stdint.h>
 
@@ -85,7 +82,5 @@ extern void mem_init_heap(size_t usable_size);
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t);
 
 extern void mem_record_root(obj_t **root, wchar_t *name, root_constructor_t);
-
-# endif /* !OLD_MEM */
 
 #endif /* !MEM_INCLUDED */
