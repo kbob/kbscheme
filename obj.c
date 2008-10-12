@@ -1,5 +1,7 @@
 #include "obj.h"
 
+#if OLD_MEM
+
 #include <assert.h>
 #include <stdlib.h>
 #include <wchar.h>
@@ -20,7 +22,7 @@ struct object {
     union {
 	bool                                     obu_boolean;
 	int                                      obu_fixnum;
-	wchar_t					 obu_character;
+	wchar_t                                  obu_character;
 	struct { wchar_t *obus_value; }          obu_string;
 	struct { obj_t *obus_name; }             obu_symbol;
 	struct { obj_t *obup_car, *obup_cdr; }   obu_pair;
@@ -145,7 +147,7 @@ obj_t *make_symbol(wchar_t *name)
     obj_t *p, *sym;
     obj_t *sym_name;
 
-    for (p = all_symbols_list; p; p = pair_cdr(p)) {
+    for (p = all_symbols_list; !is_null(p); p = pair_cdr(p)) {
 	assert(is_pair(p));
 	sym = pair_car(p);
 	assert(is_symbol(sym));
@@ -291,3 +293,13 @@ obj_t *procedure_env(obj_t *op)
     assert(is_procedure(op));
     return pair_cdr(op->ob_u.obu_procedure.obup_more);
 }
+
+#else
+
+bool is_null(obj_t *obj)
+{
+    return obj == NIL;
+}
+
+
+#endif

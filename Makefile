@@ -1,9 +1,10 @@
 CPPFLAGS = -D_GNU_SOURCE -I.
 CFLAGS = -g -Wall -Werror
 YFILES = yread.y
-CFILES = main.c bind.c eval.c io.c lib.c mem.c obj.c \
-	 obj_bool.c \
-	 print.c proc.c read.c test.c \
+CFILES = main.c bind.c eval.c io.c lib.c obj.c print.c proc.c read.c test.c \
+	 mem.c mem_scalar.c mem_fixvec.c \
+	 obj_boolean.c obj_character.c obj_fixnum.c obj_string.c obj_symbol.c \
+	 obj_pair.c obj_procedure.c \
 	 lib/base.c lib/fixnum.c
 OFILES = $(CFILES:.c=.o) $(YFILES:.y=.o)
 LIBS = -lreadline

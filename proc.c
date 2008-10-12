@@ -15,13 +15,13 @@ static obj_t *cstr_to_symbol(const char *cstr)
 void bind_proc(C_procedure_t *proc, obj_t *library, const char *name)
 {
     env_t *env = library_env(library);
-    obj_t *code = make_C_procedure(proc, make_null(), env);
+    obj_t *code = make_C_procedure(proc, NIL, env);
     env_bind(env, cstr_to_symbol(name), BINDING_MUTABLE, code);
 }
 
 void bind_special_form(C_procedure_t *form, obj_t *library, const char *name)
 {
     env_t *env = library_env(library);
-    obj_t *code = make_C_special_form_procedure(form, make_null(), env);
+    obj_t *code = make_C_special_form_procedure(form, NIL, env);
     env_bind(env, cstr_to_symbol(name), BINDING_IMMUTABLE, code);
 }

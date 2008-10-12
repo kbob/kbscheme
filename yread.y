@@ -11,6 +11,7 @@
     #include "obj.h"
     #include "print.h"
     #include "read.h"
+    #include "types.h"
 
     typedef obj_t *optr_t;
 

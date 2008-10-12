@@ -78,7 +78,7 @@ static void test_eval()
     for (tp = eval_cases; tp < eval_cases + eval_case_count; tp++) {
 	const size_t out_size = 100;
 	obj_t *input = read_string(tp->etc_input);
-	obj_t *value = eval_XXX_no_call(input, library_env(r6rs_base_library()));
+	obj_t *value = eval(input, library_env(r6rs_base_library()));
 	wchar_t actual[out_size];
 	princ(value, make_string_outstream(actual, out_size));
 	if (wcscmp(actual, tp->etc_expected)) {

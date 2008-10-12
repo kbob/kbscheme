@@ -1,0 +1,69 @@
+#include "mem_scalar.h"
+
+#if !OLD_MEM
+
+#include <assert.h>
+#include <string.h>
+
+void scalar_init_op(obj_t *obj, size_t size)
+{}
+
+void scalar_free_op(obj_t *obj)
+{}
+
+size_t scalar_ptr_count_op(const obj_t *obj)
+{
+    return 0;
+}
+
+void scalar_copy_op(const obj_t *src, obj_t *dst)
+{
+    memcpy(dst, src, OBJ_MEM_OPS(src)->mo_size(src));
+}
+
+void scalar_copy_callback_op(const obj_t *src, obj_t *dst, copy_callback_t cp)
+{
+    memcpy(dst, src, OBJ_MEM_OPS(src)->mo_size(src));
+}
+
+obj_t *scalar_get_ptr_op(const obj_t *obj, size_t index)
+{
+    return NIL;
+}
+
+void   scalar_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
+{
+    assert(false);
+}
+
+static mem_ops_t scalar_ops = {
+    NULL,
+    NULL,
+    scalar_init_op,
+    scalar_free_op,
+    NULL,
+    scalar_ptr_count_op,
+    scalar_copy_op,
+    scalar_copy_callback_op,
+    scalar_get_ptr_op,
+    scalar_set_ptr_op,
+    { }
+};
+
+void mem_scalar_create_ops(mem_ops_t *ops,
+			   wchar_t *name,
+			   mem_init_op init_op,
+			   mem_free_op free_op,
+			   mem_size_op size_op)
+{
+    *ops = scalar_ops;
+    ops->mo_super = &scalar_ops;
+    ops->mo_name = name;
+    ops->mo_size = size_op;
+    if (init_op)
+	ops->mo_init = init_op;
+    if (free_op)
+	ops->mo_free = free_op;
+}
+
+#endif

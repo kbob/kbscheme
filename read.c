@@ -6,6 +6,7 @@
 #include <wctype.h>
 
 #include "obj.h"
+#include "types.h"
 
 typedef enum token_type {
     TOK_EOF,
@@ -22,7 +23,7 @@ typedef struct token {
 
 static token_t make_token(token_type_t type, obj_t *op)
 {
-    token_t tok = { type, op ? op : make_null() };
+    token_t tok = { type, op ? op : NIL };
     return tok;
 }
 
@@ -93,15 +94,15 @@ static obj_t *read_object(instream_t *ip, token_t *tok_out)
 	return read_sequence(ip);
 
     case TOK_RPAREN:
-	return make_null();
+	return NIL;
 
     case TOK_EOF:
-	return make_null();
+	return NIL;
 
     default:
 	fprintf(stderr, "unexpected input: %d\n", tok_out->tok_type);
 	assert(false);
-	return make_null();
+	return NIL;
     }
 }
 
@@ -120,7 +121,7 @@ obj_t *micro_read(instream_t *ip)
     obj_t *op = read_object(ip, &tok);
     if (tok.tok_type == TOK_RPAREN) {
 	fprintf(stderr, "unexpected close parenthesis\n");
-	return make_null();
+	return NIL;
     } else if (tok.tok_type == TOK_EOF)
 	return make_symbol(L"exit");	/* XXX raise an exception? */
     return op;

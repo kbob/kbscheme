@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <types.h>
 
 /* XXX Reimplement this in Scheme. */
 

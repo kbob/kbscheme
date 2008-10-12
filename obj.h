@@ -1,18 +1,22 @@
 #ifndef OBJ_INCLUDED
 #define OBJ_INCLUDED
 
-#define OLD_MEM 1
+#define OLD_MEM 0
 
 #if OLD_MEM
 
 #include <stddef.h>			/* for wchar_t */
 
-#include "bool.h"
-
 #endif
+
+#include "bool.h"
 
 typedef struct object obj_t;		/* defined in obj.c */
 #define NIL ((obj_t *)0)
+
+#if !OLD_MEM
+extern bool is_null(obj_t *);
+#endif
 
 #if OLD_MEM
 

@@ -26,7 +26,7 @@ static eval_frame_t *make_long_frame(eval_frame_t *parent,
     eval_frame_t *FRAME = malloc(sizeof *FRAME);
     FRAME->ef_parent	   = parent;
     FRAME->ef_continuation = continuation;
-    FRAME->ef_value	   = make_null();
+    FRAME->ef_value	   = NIL;
     FRAME->ef_subject	   = subject;
     FRAME->ef_environment  = environment;
     FRAME->ef_procedure	   = procedure;
@@ -40,8 +40,8 @@ eval_frame_t *make_short_frame(eval_frame_t *parent,
 			       obj_t *subject,
 			       env_t *environment)
 {
-    obj_t *nil = make_null();
-    return make_long_frame(parent, continuation, subject, environment, nil, nil, nil);
+    return make_long_frame(parent, continuation,
+			   subject, environment, NIL, NIL, NIL);
 }
 
 #define MAKE_b_accum_operator_FRAME_ make_short_frame
@@ -112,7 +112,7 @@ inline eval_frame_t *eval_application(eval_frame_t *FRAME,
     obj_t *new_env = make_env(F_ENV);
     obj_t *formals = procedure_args(proc);
     obj_t *actuals = args;
-    obj_t *rest = make_null();		/* XXX use this. */
+    obj_t *rest = NIL;			/* XXX use this. */
     while (!is_null(formals) || ! is_null(actuals)) {
 	if (is_null(formals))
 	    RAISE("too many args");
@@ -153,9 +153,8 @@ DEFINE_BLOCK(b_accum_operator)
     }
     obj_t *first_arg = pair_car(args);
     obj_t *rest_args = pair_cdr(args);
-    obj_t *nil = make_null();
     CALL_THEN_GOTO((b_eval, first_arg, F_ENV),
-		   (b_accum_arg, rest_args, F_ENV, proc, nil, nil));
+		   (b_accum_arg, rest_args, F_ENV, proc, NIL, NIL));
 }
 
 DEFINE_BLOCK(b_eval_sequence)
@@ -171,7 +170,7 @@ DEFINE_BLOCK(b_eval_sequence)
 DEFINE_BLOCK(b_accum_arg)
 {
     /* append the new evaluated arg to the arglist. */
-    obj_t *last_arg = make_pair(F_VAL, make_null());
+    obj_t *last_arg = make_pair(F_VAL, NIL);
     obj_t *arglist = F_ARGL;
     if (is_null(arglist))
 	arglist = last_arg;
@@ -186,10 +185,9 @@ DEFINE_BLOCK(b_accum_arg)
 		   (b_accum_arg, rest_args, F_ENV, F_PROC, arglist, last_arg));
 }
 
-obj_t *eval_XXX_no_call(obj_t *expr, env_t *env)
+obj_t *eval(obj_t *expr, env_t *env)
 {
-    obj_t *nil = make_null();
-    eval_frame_t *FRAME = make_short_frame(NULL, NULL, nil, nil);
+    eval_frame_t *FRAME = make_short_frame(NULL, NULL, NIL, NIL);
     FRAME = MAKE_CALL_FRAME(b_eval, expr, env);
     while (F_CONT) {
 	/* XXX mix in setjmp() and a signal flag here. */

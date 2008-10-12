@@ -1,0 +1,2 @@
+scheme clean:
+	make -C .. $@

@@ -1,11 +1,16 @@
+Little stuff...
+	Clean up and comment second half of proc.h.
+	Change mem_init_op to allow NULL.
+
 DONE	nonrecursive eval
-	    define C procedure API.
-	    threaded model?
+ DONE	    define C procedure API.
+ DONE	    threaded model?
+
+	full mem model
+	
 
 	macros
 	    See file:///home/kbob/r6rs/html/r6rs-lib-html/r6rs-lib-Z-H-13.html#node_sec_12.3
-
-	full mem model
 
 	full reader
 

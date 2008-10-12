@@ -3,9 +3,11 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "types.h"
+
 env_t *make_env(env_t *parent)
 {
-    return (env_t *) make_pair(make_null(), parent);
+    return (env_t *) make_pair(NIL, parent);
 }
 
 void env_bind(env_t *env, obj_t *name, binding_type_t type, obj_t *value)

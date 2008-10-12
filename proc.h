@@ -2,6 +2,7 @@
 #define PROC_INCLUDED
 
 #include "lib.h"
+#include "types.h"
 
 /*
  * Macros to define procedures, special forms, and blocks.
@@ -63,46 +64,46 @@
 #define DEFINE_BLOCK        DEFINE_STATIC_BLOCK
 #define DECLARE_BLOCK       DECLARE_STATIC_BLOCK
 
-#define DEFINE_EXTERN_PROC(C_name, scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-			 extern, \
-			 C_name, \
-			 scheme_name, \
+#define DEFINE_EXTERN_PROC(C_name, scheme_name) 			\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+			 extern, 					\
+			 C_name, 					\
+			 scheme_name, 					\
 			 bind_proc)
 
-#define DEFINE_STATIC_PROC(C_name, scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-			 static, \
-			 C_name, \
-			 scheme_name, \
+#define DEFINE_STATIC_PROC(C_name, scheme_name) 			\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+			 static, 					\
+			 C_name, 					\
+			 scheme_name, 					\
 			 bind_proc)
 
-#define DEFINE_ANONYMOUS_PROC(scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-                         static, \
-                         CAT_(anonymous_, __LINE__), \
-                         scheme_name, \
+#define DEFINE_ANONYMOUS_PROC(scheme_name) 				\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+                         static, 					\
+                         CAT_(anonymous_, __LINE__), 			\
+                         scheme_name, 					\
 			 bind_proc)
 
-#define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-			 extern, \
-			 C_name, \
-			 scheme_name, \
+#define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name) 		\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+			 extern, 					\
+			 C_name, 					\
+			 scheme_name, 					\
 			 bind_special_form)
 
-#define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-		         static, \
-       			 C_name, \
-       			 scheme_name, \
+#define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name) 		\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+		         static, 					\
+       			 C_name, 					\
+       			 scheme_name, 					\
        			 bind_special_form)
 
-#define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name) \
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), \
-                         static, \
-                         CAT_(anonymous_, __LINE__), \
-                         scheme_name, \
+#define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name) 			\
+    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+                         static, 					\
+                         CAT_(anonymous_, __LINE__), 			\
+                         scheme_name, 					\
        			 bind_special_form)
 
 #define DEFINE_EXTERN_BLOCK(C_name) DECLARE_PROC_(extern, C_name)
@@ -113,17 +114,17 @@
 #define DECLARE_PROC_(storage_class, C_name) \
     storage_class eval_frame_t *C_name(eval_frame_t *FRAME)
 
-#define DEFINE_GENERAL_PROC_(library, \
-			     storage_class, \
-			     C_name, \
-			     scheme_name, \
-			     binder) \
-    DECLARE_PROC_(storage_class, C_name); \
-    __attribute__((constructor)) \
-    static void CAT_(bind_proc_, __LINE__)(void) \
-    { \
-        binder(C_name, library, scheme_name); \
-    } \
+#define DEFINE_GENERAL_PROC_(library, 					\
+			     storage_class, 				\
+			     C_name, 					\
+			     scheme_name, 				\
+			     binder) 					\
+    DECLARE_PROC_(storage_class, C_name); 				\
+    __attribute__((constructor)) 					\
+    static void CAT_(bind_proc_, __LINE__)(void) 			\
+    { 									\
+        binder(C_name, library, scheme_name); 				\
+    } 									\
     DECLARE_PROC_(storage_class, C_name)
 
 /* concatenate into one identifier */
@@ -141,10 +142,10 @@
 #define F_ARGL          ((obj_t *)FRAME->ef_arglist)
 #define F_LARG          ((obj_t *)FRAME->ef_last_arg)
 
-#define RETURN(val) \
-    do { \
-	FRAME->ef_parent->ef_value = (val); \
-	return FRAME->ef_parent; \
+#define RETURN(val) 							\
+    do { 								\
+	FRAME->ef_parent->ef_value = (val); 				\
+	return FRAME->ef_parent; 					\
     } while (0)
 
 /* Evaluate the expression in the environment, then go to the
@@ -156,8 +157,7 @@
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
  */
-#define TAIL_EVAL(exp, env) \
-    GOTO(b_eval, (exp), (env))
+#define TAIL_EVAL(exp, env) GOTO(b_eval, (exp), (env))
 
 #define RAISE(condition) (assert(false && "XXX implement RAISE"))
 
@@ -174,11 +174,11 @@
 /* Return from this block, then call callee, then goto target.
    Callee and target are tuples (block, arg, arg...).
  */
-#define CALL_THEN_GOTO(callee, target) \
-    do { \
-	FRAME = MAKE_GOTO_FRAME target; \
-	FRAME = MAKE_CALL_FRAME callee; \
-	return FRAME; \
+#define CALL_THEN_GOTO(callee, target) 					\
+    do { 								\
+	FRAME = MAKE_GOTO_FRAME target; 				\
+	FRAME = MAKE_CALL_FRAME callee; 				\
+	return FRAME; 							\
     } while (0)
 
 /* Make an activation frame whose continuation is this frame's
