@@ -1,6 +1,10 @@
 Little stuff...
-	Clean up and comment second half of proc.h.
-	Change mem_init_op to allow NULL.
+	Get rid of the MAKE_b_xxx_FRAME_ macros.
+DONE	Clean up and comment second half of proc.h.
+DONE	Change mem_init_op to allow NULL.
+	add function prototypes of some sort.
+	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
+	It should be illegal to define a function twice.	
 
 DONE	nonrecursive eval
  DONE	    define C procedure API.

@@ -7,7 +7,8 @@
 /*
  * Macros to define procedures, special forms, and blocks.
  * Procedures and special forms have Scheme bindings.
- * Blocks are special forms with no bindings; they are only callable from C.
+ * Blocks are special forms with no bindings; they are only callable from C,
+ * usually through the GOTO macros below.
  *
  * DEFINE_PROC(scheme_name)
  *        short for DEFINE_ANONYMOUS_PROC.
@@ -54,8 +55,59 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
- * Within a procedure (or block or special form), 
+ * Procedures, blocks, and special forms all have the same calling
+ * convention.  They're called with one arg, an eval_frame_t pointer
+ * named FRAME, and they return an eval_frame_t pointer for the
+ * next frame to execute.
  *
+ * The procedure can access FRAME directly or it can access the
+ * registers through the F_* macros.
+ *
+ *   F_PARENT	the frame's parent (caller)
+ *   F_CONT	the frame's continuation (next block)
+ *   F_SUBJ	the frame's subject.  For procedures and special forms,
+ *		this is the list of actual arguments.
+ *   F_ENV	the current environment
+ *
+ * The following registers are only in long-format frames, which
+ * are used when accumulating a procedure's arguments.
+ *
+ *   F_PROC	the procedure whose arguments are being accumulated
+ *   F_ARGL	the head of the arg list
+ *   F_LARG	the last element of the arg list.
+ *
+ * Procedures, blocks, and special forms should use these macros to
+ * pass control.  A GOTO is a transfer to another function.  The current
+ * function is not resumed.  A CALL calls another function, but a call
+ * is always followed by a GOTO, so the current function is not
+ * resumed.
+ *
+ * RETURN(val)		return the value to the caller
+ *
+ * GOTO(target, ...)	transfer to the target function, passing the
+ *			specified args.  The args are packed into the
+ *			target's FRAME by its frame maker.
+ *
+ * GOTO_FRAME(make_frame, target, ...)
+ * 			transfer to the target function.  The
+ *			specified frame maker is used to build the
+ *			target's frame.
+ *
+ * CALL_THEN_GOTO(callee, target)
+ *			call the callee, then goto the target.
+ *			callee and target are each a tuple of
+ *			function name and args.  The args are
+ *			passed to the function's frame maker.
+ *
+ * EVAL_THEN_GOTO(exp, env, target, ...)
+ *			a special case of CALL_THEN_GOTO calls
+ *			b_eval to evaluate the given expression
+ *			in the given environment.
+ *
+ * TAIL_EVAL(exp, env)	returns the result of evaluating exp, env
+ *			to this frame's caller.
+ *
+ * RAISE(condition)	raise an exception.  TBD.
  */
 
 /* abbreviations */

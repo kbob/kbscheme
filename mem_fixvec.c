@@ -5,12 +5,6 @@
 #include <assert.h>
 #include <string.h>
 
-void fixvec_init_op(obj_t *obj, size_t size)
-{}
-
-void fixvec_free_op(obj_t *obj)
-{}
-
 #define DEFINE_FIXVEC_TYPE(N)						\
     typedef struct fixvec##N { 						\
         obj_header_t  fv##N##_header; 					\
@@ -71,8 +65,8 @@ void fixvec_free_op(obj_t *obj)
 static mem_ops_t fixvec##N##_ops = { 					\
     L"fixvec" #N, 							\
     NULL, 								\
-    fixvec_init_op, 							\
-    fixvec_free_op, 							\
+    NULL, 								\
+    NULL,	 							\
     fv##N##_size_op, 							\
     fv##N##_ptr_count_op, 						\
     fv##N##_copy_op, 							\

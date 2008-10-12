@@ -13,9 +13,6 @@ typedef struct bool_obj {
 ROOT(true_obj);
 ROOT(false_obj);
 
-static void bool_init_op(obj_t *op, size_t size)
-{}
-
 static size_t bool_size_op(const obj_t *op)
 {
     return sizeof (bool_obj_t);
@@ -48,16 +45,11 @@ static void bool_set_ptr_op(obj_t *op, size_t index, obj_t *elem)
     assert(false);
 }
 
-static void bool_free_op(obj_t *op)
-{
-    assert(false);
-}
-
 static mem_ops_t true_ops = {
     L"true",
     NULL,
-    bool_init_op,
-    bool_free_op,
+    NULL,
+    NULL,
     bool_size_op,
     bool_ptr_count_op,
     bool_copy_op,
@@ -70,8 +62,8 @@ static mem_ops_t true_ops = {
 static mem_ops_t false_ops = {
     L"false",
     NULL,
-    bool_init_op,
-    bool_free_op,
+    NULL,
+    NULL,
     bool_size_op,
     bool_ptr_count_op,
     bool_copy_op,

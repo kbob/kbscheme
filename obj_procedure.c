@@ -36,12 +36,6 @@ typedef struct proc_obj {
     }                  proc_u;
 } proc_obj_t;
 
-static void proc_init_op(obj_t *obj, size_t size)
-{}
-
-static void proc_free_op(obj_t *obj)
-{}
-
 static size_t proc_size_op(const obj_t *obj)
 {
     return sizeof (proc_obj_t);
@@ -102,8 +96,8 @@ void proc_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 static mem_ops_t proc_ops = {
     L"procedure",
     NULL,
-    proc_init_op,
-    proc_free_op,
+    NULL,
+    NULL,
     proc_size_op,
     proc_ptr_count_op,
     proc_copy_op,

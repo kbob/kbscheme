@@ -5,12 +5,6 @@
 #include <assert.h>
 #include <string.h>
 
-void scalar_init_op(obj_t *obj, size_t size)
-{}
-
-void scalar_free_op(obj_t *obj)
-{}
-
 size_t scalar_ptr_count_op(const obj_t *obj)
 {
     return 0;
@@ -39,8 +33,8 @@ void   scalar_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 static mem_ops_t scalar_ops = {
     NULL,
     NULL,
-    scalar_init_op,
-    scalar_free_op,
+    NULL,
+    NULL,
     NULL,
     scalar_ptr_count_op,
     scalar_copy_op,
