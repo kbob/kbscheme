@@ -9,11 +9,11 @@
 #include <string.h>
 #include <unistd.h>
 
-static struct { long word; } initial_heap[65536];
+#define INIT_HEAP_WORDS 65536
+static struct { long word; } initial_heap[INIT_HEAP_WORDS];
 static void *space_A, *space_B;
 static void *from_space, *to_space = initial_heap;
-static void *from_space_end;
-static void *to_space_end = initial_heap + sizeof initial_heap;
+static void *from_space_end, *to_space_end = &initial_heap[INIT_HEAP_WORDS];
 static void *next_alloc = initial_heap;
 
 void mem_init_heap(size_t usable_size)
@@ -33,7 +33,7 @@ void mem_init_heap(size_t usable_size)
 extern obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size)
 {
     /* XXX use __alignof__ */
-    if (to_space > to_space_end - size)
+    if (next_alloc > to_space_end - size)
 	assert(false && "mem all gone");
     const mem_ops_t **p;
     /* with lock */ {
