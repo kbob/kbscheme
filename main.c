@@ -4,12 +4,14 @@
 #include "io.h"
 #include "eval.h"
 #include "lib.h"
+#include "mem.h"
 #include "print.h"
 #include "read.h"
 #include "test.h"
 
 int main(int argc, char *argv[])
 {
+    mem_init_heap(1048576);
     if (argc == 2 && !strcmp(argv[1], "-t"))
 	self_test();
     else {
@@ -20,7 +22,7 @@ int main(int argc, char *argv[])
 	    if (is_symbol(op) &&
 		!wcscmp(string_value(symbol_name(op)), L"exit"))
 		break;
-	    op = eval(op, library_env(r6rs_base_library()));
+	    op = eval_XXX_no_call(op, library_env(r6rs_base_library()));
 	    print(op, out);
 	}
 	printf("\n");

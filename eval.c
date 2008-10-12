@@ -114,9 +114,10 @@ inline eval_frame_t *eval_application(eval_frame_t *FRAME,
     obj_t *actuals = args;
     obj_t *rest = make_null();		/* XXX use this. */
     while (!is_null(formals) || ! is_null(actuals)) {
-	if (is_null(formals)) {
+	if (is_null(formals))
+	    RAISE("too many args");
+	if (!is_pair(formals)) {
 	    rest = actuals;
-	    break;
 	}
 	if (is_null(actuals))
 	    RAISE("not enough args");
@@ -185,7 +186,7 @@ DEFINE_BLOCK(b_accum_arg)
 		   (b_accum_arg, rest_args, F_ENV, F_PROC, arglist, last_arg));
 }
 
-obj_t *eval(obj_t *expr, env_t *env)
+obj_t *eval_XXX_no_call(obj_t *expr, env_t *env)
 {
     obj_t *nil = make_null();
     eval_frame_t *FRAME = make_short_frame(NULL, NULL, nil, nil);

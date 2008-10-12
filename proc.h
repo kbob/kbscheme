@@ -141,21 +141,11 @@
 #define F_ARGL          ((obj_t *)FRAME->ef_arglist)
 #define F_LARG          ((obj_t *)FRAME->ef_last_arg)
 
-#if 0
-#define RETURN(val) \
-    do { \
-        obj_t *val__ = (val); \
-        FRAME = F_PARENT; \
-	FRAME->ef_value = val__; \
-        return FRAME; \
-    } while (0)
-#else
 #define RETURN(val) \
     do { \
 	FRAME->ef_parent->ef_value = (val); \
 	return FRAME->ef_parent; \
     } while (0)
-#endif
 
 /* Evaluate the expression in the environment, then go to the
    target block.

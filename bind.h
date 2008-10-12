@@ -5,6 +5,7 @@
 #ifndef BIND_INCLUDED
 #define BIND_INCLUDED
 
+#include "bool.h"
 #include "obj.h"
 
 typedef obj_t env_t;

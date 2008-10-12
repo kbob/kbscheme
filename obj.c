@@ -50,7 +50,7 @@ obj_t *make_null(void)
 
 bool is_null(obj_t *op)
 {
-    return op == 0;
+    return op == NIL;
 }
 
 /* boolean methods */

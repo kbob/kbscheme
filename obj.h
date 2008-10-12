@@ -1,15 +1,20 @@
-/*
- * 
- */
+#ifndef OBJ_INCLUDED
+#define OBJ_INCLUDED
 
-#ifndef MEM_INCLUDED
-#define MEM_INCLUDED
+#define OLD_MEM 1
+
+#if OLD_MEM
 
 #include <stddef.h>			/* for wchar_t */
 
 #include "bool.h"
 
-typedef struct object obj_t;		/* defined in mem.c */
+#endif
+
+typedef struct object obj_t;		/* defined in obj.c */
+#define NIL ((obj_t *)0)
+
+#if OLD_MEM
 
 /* null methods */
 extern obj_t      *make_null(void);
@@ -69,4 +74,6 @@ extern obj_t      *procedure_body(obj_t *);
 extern obj_t      *procedure_args(obj_t *);
 extern obj_t      *procedure_env(obj_t *);
 
-#endif /* !MEM_INCLUDED */
+#endif
+
+#endif /* !OBJ_INCLUDED */
