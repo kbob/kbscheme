@@ -51,11 +51,11 @@ const char *block_name(C_procedure_t *block)
     return "<some-proc>";
 }
 
-void print_stack(const char *label, eval_frame_t *FRAME)
+void print_stack(const char *label, eval_frame_t FRAME)
 {
     printf("%s: stack = ", label);
     const char *sep = "";
-    for ( ; FRAME; FRAME = F_PARENT, sep = " -> ") {
+    for ( ; FRAME.ef_frame; FRAME.ef_frame = F_PARENT, sep = " -> ") {
 	printf("%s%s", sep, block_name(F_CONT));
 	if (F_CONT || F_SUBJ) {
 	    printf("(");
@@ -118,16 +118,9 @@ DEFINE_BLOCK(b_accum_operator)
     }
     obj_t *first_arg = pair_car(args);
     obj_t *rest_args = pair_cdr(args);
-#if 0
-    // XXX use EVAL_THEN_GOTO
-    CALL_THEN_GOTO_FRAME((b_eval, first_arg, F_ENV),
-			 (make_long_frame,
-			  b_accum_arg, rest_args, F_ENV, proc, NIL, NIL));
-#else
     EVAL_THEN_GOTO_FRAME(first_arg, F_ENV,
 			 make_long_frame,
 			 b_accum_arg, rest_args, F_ENV, proc, NIL, NIL);
-#endif
 }
 
 DEFINE_BLOCK(b_eval_sequence)

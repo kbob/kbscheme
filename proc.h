@@ -57,9 +57,9 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
  * Procedures, blocks, and special forms all have the same calling
- * convention.  They're called with one arg, an eval_frame_t pointer
- * named FRAME, and they return an eval_frame_t pointer for the
- * next frame to execute.
+ * convention.  They're called with one arg, an eval_frame_t structure
+ * named FRAME, and they return an eval_frame_t for the next frame to
+ * execute.
  *
  * The procedure can access FRAME directly or it can access the
  * registers through the F_* macros.
@@ -187,35 +187,33 @@
 /* FRAME member accessors */
 #define F_PARENT        (frame_get_parent(FRAME.ef_frame))
 #define F_CONT          (frame_get_continuation(FRAME.ef_frame))
-#define F_VAL           (frame_get_value(FRAME.ef_frame))
 #define F_SUBJ          (frame_get_subject(FRAME.ef_frame))
 #define F_ENV           (frame_get_environment(FRAME.ef_frame))
 #define F_PROC          (frame_get_procedure(FRAME.ef_frame))
 #define F_ARGL          (frame_get_arg_list(FRAME.ef_frame))
 #define F_LARG          (frame_get_last_arg(FRAME.ef_frame))
+#define F_VAL           (FRAME.ef_value)
 
-#define RETURN(val) 							\
-    do { 								\
-	obj_t *parent__ = F_PARENT;					\
-        frame_set_value(parent__, (val));				\
-	return (eval_frame_t) { parent__ };				\
-    } while (0)
-
-/* Evaluate the expression in the environment, then go to the
-   target block.
- */
-#define EVAL_THEN_GOTO(exp, env, target, ...) \
-    CALL_THEN_GOTO((b_eval, (exp), (env)), ((target), __VA_ARGS__))
-
-#define EVAL_THEN_GOTO_FRAME(exp, env, factory, target, ...) \
-    CALL_THEN_GOTO_FRAME((b_eval, (exp), (env)), ((factory), (target), __VA_ARGS__))
+/* Return the value as the result of this function. */
+#define RETURN(val) return (eval_frame_t) { F_PARENT, (val) };
 
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
  */
 #define TAIL_EVAL(exp, env) GOTO(b_eval, (exp), (env))
 
+/* Raise an exception. */
 #define RAISE(condition) (assert(false && "XXX implement RAISE"))
+
+/* Evaluate the expression in the environment, then go to the
+ * target block.
+ */
+#define EVAL_THEN_GOTO(exp, env, target, ...) \
+    EVAL_THEN_GOTO_FRAME((exp), (env), make_short_frame, (target), __VA_ARGS__)
+
+#define EVAL_THEN_GOTO_FRAME(exp, env, factory, target, ...)		\
+    CALL_THEN_GOTO_FRAME((b_eval, (exp), (env)),			\
+                         ((factory), (target), __VA_ARGS__))
 
 /* Direct goto.  Returns from current block, then calls target block
    with specified args.
@@ -228,7 +226,7 @@
     return MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);
 
 /* Return from this block, then call callee, then goto target.
-   Callee and target are tuples (block, arg, arg...).
+ * Callee and target are tuples (block, arg, arg...).
  */
 #define CALL_THEN_GOTO(callee, target) 					\
     do { 								\
@@ -251,12 +249,14 @@
     MAKE_GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
 
 #define MAKE_GOTO_FRAME(factory, target, ...) \
-    ((eval_frame_t) { factory(F_PARENT, (target), __VA_ARGS__) })
+    ((eval_frame_t) { factory(F_PARENT, (target), __VA_ARGS__), NIL })
 
 /* Make an activation frame whose continuation is the current frame.
  */
-#define MAKE_CALL(target, ...) \
-    ((eval_frame_t) { make_short_frame(FRAME.ef_frame, (target), __VA_ARGS__) })
+#define MAKE_CALL(target, ...)						\
+    ((eval_frame_t) {							\
+	make_short_frame(FRAME.ef_frame, (target), __VA_ARGS__), NIL	\
+     })
 
 DECLARE_EXTERN_BLOCK(b_eval);
 

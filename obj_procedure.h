@@ -5,6 +5,7 @@
 
 typedef struct eval_frame {
     obj_t *ef_frame;
+    obj_t *ef_value;
 } eval_frame_t;
 
 typedef eval_frame_t C_procedure_t(eval_frame_t);

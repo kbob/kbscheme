@@ -1,22 +1,24 @@
 Little stuff...
-	Get rid of the MAKE_b_xxx_FRAME_ macros.
+DONE	Get rid of the MAKE_b_xxx_FRAME_ macros.
 DONE	Clean up and comment second half of proc.h.
 DONE	Change mem_init_op to allow NULL.
 	add procedure prototypes of some sort.
 	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
 	It should be illegal to define a function twice.	
+	Fix the makefile so subdirectories are rebuilt.
 
 DONE	nonrecursive eval
  DONE	    define C procedure API.
  DONE	    threaded model?
  DONE	    documentation
+	    clean up proc.h somehow?
 
 	full mem model
  DONE	    define obj ops.
  DONE	    rewrite base objects.
  DONE	    rewrite frames to use objects.
 	    look into rewriting binding or env.
-	    must remove value from frame - not thread safe.
+ DONE	    must remove value from frame - not thread safe.
 
 	decentralize unit testing.
 

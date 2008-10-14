@@ -214,12 +214,6 @@ bool is_long_frame(obj_t *obj)
     return obj && OBJ_MEM_OPS(obj) == &long_frame_ops;
 }
 
-void frame_set_value(obj_t *frame, obj_t *value)
-{
-    assert(is_frame(frame));
-    ((short_frame_t *) frame)->sf_value = value;
-}
-
 obj_t *frame_get_parent(obj_t *frame)
 {
     assert(is_frame(frame));
