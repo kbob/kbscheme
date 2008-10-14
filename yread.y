@@ -91,6 +91,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	instream_ungetwc(wc, in);
 	*lvalp = make_symbol(buf);
 	printf("yylex return SYMBOL %ls\n", buf);
+	free(buf);
 	return SYMBOL;
     }
     fprintf(stderr, "unexpected char L'\\x%08x' = %d\n", wc, wc);

@@ -1,7 +1,6 @@
 #include "eval.h"
 
 #include <assert.h>
-#include <stdlib.h>			/* XXX malloc */
 
 #include "bind.h"
 #include "proc.h"
@@ -14,39 +13,6 @@
 DECLARE_BLOCK(b_accum_operator);
 DECLARE_BLOCK(b_accum_arg);
 DECLARE_BLOCK(b_eval_sequence);
-
-static eval_frame_t *make_long_frame(eval_frame_t *parent,
-				     C_procedure_t *continuation,
-				     obj_t *subject,
-				     env_t *environment,
-				     obj_t *procedure,
-				     obj_t *arglist,
-				     obj_t *last_arg)
-{
-    eval_frame_t *FRAME = malloc(sizeof *FRAME);
-    FRAME->ef_parent	   = parent;
-    FRAME->ef_continuation = continuation;
-    FRAME->ef_value	   = NIL;
-    FRAME->ef_subject	   = subject;
-    FRAME->ef_environment  = environment;
-    FRAME->ef_procedure	   = procedure;
-    FRAME->ef_arglist	   = arglist;
-    FRAME->ef_last_arg	   = last_arg;
-    return FRAME;
-}
-
-eval_frame_t *make_short_frame(eval_frame_t *parent,
-			       C_procedure_t *continuation,
-			       obj_t *subject,
-			       env_t *environment)
-{
-    return make_long_frame(parent, continuation,
-			   subject, environment, NIL, NIL, NIL);
-}
-
-#define MAKE_b_accum_operator_FRAME_ make_short_frame
-#define MAKE_b_accum_arg_FRAME_	     make_long_frame
-#define MAKE_b_eval_sequence_FRAME_  make_short_frame
 
 static bool is_self_evaluating(obj_t *expr)
 {
@@ -62,7 +28,7 @@ static bool is_application(obj_t *expr)
     return is_pair(expr);
 }
 
-static obj_t *eval_symbol(eval_frame_t *FRAME)
+static obj_t *eval_symbol(eval_frame_t FRAME)
 {
     binding_t *binding = env_lookup(F_ENV, F_SUBJ);
     return binding_value(binding);
@@ -102,9 +68,9 @@ void print_stack(const char *label, eval_frame_t *FRAME)
 
 #endif /* EVAL_TRACE */
 
-inline eval_frame_t *eval_application(eval_frame_t *FRAME,
-				      obj_t *proc,
-				      obj_t *args)
+inline eval_frame_t eval_application(eval_frame_t FRAME,
+				     obj_t *proc,
+				     obj_t *args)
 {
     obj_t *body = procedure_body(proc);
     if (procedure_is_C(proc))
@@ -138,8 +104,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
     if (is_application(F_SUBJ)) {
 	obj_t *proc = pair_car(F_SUBJ);
 	obj_t *args = pair_cdr(F_SUBJ);
-	CALL_THEN_GOTO((b_eval, proc, F_ENV),
-		       (b_accum_operator, args, F_ENV));
+	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, args, F_ENV);
     }
     RAISE(&syntax);
 }
@@ -153,8 +118,16 @@ DEFINE_BLOCK(b_accum_operator)
     }
     obj_t *first_arg = pair_car(args);
     obj_t *rest_args = pair_cdr(args);
-    CALL_THEN_GOTO((b_eval, first_arg, F_ENV),
-		   (b_accum_arg, rest_args, F_ENV, proc, NIL, NIL));
+#if 0
+    // XXX use EVAL_THEN_GOTO
+    CALL_THEN_GOTO_FRAME((b_eval, first_arg, F_ENV),
+			 (make_long_frame,
+			  b_accum_arg, rest_args, F_ENV, proc, NIL, NIL));
+#else
+    EVAL_THEN_GOTO_FRAME(first_arg, F_ENV,
+			 make_long_frame,
+			 b_accum_arg, rest_args, F_ENV, proc, NIL, NIL);
+#endif
 }
 
 DEFINE_BLOCK(b_eval_sequence)
@@ -163,8 +136,7 @@ DEFINE_BLOCK(b_eval_sequence)
     obj_t *rest = pair_cdr(F_SUBJ);
     if (is_null(rest))
 	GOTO(b_eval, first, F_ENV);	/* Optimize tail recursion. */
-    CALL_THEN_GOTO((b_eval, first, F_ENV),
-		   (b_eval_sequence, rest, F_ENV));
+    EVAL_THEN_GOTO(first, F_ENV, b_eval_sequence, rest, F_ENV);
 }
 
 DEFINE_BLOCK(b_accum_arg)
@@ -181,14 +153,15 @@ DEFINE_BLOCK(b_accum_arg)
 	return eval_application(FRAME, F_PROC, arglist);
     obj_t *next_arg = pair_car(F_SUBJ);
     obj_t *rest_args = pair_cdr(F_SUBJ);
-    CALL_THEN_GOTO((b_eval, next_arg, F_ENV),
-		   (b_accum_arg, rest_args, F_ENV, F_PROC, arglist, last_arg));
+    EVAL_THEN_GOTO_FRAME(next_arg, F_ENV,
+			 make_long_frame, b_accum_arg,
+			 rest_args, F_ENV, F_PROC, arglist, last_arg);
 }
 
 obj_t *eval(obj_t *expr, env_t *env)
 {
-    eval_frame_t *FRAME = make_short_frame(NULL, NULL, NIL, NIL);
-    FRAME = MAKE_CALL_FRAME(b_eval, expr, env);
+    eval_frame_t FRAME = { make_short_frame(NIL, NULL, NIL, NIL) };
+    FRAME = MAKE_CALL(b_eval, expr, env);
     while (F_CONT) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #ifdef EVAL_TRACE

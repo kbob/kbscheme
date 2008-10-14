@@ -80,16 +80,16 @@ obj_t *make_boolean(bool value)
     return *pp;
 }
 
-bool is_boolean(obj_t *op)
+bool is_boolean(obj_t *obj)
 {
-    if (is_null(op))
+    if (is_null(obj))
 	return false;
-    mem_ops_t *ops = OBJ_MEM_OPS(op);
+    mem_ops_t *ops = OBJ_MEM_OPS(obj);
     return ops == &true_ops || ops == &false_ops;
 }
 
-bool boolean_value(obj_t *op)
+bool boolean_value(obj_t *obj)
 {
-    assert(is_boolean(op));
-    return OBJ_MEM_OPS(op) == &true_ops;
+    assert(is_boolean(obj));
+    return OBJ_MEM_OPS(obj) == &true_ops;
 }

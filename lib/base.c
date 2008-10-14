@@ -51,7 +51,6 @@ DEFINE_PROC("string?")
  * (define (<variable> . <formals>) body) # syntax
  */
 
-#define MAKE_b_define_continue_FRAME_ make_short_frame
 DEFINE_BLOCK(b_define_continue)
 {
     obj_t *var = pair_car(F_SUBJ);
@@ -113,7 +112,6 @@ DEFINE_SPECIAL_FORM("lambda")
  * (if <test> <consequent>)             # syntax
  */
 
-#define MAKE_b_continue_if_FRAME_ make_short_frame
 DEFINE_BLOCK(b_continue_if)
 {
     obj_t *truth = F_VAL;
@@ -140,7 +138,6 @@ DEFINE_SPECIAL_FORM("if")
  * (set! <variable> <expression>)	# syntax
  */
 
-#define MAKE_b_set_continue_FRAME_ make_short_frame
 DEFINE_BLOCK(b_set_continue)
 {
     obj_t *var = F_SUBJ;
@@ -322,8 +319,29 @@ DEFINE_PROC("null?")
 
 /* 11.15. Control features
  *
- * ...
+ * (apply proc arg1 ... rest-args)	# procedure
+ *
+ * (call-with-current-continuation proc) # procedure
+ * (call/cc proc)			# procedure
+ *
+ * (values obj ...)			# procedure
+ *
+ * (call-with-values producer consumer	# procedure
+ *
+ * (dynamic-wind before thunk after)	# procedure
  */
+
+#if 0
+DEFINE_PROC("call-with-current-continuation")
+{
+    obj_t *proc = pair_car(F_SUBJ);
+    obj_t *args = make_pair(FRAME, NIL);
+    return eval_application(FRAME, proc, args);
+}
+REBIND_PROC("call-with-current-continuation", "call/cc");
+#endif
+
+/* XXX How can I bind call/cc to call-with-current-continuation? */
 
 /* 11.16.  Iteration
  *

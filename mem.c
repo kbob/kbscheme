@@ -49,3 +49,14 @@ void mem_record_root(obj_t **root, wchar_t *name, root_constructor_t init)
 {
     // printf("root %ls at %p init %p\n", name, root, init);
 }
+
+#if 0
+So how does gc work?
+We run out of memory.
+If !fromspace, we allocate a new halfspace.
+We start at the roots and mark everything reachable.
+Then we copy everything reachable to the new halfspace.
+
+What about cons?  Everywhere cons happens, we have to invalidate
+all the registers.
+#endif

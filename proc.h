@@ -2,6 +2,7 @@
 #define PROC_INCLUDED
 
 #include "lib.h"
+#include "obj_frame.h"
 #include "types.h"
 
 /*
@@ -164,7 +165,7 @@
 #define DECLARE_STATIC_BLOCK(C_name) DECLARE_PROC_(static, C_name);
 
 #define DECLARE_PROC_(storage_class, C_name) \
-    storage_class eval_frame_t *C_name(eval_frame_t *FRAME)
+    storage_class eval_frame_t C_name(eval_frame_t FRAME)
 
 #define DEFINE_GENERAL_PROC_(library, 					\
 			     storage_class, 				\
@@ -183,28 +184,31 @@
 #define CAT_(a, b) CAT__(a, b)
 #define CAT__(a, b) a ## b
 
-/* eval_frame_t member accessors */
-#define F_PARENT        ((eval_frame_t *)FRAME->ef_parent)
-#define F_CONT          ((C_procedure_t *)FRAME->ef_continuation)
-#define F_VAL           ((obj_t *)FRAME->ef_value)
-#define F_SUBJ           ((obj_t *)FRAME->ef_subject)
-#define F_EXP F_SUBJ
-#define F_ENV           ((obj_t *)FRAME->ef_environment)
-#define F_PROC          ((obj_t *)FRAME->ef_procedure)
-#define F_ARGL          ((obj_t *)FRAME->ef_arglist)
-#define F_LARG          ((obj_t *)FRAME->ef_last_arg)
+/* FRAME member accessors */
+#define F_PARENT        (frame_get_parent(FRAME.ef_frame))
+#define F_CONT          (frame_get_continuation(FRAME.ef_frame))
+#define F_VAL           (frame_get_value(FRAME.ef_frame))
+#define F_SUBJ          (frame_get_subject(FRAME.ef_frame))
+#define F_ENV           (frame_get_environment(FRAME.ef_frame))
+#define F_PROC          (frame_get_procedure(FRAME.ef_frame))
+#define F_ARGL          (frame_get_arg_list(FRAME.ef_frame))
+#define F_LARG          (frame_get_last_arg(FRAME.ef_frame))
 
 #define RETURN(val) 							\
     do { 								\
-	FRAME->ef_parent->ef_value = (val); 				\
-	return FRAME->ef_parent; 					\
+	obj_t *parent__ = F_PARENT;					\
+        frame_set_value(parent__, (val));				\
+	return (eval_frame_t) { parent__ };				\
     } while (0)
 
 /* Evaluate the expression in the environment, then go to the
    target block.
  */
 #define EVAL_THEN_GOTO(exp, env, target, ...) \
-    CALL_THEN_GOTO((b_eval, (exp), (env)), (target, __VA_ARGS__))
+    CALL_THEN_GOTO((b_eval, (exp), (env)), ((target), __VA_ARGS__))
+
+#define EVAL_THEN_GOTO_FRAME(exp, env, factory, target, ...) \
+    CALL_THEN_GOTO_FRAME((b_eval, (exp), (env)), ((factory), (target), __VA_ARGS__))
 
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
@@ -217,55 +221,46 @@
    with specified args.
  */
 #define GOTO(target, ...) \
-    GOTO_FRAME(TARGET_FRAME_MAKER_(target), target, __VA_ARGS__)
+    GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
 
-/* Goto with explicit make_frame function.  */
-#define GOTO_FRAME(make_frame, target, ...) \
-    return make_frame(F_PARENT, target, __VA_ARGS__)
+/* Goto with explicit frame factory.  */
+#define GOTO_FRAME(factory, target, ...) \
+    return MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);
 
 /* Return from this block, then call callee, then goto target.
    Callee and target are tuples (block, arg, arg...).
  */
 #define CALL_THEN_GOTO(callee, target) 					\
     do { 								\
+	FRAME = MAKE_GOTO target; 					\
+	FRAME = MAKE_CALL callee;	 				\
+	return FRAME; 							\
+    } while (0)
+
+#define CALL_THEN_GOTO_FRAME(callee, target) 				\
+    do { 								\
 	FRAME = MAKE_GOTO_FRAME target; 				\
-	FRAME = MAKE_CALL_FRAME callee; 				\
+	FRAME = MAKE_CALL callee; 					\
 	return FRAME; 							\
     } while (0)
 
 /* Make an activation frame whose continuation is this frame's
    continuation.
  */
-#define MAKE_GOTO_FRAME(target, arg1, ...) \
-    TARGET_FRAME_MAKER_(target)(F_PARENT, target, (arg1), __VA_ARGS__)
+#define MAKE_GOTO(target, ...) \
+    MAKE_GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
+
+#define MAKE_GOTO_FRAME(factory, target, ...) \
+    ((eval_frame_t) { factory(F_PARENT, (target), __VA_ARGS__) })
 
 /* Make an activation frame whose continuation is the current frame.
  */
-#define MAKE_CALL_FRAME(target, ...) \
-    TARGET_FRAME_MAKER_(target)(FRAME, target, __VA_ARGS__)
-
-#define TARGET_FRAME_MAKER_(target) MAKE_##target##_FRAME_
+#define MAKE_CALL(target, ...) \
+    ((eval_frame_t) { make_short_frame(FRAME.ef_frame, (target), __VA_ARGS__) })
 
 DECLARE_EXTERN_BLOCK(b_eval);
-#define MAKE_b_eval_FRAME_	     make_short_frame
-
-struct eval_frame {
-    eval_frame_t  *ef_parent;
-    C_procedure_t *ef_continuation;
-    obj_t         *ef_value;
-    obj_t         *ef_subject;
-    env_t         *ef_environment;
-    obj_t         *ef_procedure;
-    obj_t         *ef_arglist;
-    obj_t         *ef_last_arg;
-};
 
 extern void bind_proc(C_procedure_t, lib_t *library, const char *name);
 extern void bind_special_form(C_procedure_t, lib_t *library, const char *name);
-
-extern eval_frame_t *make_short_frame(eval_frame_t *parent,
-				      C_procedure_t *continuation,
-				      obj_t *subject,
-				      env_t *environment);
 
 #endif /* !PROC_INCLUDED */

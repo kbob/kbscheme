@@ -2,7 +2,7 @@ Little stuff...
 	Get rid of the MAKE_b_xxx_FRAME_ macros.
 DONE	Clean up and comment second half of proc.h.
 DONE	Change mem_init_op to allow NULL.
-	add function prototypes of some sort.
+	add procedure prototypes of some sort.
 	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
 	It should be illegal to define a function twice.	
 
@@ -14,8 +14,11 @@ DONE	nonrecursive eval
 	full mem model
  DONE	    define obj ops.
  DONE	    rewrite base objects.
-	    rewrite frames to use objects.
+ DONE	    rewrite frames to use objects.
 	    look into rewriting binding or env.
+	    must remove value from frame - not thread safe.
+
+	decentralize unit testing.
 
 	macros
 	    See file:///home/kbob/r6rs/html/r6rs-lib-html/r6rs-lib-Z-H-13.html#node_sec_12.3

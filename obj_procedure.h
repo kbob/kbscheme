@@ -3,8 +3,11 @@
 
 #include "obj.h"
 
-typedef struct eval_frame eval_frame_t;
-typedef eval_frame_t *C_procedure_t(eval_frame_t *);
+typedef struct eval_frame {
+    obj_t *ef_frame;
+} eval_frame_t;
+
+typedef eval_frame_t C_procedure_t(eval_frame_t);
 
 extern obj_t *make_procedure(obj_t *code, obj_t *arglist, obj_t *env);
 extern obj_t *make_C_procedure(C_procedure_t *code,
