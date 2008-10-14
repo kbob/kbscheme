@@ -26,7 +26,7 @@ binding_t *env_lookup(env_t *env, obj_t *var)
      * for frame in env:
      *     for binding in frame:
      *         if binding.name == var:
-     *             return binding.value
+     *             return binding
      * assert False, 'unbound variable'
      */
 

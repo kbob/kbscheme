@@ -6,6 +6,7 @@ DONE	Change mem_init_op to allow NULL.
 	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
 	It should be illegal to define a function twice.	
 	Fix the makefile so subdirectories are rebuilt.
+	mem_fixvec should export non-virtual element accessors.
 
 DONE	nonrecursive eval
  DONE	    define C procedure API.
@@ -17,8 +18,12 @@ DONE	nonrecursive eval
  DONE	    define obj ops.
  DONE	    rewrite base objects.
  DONE	    rewrite frames to use objects.
-	    look into rewriting binding or env.
+	    write mixvec.
+	    rewrite binding as mixvec.
+	    rewrite procedure as mixvec?
  DONE	    must remove value from frame - not thread safe.
+
+	GC
 
 	decentralize unit testing.
 

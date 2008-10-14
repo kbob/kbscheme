@@ -54,9 +54,10 @@ void mem_record_root(obj_t **root, wchar_t *name, root_constructor_t init)
 So how does gc work?
 We run out of memory.
 If !fromspace, we allocate a new halfspace.
-We start at the roots and mark everything reachable.
-Then we copy everything reachable to the new halfspace.
+We start at the roots and copy everything reachable to the new halfspace.
 
-What about cons?  Everywhere cons happens, we have to invalidate
-all the registers.
+Every read goes through a read barrier:
+    if is_in_fromspace(obj)
+        obj = *obj;
+
 #endif
