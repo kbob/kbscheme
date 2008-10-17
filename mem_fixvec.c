@@ -19,7 +19,7 @@
 	return N; 							\
     } 									\
  									\
-    void fv##N##_copy_op(const obj_t *src, obj_t *dst) 			\
+    void fv##N##_move_op(const obj_t *src, obj_t *dst) 			\
     { 									\
 	int i; 								\
  									\
@@ -30,9 +30,9 @@
 	    vdst->fv##N##_ptrs[i] = vsrc->fv##N##_ptrs[i]; 		\
     } 									\
  									\
-    void fv##N##_copy_callback_op(const obj_t *src, 			\
+    void fv##N##_move_callback_op(const obj_t *src, 			\
 			      obj_t *dst, 				\
-			      copy_callback_t cb) 			\
+			      move_callback_t cb) 			\
     { 									\
 	int i; 								\
  									\
@@ -67,8 +67,8 @@ static mem_ops_t fixvec##N##_ops = { 					\
     NULL,	 							\
     fv##N##_size_op, 							\
     fv##N##_ptr_count_op, 						\
-    fv##N##_copy_op, 							\
-    fv##N##_copy_callback_op, 						\
+    fv##N##_move_op, 							\
+    fv##N##_move_callback_op, 						\
     fv##N##_get_ptr_op, 						\
     fv##N##_set_ptr_op, 						\
     { } 								\

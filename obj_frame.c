@@ -36,13 +36,13 @@ static size_t sf_ptr_count_op(const obj_t *obj)
     return 4;
 }
 
-static void sf_copy_op(const obj_t *src, obj_t *dst)
+static void sf_move_op(const obj_t *src, obj_t *dst)
 {
     memcpy(dst, src, sizeof (short_frame_t));
 }
 
-static void sf_copy_callback_op(const obj_t *src, obj_t *dst,
-				copy_callback_t cb)
+static void sf_move_callback_op(const obj_t *src, obj_t *dst,
+				move_callback_t cb)
 {
     short_frame_t *fsrc = (short_frame_t *)src;
     short_frame_t *fdst = (short_frame_t *)dst;
@@ -84,8 +84,8 @@ static mem_ops_t short_frame_ops = {
     NULL,
     sf_size_op,
     sf_ptr_count_op,
-    sf_copy_op,
-    sf_copy_callback_op,
+    sf_move_op,
+    sf_move_callback_op,
     sf_get_ptr_op,
     sf_set_ptr_op,
     { }
@@ -101,13 +101,13 @@ static size_t lf_ptr_count_op(const obj_t *obj)
     return 7;
 }
 
-static void lf_copy_op(const obj_t *src, obj_t *dst)
+static void lf_move_op(const obj_t *src, obj_t *dst)
 {
     memcpy(dst, src, sizeof (long_frame_t));
 }
 
-static void lf_copy_callback_op(const obj_t *src, obj_t *dst,
-				copy_callback_t cb)
+static void lf_move_callback_op(const obj_t *src, obj_t *dst,
+				move_callback_t cb)
 {
     long_frame_t *fsrc = (long_frame_t *)src;
     long_frame_t *fdst = (long_frame_t *)dst;
@@ -158,8 +158,8 @@ static mem_ops_t long_frame_ops = {
     NULL,
     lf_size_op,
     lf_ptr_count_op,
-    lf_copy_op,
-    lf_copy_callback_op,
+    lf_move_op,
+    lf_move_callback_op,
     lf_get_ptr_op,
     lf_set_ptr_op,
     { }

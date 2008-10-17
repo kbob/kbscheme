@@ -45,14 +45,14 @@ static size_t proc_ptr_count_op(const obj_t *obj)
     return proc->proc_flags & PF_COMPILED_C ? 2 : 3;
 }
 
-static void proc_copy_op(const obj_t *src, obj_t *dst)
+static void proc_move_op(const obj_t *src, obj_t *dst)
 {
     memcpy(dst, src, sizeof (proc_obj_t));
 }
 
-static void proc_copy_callback_op(const obj_t *src,
+static void proc_move_callback_op(const obj_t *src,
 				  obj_t *dst,
-				  copy_callback_t cb)
+				  move_callback_t cb)
 {
     const proc_obj_t *psrc = (proc_obj_t *) src;
     proc_obj_t *pdst = (proc_obj_t *) dst;
@@ -98,8 +98,8 @@ static mem_ops_t proc_ops = {
     NULL,
     proc_size_op,
     proc_ptr_count_op,
-    proc_copy_op,
-    proc_copy_callback_op,
+    proc_move_op,
+    proc_move_callback_op,
     proc_get_ptr_op,
     proc_set_ptr_op,
     { }

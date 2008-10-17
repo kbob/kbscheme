@@ -299,3 +299,92 @@ eval nilary procedure:
     b_eval sets val=#<proc '='>, calls RETURN.
     call b_have_operator.
 
+
+----------------------------------
+10/17/2008
+
+Read barriers.
+
+I think each obj_* operation can verify its subject on entry with
+something like this.
+
+	ENSURE_TOSPACE(obj);
+
+#define ENSURE_TOSPACE(x) (!is_null((x)) && ((x) < to_space || (x) >= to_space_end) ? (x) = move_obj(x) : (x))
+
+Or, as a function,
+
+    obj_t *ensure_tospace(obj_t *obj)
+    {
+	if (is_null(obj))
+	    return obj;
+	if (to_space <= obj && obj < to_space_end)
+	    return obj;
+	return move_obj(obj);
+    }
+    #define ENSURE_TOSPACE(x) ((x) = ensure_tospace(x))
+
+Anyway, everytime an obj's public method dereferences a pointer field,
+it also does the ensure_tospace thing.
+
+    obj_t *some_obj_get_thingie(obj_t *obj)
+    {
+	ENSURE_TOSPACE(obj);
+        some_obj_t *so = (some_obj_t *)obj;
+        return ensure_tospace(so->so_thingie);
+    }
+
+----------------------------------
+The alternative is to keep auto storage locations on a linked list
+or stack, and traverse that list when flipping.
+
+    struct obj_ref {
+        obj_t **ref;
+	obj_ref *next;
+    };
+
+    __thread obj_ref *auto_head;
+
+    #define OBJ(x) obj_t *x; obj_ref r = { &x, auto_head }; auto_head = r;
+       
+and make it illegal to DECLARE an obj in a loop.
+
+    my_proc()
+    {
+	OBJ(o);
+	for (o = some_list; o; o = pair_cdr(o))
+	    ...;
+    }
+
+But how do we find implicit pops?  Compare stack pointer?
+Zap the list each time through the threaded eval loop?
+
+----------------------------------
+That doesn't quite cut it.  Instead, let's have a new arg that gets
+passed to every function.  Call it HEAP or ROOT or ALLOC or something.
+
+Each function or block entry has code to initialize HEAP:
+
+    my_proc(HEAP__, ...)                     | This much comes
+    {                                        | from the DEFINE_PROC
+        some_struct HEAP = { HEAP__, ... };  | macro.
+	...
+	return make_pair(HEAP, some_car, some_cdr);
+    }
+
+    #define THIS_FUNCTION_USES_THE_HEAP some_struct HEAP = { HEAP__, ... }
+
+Then roots are defined from HEAP.
+
+        HEAP_ROOT(obj); obj = make_symbol(L"foo");
+
+    #define HEAP_ROOT(obj) obj_t *obj = NIL;  heap_record_obj(HEAP, obj);
+
+----------------------------------
+Third alternative.  May be independent of the first two.
+
+Make FRAME a thread-global variable.
+Then blocks just return a value.
+Each thread's FRAME is a root.
+
+

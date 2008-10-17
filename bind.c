@@ -43,7 +43,7 @@ binding_t *env_lookup(env_t *env, obj_t *var)
 	}
 	env = pair_cdr(env);
     }
-    fprintf(stderr, "unbound variable \"%ls\"",
+    fprintf(stderr, "unbound variable \"%ls\"\n",
 	    string_value(symbol_name(var)));
     assert(false && "unbound variable");
 }

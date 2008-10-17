@@ -8,12 +8,12 @@ size_t scalar_ptr_count_op(const obj_t *obj)
     return 0;
 }
 
-void scalar_copy_op(const obj_t *src, obj_t *dst)
+void scalar_move_op(const obj_t *src, obj_t *dst)
 {
     memcpy(dst, src, OBJ_MEM_OPS(src)->mo_size(src));
 }
 
-void scalar_copy_callback_op(const obj_t *src, obj_t *dst, copy_callback_t cp)
+void scalar_move_callback_op(const obj_t *src, obj_t *dst, move_callback_t cp)
 {
     memcpy(dst, src, OBJ_MEM_OPS(src)->mo_size(src));
 }
@@ -35,8 +35,8 @@ static mem_ops_t scalar_ops = {
     NULL,
     NULL,
     scalar_ptr_count_op,
-    scalar_copy_op,
-    scalar_copy_callback_op,
+    scalar_move_op,
+    scalar_move_callback_op,
     scalar_get_ptr_op,
     scalar_set_ptr_op,
     { }
