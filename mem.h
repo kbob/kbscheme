@@ -59,8 +59,6 @@
     (OBJ_OPS_WORD(obj) = ~(intptr_t)(fwd))
 #endif
 
-#define ASSERT_IN_TOSPACE(obj) (is_null(obj) || (obj - to_space) < heap_size_bytes)
-
 typedef struct mem_ops mem_ops_t;
 typedef obj_t *move_callback_t(const obj_t *);
 typedef obj_t *root_constructor_t(void);
@@ -118,7 +116,9 @@ struct mem_ops {
     mem_end_marker_t      mo_end_marker;
 };
 
-extern void mem_init_heap(size_t usable_size);
+extern void set_heap_size_bytes(size_t usable_size_bytes);
+
+extern void assert_in_tospace(const obj_t *);
 
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t);
 

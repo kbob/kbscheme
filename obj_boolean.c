@@ -68,37 +68,35 @@ static mem_ops_t false_ops = {
     { }
 };
 
-#include <stdio.h>
 ROOT_CONSTRUCTOR(true_obj)
 {
-    printf("constructing true\n");
-
     return mem_alloc_obj(&true_ops, sizeof (bool_obj_t));
 }
 
 ROOT_CONSTRUCTOR(false_obj)
 {
-    printf("contructing false: true=%p\n", true_obj);
     return mem_alloc_obj(&false_ops, sizeof (bool_obj_t));
 }
 
 obj_t *make_boolean(bool value)
 {
-    
-    printf("make_boolean: true=%p false=%p\n", true_obj, false_obj);
+    assert_in_tospace(true_obj);
+    assert_in_tospace(false_obj);
     return value ? true_obj : false_obj;
 }
 
 bool is_boolean(obj_t *obj)
 {
+    assert_in_tospace(obj);
     if (is_null(obj))
 	return false;
     mem_ops_t *ops = OBJ_MEM_OPS(obj);
     return ops == &true_ops || ops == &false_ops;
 }
 
-bool boolean_value(obj_t *obj)
+bool boolean_value(obj_t *boolean)
 {
-    assert(is_boolean(obj));
-    return OBJ_MEM_OPS(obj) == &true_ops;
+    assert_in_tospace(boolean);
+    assert(is_boolean(boolean));
+    return OBJ_MEM_OPS(boolean) == &true_ops;
 }

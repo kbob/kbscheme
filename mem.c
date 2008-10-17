@@ -11,18 +11,17 @@ typedef struct word {
     intptr_t word_word;
 } word_t;
 
-#define INIT_HEAP_WORDS 65536
-//#define INIT_HEAP_WORDS 1000
+//#define INIT_HEAP_WORDS 65536
+#define INIT_HEAP_WORDS 1000
 
 static word_t initial_heap[INIT_HEAP_WORDS];
-//static void *space_A, *space_B;
 static void *from_space, *to_space = initial_heap;
 static void *from_space_end, *to_space_end = &initial_heap[INIT_HEAP_WORDS];
 static void *next_alloc = initial_heap;
 static bool heap_allocation_needed = true;
 static size_t heap_size_bytes = INIT_HEAP_WORDS * sizeof (word_t);
 static root_descriptor_t *roots;
-__thread root_descriptor_t *thread_roots;
+//static __thread root_descriptor_t *thread_roots;
 
 static size_t aligned_size(size_t size)
 {
@@ -65,6 +64,7 @@ static obj_t *move_obj(obj_t *obj)
 	return OBJ_FWD_PTR(obj);
     size_t size = aligned_size(OBJ_MEM_OPS(obj)->mo_size(obj));
     obj_t *new_obj = next_alloc;
+    //XXX merge dup code both here and mem_alloc_obj().
     next_alloc += size;
     assert(next_alloc <= to_space_end);
     OBJ_MEM_OPS(obj)->mo_move(obj, new_obj);
@@ -90,15 +90,14 @@ static void copy_heap()
 	flip();
 	root_descriptor_t *desc;
 	for (desc = roots; desc; desc = desc->rd_next) {
-	    printf("flipping root %ls = ", desc->rd_name);
-	    print_stdout(*desc->rd_root);
+	    printf("flipping root %ls\n", desc->rd_name);
 	    *desc->rd_root = move_obj(*desc->rd_root);
 	}
 	void *scan = to_space;
 	while (scan < next_alloc) {
-	    printf("scan\n");
 	    scan = scan_obj(scan);
 	}
+	assert(scan == next_alloc);
     }
 }
 
@@ -126,6 +125,12 @@ void set_heap_size_bytes(size_t usable_size_bytes)
 	heap_size_bytes = usable_size_bytes;
 	heap_allocation_needed = true;
     }	
+}
+
+void assert_in_tospace(const obj_t *obj)
+{
+    const void *vobj = obj;
+    assert(is_null(obj) || (vobj >= to_space && vobj < to_space_end));
 }
 
 void mem_record_root(root_descriptor_t *desc)

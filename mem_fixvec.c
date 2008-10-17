@@ -77,8 +77,10 @@ static mem_ops_t fixvec##N##_ops = { 					\
 
 DEFINE_FIXVEC_TYPE(1)
 DEFINE_FIXVEC_TYPE(2)
+#if 0
 DEFINE_FIXVEC_TYPE(3)
 DEFINE_FIXVEC_TYPE(4)
+#endif
 
 void mem_fixvec_create_ops(mem_ops_t *ops,
 			   wchar_t *name,
@@ -87,6 +89,31 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
 			   mem_free_op free_op)
 {
     mem_ops_t *super;
+
+    switch (len) {
+    case 1:
+	super = &fixvec1_ops;
+	break;
+
+    case 2:
+	super = &fixvec2_ops;
+	break;
+
+#if 0
+    case 3:
+	super = &fixvec3_ops;
+	break;
+
+    case 4:
+	super = &fixvec4_ops;
+	break;
+#endif
+
+    default:
+	assert(false);
+    }
+
+#if 0
     if (len == 1)
 	super = &fixvec1_ops;
     else if (len == 2)
@@ -97,6 +124,7 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
 	super = &fixvec4_ops;
     else
 	assert(false);
+#endif
 
     *ops = *super;
     ops->mo_name = name;
@@ -110,6 +138,7 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
 
 obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)
 {
+    assert_in_tospace(ptr0);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec1_t));
     fixvec1_t *vec = (fixvec1_t *)obj;
     vec->fv1_ptrs[0] = ptr0;
@@ -118,6 +147,8 @@ obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)
 
 obj_t *alloc_fixvec2(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1)
 {
+    assert_in_tospace(ptr0);
+    assert_in_tospace(ptr1);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec2_t));
     fixvec2_t *vec = (fixvec2_t *)obj;
     vec->fv2_ptrs[0] = ptr0;
@@ -125,8 +156,12 @@ obj_t *alloc_fixvec2(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1)
     return obj;
 }
 
+#if 0
 obj_t *alloc_fixvec3(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1, obj_t *ptr2)
 {
+    assert_in_tospace(ptr0);
+    assert_in_tospace(ptr1);
+    assert_in_tospace(ptr2);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec3_t));
     fixvec3_t *vec = (fixvec3_t *)obj;
     vec->fv3_ptrs[0] = ptr0;
@@ -138,6 +173,10 @@ obj_t *alloc_fixvec3(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1, obj_t *ptr2)
 obj_t *alloc_fixvec4(mem_ops_t *ops,
 		     obj_t *ptr0, obj_t *ptr1, obj_t *ptr2, obj_t *ptr3)
 {
+    assert_in_tospace(ptr0);
+    assert_in_tospace(ptr1);
+    assert_in_tospace(ptr2);
+    assert_in_tospace(ptr3);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec4_t));
     fixvec4_t *vec = (fixvec4_t *)obj;
     vec->fv4_ptrs[0] = ptr0;
@@ -146,3 +185,4 @@ obj_t *alloc_fixvec4(mem_ops_t *ops,
     vec->fv4_ptrs[3] = ptr3;
     return obj;
 }
+#endif

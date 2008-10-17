@@ -20,7 +20,7 @@ void scalar_move_callback_op(const obj_t *src, obj_t *dst, move_callback_t cp)
 
 obj_t *scalar_get_ptr_op(const obj_t *obj, size_t index)
 {
-    return NIL;
+    assert(false);
 }
 
 void   scalar_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)

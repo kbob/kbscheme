@@ -21,7 +21,6 @@ extern bool           is_long_frame         (obj_t *);
 
 extern obj_t         *frame_get_parent      (obj_t *frame);
 extern C_procedure_t *frame_get_continuation(obj_t *frame);
-extern obj_t         *frame_get_value       (obj_t *frame);
 extern obj_t         *frame_get_subject     (obj_t *frame);
 extern obj_t         *frame_get_environment (obj_t *frame);
 

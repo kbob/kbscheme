@@ -13,7 +13,7 @@ typedef struct character_obj {
 
 static mem_ops_t character_ops;
 
-static size_t character_size_op(const obj_t *op)
+static size_t character_size_op(const obj_t *obj)
 {
     return sizeof (character_obj_t);
 }
@@ -23,19 +23,21 @@ obj_t *make_character(wchar_t value)
     if (!character_ops.mo_super)
 	mem_scalar_create_ops(&character_ops, L"character",
 			      NULL, NULL, character_size_op);
-    obj_t *op = mem_alloc_obj(&character_ops, sizeof (character_obj_t));
-    character_obj_t *fp = (character_obj_t *)op;
-    fp->character_value = value;
-    return op;
+    obj_t *obj = mem_alloc_obj(&character_ops, sizeof (character_obj_t));
+    character_obj_t *cp = (character_obj_t *)obj;
+    cp->character_value = value;
+    return obj;
 }
 
-bool is_character(obj_t *op)
+bool is_character(obj_t *obj)
 {
-    return op && OBJ_MEM_OPS(op) == &character_ops;
+    assert_in_tospace(obj);
+    return obj && OBJ_MEM_OPS(obj) == &character_ops;
 }
 
-wchar_t character_value(obj_t *op)
+wchar_t character_value(obj_t *character)
 {
-    assert(is_character(op));
-    return ((character_obj_t *)op)->character_value;
+    assert_in_tospace(character);
+    assert(is_character(character));
+    return ((character_obj_t *)character)->character_value;
 }

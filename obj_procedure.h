@@ -3,9 +3,12 @@
 
 #include "obj.h"
 
+typedef struct root_desc root_desc_t;
+
 typedef struct eval_frame {
-    obj_t *ef_frame;
-    obj_t *ef_value;
+    obj_t       *ef_frame;
+    obj_t       *ef_value;
+    root_desc_t *ef_roots;
 } eval_frame_t;
 
 typedef eval_frame_t C_procedure_t(eval_frame_t);

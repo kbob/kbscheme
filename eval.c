@@ -153,7 +153,7 @@ DEFINE_BLOCK(b_accum_arg)
 
 obj_t *eval(obj_t *expr, env_t *env)
 {
-    eval_frame_t FRAME = { make_short_frame(NIL, NULL, NIL, NIL) };
+    eval_frame_t FRAME = { make_short_frame(NIL, NULL, NIL, NIL), NIL };
     FRAME = MAKE_CALL(b_eval, expr, env);
     while (F_CONT) {
 	/* XXX mix in setjmp() and a signal flag here. */

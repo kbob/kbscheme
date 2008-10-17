@@ -5,7 +5,7 @@
 
 #include "obj.h"
 
-extern obj_t *make_symbol(wchar_t *name);
+extern obj_t *make_symbol(const wchar_t *name);
 extern bool   is_symbol(obj_t *);
 extern obj_t *symbol_name(obj_t *);
 

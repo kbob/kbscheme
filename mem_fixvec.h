@@ -17,7 +17,9 @@ extern void mem_fixvec_create_ops(mem_ops_t *,
 				  mem_free_op);
 extern obj_t *alloc_fixvec1(mem_ops_t *, obj_t *);
 extern obj_t *alloc_fixvec2(mem_ops_t *, obj_t *, obj_t *);
+#if 0
 extern obj_t *alloc_fixvec3(mem_ops_t *, obj_t *, obj_t *, obj_t *);
 extern obj_t *alloc_fixvec4(mem_ops_t *, obj_t *, obj_t *, obj_t *, obj_t *);
+#endif
 
 #endif /* !MEM_FIXVEC_INCLUDED */

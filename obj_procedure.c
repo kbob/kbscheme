@@ -5,19 +5,6 @@
 
 #include "mem.h"
 
-obj_t *make_procedure(obj_t *code, obj_t *arglist, obj_t *env);
-obj_t *make_C_procedure(C_procedure_t *code, obj_t *arglist, obj_t *env);
-obj_t *make_special_form_procedure(obj_t *code, obj_t *arglist, obj_t *env);
-obj_t *make_C_special_form_procedure(C_procedure_t *code,
-				     obj_t *arglist,
-				     obj_t *env);
-bool is_procedure(obj_t *);
-bool procedure_is_C(obj_t *);
-bool procedure_is_special_form(obj_t *);
-obj_t *procedure_body(obj_t *);
-obj_t *procedure_args(obj_t *);
-obj_t *procedure_env(obj_t *);
-
 typedef enum proc_flags {
     PF_COMPILED_C   = 1 << 0,
     PF_SPECIAL_FORM = 1 << 1,
@@ -41,8 +28,7 @@ static size_t proc_size_op(const obj_t *obj)
 
 static size_t proc_ptr_count_op(const obj_t *obj)
 {
-    proc_obj_t *proc = (proc_obj_t *)obj;
-    return proc->proc_flags & PF_COMPILED_C ? 2 : 3;
+    return ((proc_obj_t *)obj)->proc_flags & PF_COMPILED_C ? 2 : 3;
 }
 
 static void proc_move_op(const obj_t *src, obj_t *dst)
@@ -107,6 +93,8 @@ static mem_ops_t proc_ops = {
 
 static obj_t *make_proc(int flags, void *body, obj_t *args, obj_t *env)
 {
+    assert_in_tospace(args);
+    assert_in_tospace(env);
     obj_t *obj = mem_alloc_obj(&proc_ops, sizeof (proc_obj_t));
     proc_obj_t *proc = (proc_obj_t *)obj;
     proc->proc_flags = flags;
@@ -118,11 +106,13 @@ static obj_t *make_proc(int flags, void *body, obj_t *args, obj_t *env)
 
 obj_t *make_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
+    assert_in_tospace(body);
     return make_proc(0, body, arglist, env);
 }
 
 obj_t *make_special_form_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
+    assert_in_tospace(body);
     return make_proc(PF_SPECIAL_FORM, body, arglist, env);
 }
 
@@ -140,35 +130,41 @@ obj_t *make_C_special_form_procedure(C_procedure_t *code,
 
 bool is_procedure(obj_t *obj)
 {
+    assert_in_tospace(obj);
     return obj && OBJ_MEM_OPS(obj) == &proc_ops;
 }
 
-bool procedure_is_C(obj_t *obj)
+bool procedure_is_C(obj_t *proc)
 {
-    assert(is_procedure(obj));
-    return (((proc_obj_t *)obj)->proc_flags & PF_COMPILED_C) != 0;
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return (((proc_obj_t *)proc)->proc_flags & PF_COMPILED_C) != 0;
 }
 
-bool procedure_is_special_form(obj_t *obj)
+bool procedure_is_special_form(obj_t *proc)
 {
-    assert(is_procedure(obj));
-    return (((proc_obj_t *)obj)->proc_flags & PF_SPECIAL_FORM) != 0;
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return (((proc_obj_t *)proc)->proc_flags & PF_SPECIAL_FORM) != 0;
 }
 
-obj_t *procedure_body(obj_t *obj)
+obj_t *procedure_body(obj_t *proc)
 {
-    assert(is_procedure(obj));
-    return ((proc_obj_t *)obj)->proc_u.pu_body;
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return ((proc_obj_t *)proc)->proc_u.pu_body;
 }
 
-obj_t *procedure_args(obj_t *obj)
+obj_t *procedure_args(obj_t *proc)
 {
-    assert(is_procedure(obj));
-    return ((proc_obj_t *)obj)->proc_args;
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return ((proc_obj_t *)proc)->proc_args;
 }
 
-obj_t *procedure_env(obj_t *obj)
+obj_t *procedure_env(obj_t *proc)
 {
-    assert(is_procedure(obj));
-    return ((proc_obj_t *)obj)->proc_env;
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return ((proc_obj_t *)proc)->proc_env;
 }
