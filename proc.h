@@ -3,6 +3,7 @@
 
 #include "lib.h"
 #include "obj_frame.h"
+#include "roots.h"
 #include "types.h"
 
 /*
@@ -118,42 +119,42 @@
 #define DECLARE_BLOCK       DECLARE_STATIC_BLOCK
 
 #define DEFINE_EXTERN_PROC(C_name, scheme_name) 			\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL, 						\
 			 extern, 					\
 			 C_name, 					\
 			 scheme_name, 					\
 			 bind_proc)
 
 #define DEFINE_STATIC_PROC(C_name, scheme_name) 			\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL,						\
 			 static, 					\
 			 C_name, 					\
 			 scheme_name, 					\
 			 bind_proc)
 
 #define DEFINE_ANONYMOUS_PROC(scheme_name) 				\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL,						\
                          static, 					\
                          CAT_(anonymous_, __LINE__), 			\
                          scheme_name, 					\
 			 bind_proc)
 
 #define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name) 		\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL,						\
 			 extern, 					\
 			 C_name, 					\
 			 scheme_name, 					\
 			 bind_special_form)
 
 #define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name) 		\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL,						\
 		         static, 					\
        			 C_name, 					\
        			 scheme_name, 					\
        			 bind_special_form)
 
 #define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name) 			\
-    DEFINE_GENERAL_PROC_(r6rs_base_library(), 				\
+    DEFINE_GENERAL_PROC_(NIL,						\
                          static, 					\
                          CAT_(anonymous_, __LINE__), 			\
                          scheme_name, 					\
@@ -176,7 +177,15 @@
     __attribute__((constructor)) 					\
     static void CAT_(bind_proc_, __LINE__)(void) 			\
     { 									\
-        binder(C_name, library, scheme_name); 				\
+	static proc_descriptor_t desc = {				\
+	    library,							\
+	    C_name,							\
+	    scheme_name,						\
+	    binder,							\
+	    NULL							\
+	};								\
+	register_proc(&desc);						\
+        /* binder(C_name, library, scheme_name); */ 			\
     } 									\
     DECLARE_PROC_(storage_class, C_name)
 
@@ -195,7 +204,17 @@
 #define F_VAL           (FRAME.ef_value)
 
 /* Return the value as the result of this function. */
+#if 0
 #define RETURN(val) return (eval_frame_t) { F_PARENT, (val) };
+#else
+#define RETURN(val)							\
+    do {								\
+	PUSH_ROOT(FRAME.ef_frame);					\
+	FRAME = (eval_frame_t) { F_PARENT, (val) };			\
+	POP_FUNCTION_ROOTS();						\
+	return FRAME;							\
+    } while (0)
+#endif
 
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
@@ -222,23 +241,36 @@
     GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
 
 /* Goto with explicit frame factory.  */
+#if 0
 #define GOTO_FRAME(factory, target, ...) \
     return MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);
+#else
+#define GOTO_FRAME(factory, target, ...)				\
+    do {								\
+        POP_FUNCTION_ROOTS();						\
+        return MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);	\
+    } while (0);    
+#endif
 
 /* Return from this block, then call callee, then goto target.
  * Callee and target are tuples (block, arg, arg...).
  */
 #define CALL_THEN_GOTO(callee, target) 					\
     do { 								\
+	PUSH_ROOT(FRAME.ef_frame);					\
 	FRAME = MAKE_GOTO target; 					\
 	FRAME = MAKE_CALL callee;	 				\
+	POP_FUNCTION_ROOTS();						\
 	return FRAME; 							\
     } while (0)
 
 #define CALL_THEN_GOTO_FRAME(callee, target) 				\
     do { 								\
+	PUSH_ROOT(FRAME.ef_frame);					\
 	FRAME = MAKE_GOTO_FRAME target; 				\
 	FRAME = MAKE_CALL callee; 					\
+	POP_ROOT(FRAME.ef_frame);					\
+	POP_FUNCTION_ROOTS();						\
 	return FRAME; 							\
     } while (0)
 
@@ -258,9 +290,25 @@
 	make_short_frame(FRAME.ef_frame, (target), __VA_ARGS__), NIL	\
      })
 
+typedef void binder_t(C_procedure_t, lib_t *, const wchar_t *name);
+typedef struct proc_descriptor proc_descriptor_t;
+
+struct proc_descriptor {
+    lib_t             *pd_library;
+    C_procedure_t     *pd_proc;
+    wchar_t           *pd_name;
+    binder_t          *pd_binder;
+    proc_descriptor_t *pd_next;
+};
+
 DECLARE_EXTERN_BLOCK(b_eval);
 
-extern void bind_proc(C_procedure_t, lib_t *library, const char *name);
-extern void bind_special_form(C_procedure_t, lib_t *library, const char *name);
+extern void register_proc(proc_descriptor_t *desc);
+extern void register_procs(void);
+
+extern void bind_proc(C_procedure_t, lib_t *library, const wchar_t *name);
+extern void bind_special_form(C_procedure_t,
+			      lib_t *library,
+			      const wchar_t *name);
 
 #endif /* !PROC_INCLUDED */

@@ -59,7 +59,7 @@ static obj_t *proc_get_ptr_op(const obj_t *obj, size_t index)
 	return proc->proc_args;
     if (index == 1)
 	return proc->proc_env;
-    if (index == 2 && (proc->proc_flags & PF_COMPILED_C))
+    if (index == 2 && !(proc->proc_flags & PF_COMPILED_C))
 	return proc->proc_u.pu_body;
     assert(false);
 }
@@ -71,7 +71,7 @@ void proc_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 	proc->proc_args = ptr;
     else if (index == 1)
 	proc->proc_env = ptr;
-    else if (index == 2 && (proc->proc_flags & PF_COMPILED_C))
+    else if (index == 2 && !(proc->proc_flags & PF_COMPILED_C))
 	proc->proc_u.pu_body = ptr;
     else
 	assert(false);
@@ -98,9 +98,13 @@ static obj_t *make_proc(int flags, void *body, obj_t *args, obj_t *env)
     obj_t *obj = mem_alloc_obj(&proc_ops, sizeof (proc_obj_t));
     proc_obj_t *proc = (proc_obj_t *)obj;
     proc->proc_flags = flags;
-    proc->proc_args = args;
-    proc->proc_env = env;
-    proc->proc_u.pu_body = body;
+    proc->proc_args = mem_move_obj(args);
+    proc->proc_env = mem_move_obj(env);
+    if (flags * PF_COMPILED_C)
+	proc->proc_u.pu_code = body;
+    else 
+	proc->proc_u.pu_body = mem_move_obj(body);
+    verify_heap();
     return obj;
 }
 

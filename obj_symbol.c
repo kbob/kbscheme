@@ -6,6 +6,7 @@
 #include "mem_fixvec.h"
 #include "obj_pair.h"
 #include "obj_string.h"
+#include "roots.h"
 
 static mem_ops_t symbol_ops;
 
@@ -16,7 +17,9 @@ static obj_t *find_symbol(const wchar_t *name)
     obj_t *p, *sym;
     obj_t *sym_name;
 
+    int i = 0;
     for (p = all_symbols_list; !is_null(p); p = pair_cdr(p)) {
+	printf("iter %d\n", i++);
 	assert_in_tospace(p);
 	assert(is_pair(p));
 	sym = pair_car(p);
@@ -26,16 +29,17 @@ static obj_t *find_symbol(const wchar_t *name)
 	assert_in_tospace(sym_name);
 	assert(is_string(sym_name));
 	/* XXX use a Scheme function instead of wcscmp(). */
-	if (wcscmp(string_value(sym_name), name) == 0)
+	if (wcscmp(string_value(sym_name), name) == 0) {
 	    return sym;
+	}
     }
     return NIL;
 }
 
 extern obj_t *make_symbol(const wchar_t *name)
 {
-    // XXX YYY symbol is a temporary root.
-    obj_t *symbol = find_symbol(name);
+    AUTO_ROOT(symbol);
+    symbol = find_symbol(name);
     if (is_null(symbol)) {
 	/* Not found.  Create one. */
 	if (!symbol_ops.mo_super)
@@ -46,6 +50,7 @@ extern obj_t *make_symbol(const wchar_t *name)
 	    all_symbols_list = make_pair(symbol, all_symbols_list);
 	}
     }
+    POP_ROOT(symbol);
     return symbol;
 }
 

@@ -41,6 +41,7 @@ void pair_set_car(obj_t *pair, obj_t *car)
     assert_in_tospace(car);
     assert(is_pair(pair));
     OBJ_MEM_OPS(pair)->mo_set_ptr(pair, 0, car);
+    verify_heap();
 }
 
 void pair_set_cdr(obj_t *pair, obj_t *cdr)
@@ -49,4 +50,5 @@ void pair_set_cdr(obj_t *pair, obj_t *cdr)
     assert_in_tospace(cdr);
     assert(is_pair(pair));
     OBJ_MEM_OPS(pair)->mo_set_ptr(pair, 1, cdr);
+    verify_heap();
 }

@@ -386,5 +386,3 @@ Third alternative.  May be independent of the first two.
 Make FRAME a thread-global variable.
 Then blocks just return a value.
 Each thread's FRAME is a root.
-
-

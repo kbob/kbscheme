@@ -98,5 +98,6 @@ bool boolean_value(obj_t *boolean)
 {
     assert_in_tospace(boolean);
     assert(is_boolean(boolean));
+    assert(boolean == true_obj || boolean == false_obj);
     return OBJ_MEM_OPS(boolean) == &true_ops;
 }

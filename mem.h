@@ -6,37 +6,7 @@
 
 #include "bool.h"
 #include "obj.h"
-
-#define ROOT             STATIC_ROOT
-#define ROOT_CONSTRUCTOR STATIC_ROOT_CONSTRUCTOR
-
-#define EXTERN_ROOT(name) GENERAL_ROOT_(, name, )
-#define STATIC_ROOT(name) GENERAL_ROOT_(static, name, )
-
-#define EXTERN_ROOT_CONSTRUCTOR(name) GENERAL_ROOT_CONSTRUCTOR_(extern, name)
-#define STATIC_ROOT_CONSTRUCTOR(name) GENERAL_ROOT_CONSTRUCTOR_(static, name)
-
-#define GENERAL_ROOT_CONSTRUCTOR_(storage_class, name)			\
-    DECLARE_ROOT_CONSTRUCTOR_(name);					\
-    GENERAL_ROOT_(storage_class, name, name = construct_root_##name())	\
-    DECLARE_ROOT_CONSTRUCTOR_(name)
-    
-#define DECLARE_ROOT_CONSTRUCTOR_(name) \
-    __attribute__((constructor)) static obj_t *construct_root_##name(void)
-
-#define GENERAL_ROOT_(storage_class, name, init) 			\
-    storage_class obj_t *name = NIL;					\
-    __attribute__((constructor)) 					\
-    static void mem_record_root_ ## name(void) 				\
-    { 									\
-	static root_descriptor_t desc = {				\
-            L ## #name,							\
-	    &name,							\
-            NULL							\
-        };								\
-        mem_record_root(&desc);						\
-	init;								\
-    }
+#include "roots.h"
 
 #define OBJ_MARK_MASK 0x1
 #define OBJ_OPS_MASK (~(intptr_t) OBJ_MARK_MASK)
@@ -61,7 +31,6 @@
 
 typedef struct mem_ops mem_ops_t;
 typedef obj_t *move_callback_t(const obj_t *);
-typedef obj_t *root_constructor_t(void);
 
 typedef struct obj_header {
     intptr_t ob_ops_;
@@ -94,14 +63,6 @@ typedef void   mem_set_ptr_op(obj_t *, size_t index, obj_t *);
 
 typedef struct mem_end_marker { } mem_end_marker_t;
 
-typedef struct root_descriptor root_descriptor_t;
-
-struct root_descriptor {
-    const wchar_t        *rd_name;
-    obj_t               **rd_root;
-    root_descriptor_t    *rd_next;
-};
-
 struct mem_ops {
     const wchar_t        *mo_name;	/* object class's name */
     mem_ops_t            *mo_super;	/* superclass pointer */
@@ -122,6 +83,8 @@ extern void assert_in_tospace(const obj_t *);
 
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t);
 
-extern void mem_record_root(root_descriptor_t *desc);
+extern obj_t *mem_move_obj(obj_t *);
+
+extern void verify_heap(void);		// XXX
 
 #endif /* !MEM_INCLUDED */

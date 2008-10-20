@@ -1,27 +1,55 @@
 #include "proc.h"
 
-#include <stdlib.h>
-#include <wchar.h>
+#include "roots.h"
 
-static obj_t *cstr_to_symbol(const char *cstr)
+static proc_descriptor_t *proc_descs;
+
+void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
 {
-    /* XXX should use Unicode strings? */
-    size_t len = mbstowcs(NULL, cstr, 0);
-    wchar_t *ws = alloca((len + 1) * sizeof *ws);
-    mbstowcs(ws, cstr, len + 1);
-    return make_symbol(ws);
+    printf("binding proc %ls\n", name);
+    AUTO_ROOT(env);
+    env = library_env(library);
+    AUTO_ROOT(code);
+    code = make_C_procedure(proc, NIL, env);
+    AUTO_ROOT(sym);
+    sym = make_symbol(name);
+    env_bind(env, sym, BINDING_MUTABLE, code);
+    POP_ROOT(sym);
+    POP_ROOT(code);
+    POP_ROOT(env);
 }
 
-void bind_proc(C_procedure_t *proc, obj_t *library, const char *name)
+void bind_special_form(C_procedure_t *form,
+		       obj_t *library,
+		       const wchar_t *name)
 {
-    env_t *env = library_env(library);
-    obj_t *code = make_C_procedure(proc, NIL, env);
-    env_bind(env, cstr_to_symbol(name), BINDING_MUTABLE, code);
+    printf("binding special form %ls\n", name);
+    AUTO_ROOT(env);
+    env = library_env(library);
+    AUTO_ROOT(code);
+    code = make_C_special_form_procedure(form, NIL, env);
+    AUTO_ROOT(sym);
+    sym = make_symbol(name);
+    env_bind(env, sym, BINDING_IMMUTABLE, code);
+    POP_ROOT(sym);
+    POP_ROOT(code);
+    POP_ROOT(env);
 }
 
-void bind_special_form(C_procedure_t *form, obj_t *library, const char *name)
+void register_proc(proc_descriptor_t *desc)
 {
-    env_t *env = library_env(library);
-    obj_t *code = make_C_special_form_procedure(form, NIL, env);
-    env_bind(env, cstr_to_symbol(name), BINDING_IMMUTABLE, code);
+    desc->pd_next = proc_descs;
+    proc_descs = desc;
+}
+
+void register_procs(void)
+{
+    while (proc_descs) {
+	proc_descriptor_t *desc = proc_descs;
+	lib_t *library = desc->pd_library;
+	if (!library)
+	    library = r6rs_base_library();
+	(*desc->pd_binder)(desc->pd_proc, library, desc->pd_name);
+	proc_descs = desc->pd_next;
+    }
 }

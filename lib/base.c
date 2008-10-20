@@ -11,34 +11,34 @@
  *    null?
  */
 
-DEFINE_PROC("boolean?")
+DEFINE_PROC(L"boolean?")
 {
     RETURN(make_boolean(is_boolean(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("symbol?")
+DEFINE_PROC(L"symbol?")
 {
     RETURN(make_boolean(is_symbol(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("char?")
+DEFINE_PROC(L"char?")
 {
     RETURN(make_boolean(is_character(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("vector?")
+DEFINE_PROC(L"vector?")
 {
     /* RETURN(make_boolean(is_vector(pair_car(F_SUBJ)))); */
     RETURN(make_boolean(false));
 }
 
-DEFINE_PROC("number?")
+DEFINE_PROC(L"number?")
 {
     /* RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
     RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("string?")
+DEFINE_PROC(L"string?")
 {
     RETURN(make_boolean(is_string(pair_car(F_SUBJ))));
 }
@@ -58,7 +58,7 @@ DEFINE_BLOCK(b_define_continue)
     RETURN(NIL);
 }
 
-DEFINE_SPECIAL_FORM("define")
+DEFINE_SPECIAL_FORM(L"define")
 {
     obj_t *var = pair_car(F_SUBJ);
     obj_t *rest = pair_cdr(F_SUBJ);
@@ -88,7 +88,7 @@ DEFINE_SPECIAL_FORM("define")
  * (quote <datum>)			# syntax
  */
 
-DEFINE_SPECIAL_FORM("quote")
+DEFINE_SPECIAL_FORM(L"quote")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
     RETURN(pair_car(F_SUBJ));
@@ -99,7 +99,7 @@ DEFINE_SPECIAL_FORM("quote")
  * (lambda <formals> <body>)		# syntax
  */
 
-DEFINE_SPECIAL_FORM("lambda")
+DEFINE_SPECIAL_FORM(L"lambda")
 {
     obj_t *params = pair_car(F_SUBJ);
     obj_t *body = pair_cdr(F_SUBJ);
@@ -126,7 +126,7 @@ DEFINE_BLOCK(b_continue_if)
     TAIL_EVAL(alternate, F_ENV);
 }
 
-DEFINE_SPECIAL_FORM("if")
+DEFINE_SPECIAL_FORM(L"if")
 {
     obj_t *test = pair_car(F_SUBJ);
     obj_t *subj_cdr = pair_cdr(F_SUBJ);
@@ -147,7 +147,7 @@ DEFINE_BLOCK(b_set_continue)
     RETURN(NIL);
 }
 
-DEFINE_SPECIAL_FORM("set!")
+DEFINE_SPECIAL_FORM(L"set!")
 {
     obj_t *var = pair_car(F_SUBJ);
     obj_t *exp = pair_car(pair_cdr(F_SUBJ));
@@ -197,7 +197,7 @@ DEFINE_SPECIAL_FORM("set!")
  * (equal? obj1 obj2)			# procedure
  */
 
-DEFINE_PROC("eq?")
+DEFINE_PROC(L"eq?")
 {
     obj_t *obj1 = pair_car(F_SUBJ);
     obj_t *obj2 = pair_car(pair_cdr(F_SUBJ));
@@ -209,7 +209,7 @@ DEFINE_PROC("eq?")
  * (procedure? obj)
  */
 
-DEFINE_PROC("procedure?")
+DEFINE_PROC(L"procedure?")
 {
     RETURN(make_boolean(is_procedure(pair_car(F_SUBJ))));
 }
@@ -266,28 +266,28 @@ DEFINE_PROC("procedure?")
  * (for-each proc list1 list2 ...)	# procedure
  */
 
-DEFINE_PROC("pair?")
+DEFINE_PROC(L"pair?")
 {
     RETURN(make_boolean(is_pair(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("cons")
+DEFINE_PROC(L"cons")
 {
     RETURN(make_pair(pair_car(F_SUBJ),
 		     pair_car(pair_cdr(F_SUBJ))));
 }
 
-DEFINE_PROC("car")
+DEFINE_PROC(L"car")
 {
     RETURN(pair_car(pair_car(F_SUBJ)));
 }
 
-DEFINE_PROC("cdr")
+DEFINE_PROC(L"cdr")
 {
     RETURN(pair_cdr(pair_car(F_SUBJ)));
 }
 
-DEFINE_PROC("null?")
+DEFINE_PROC(L"null?")
 {
     RETURN(make_boolean(is_null(pair_car(F_SUBJ))));
 }
@@ -332,13 +332,13 @@ DEFINE_PROC("null?")
  */
 
 #if 0
-DEFINE_PROC("call-with-current-continuation")
+DEFINE_PROC(L"call-with-current-continuation")
 {
     obj_t *proc = pair_car(F_SUBJ);
     obj_t *args = make_pair(FRAME, NIL);
     return eval_application(FRAME, proc, args);
 }
-REBIND_PROC("call-with-current-continuation", "call/cc");
+REBIND_PROC(L"call-with-current-continuation", L"call/cc");
 #endif
 
 /* XXX How can I bind call/cc to call-with-current-continuation? */

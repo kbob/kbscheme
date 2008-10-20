@@ -31,7 +31,9 @@ obj_t *make_string(const wchar_t *value)
     size_t len = wcslen(value);
     obj_t *obj = mem_alloc_obj(&string_ops, len_to_bytes(len));
     string_obj_t *sp = (string_obj_t *)obj;
+    sp->string_len = len;
     wcscpy(sp->string_value, value);
+    verify_heap();
     return obj;
 }
 

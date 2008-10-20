@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "roots.h"
 #include "types.h"
 
 env_t *make_env(env_t *parent)
@@ -12,12 +13,28 @@ env_t *make_env(env_t *parent)
 
 void env_bind(env_t *env, obj_t *name, binding_type_t type, obj_t *value)
 {
+    /* XXX rewrite binding as a mixvec. */
     assert(!is_null(env));
     assert(is_symbol(name));
-    obj_t *frame = pair_car(env);
-    obj_t *binding = make_pair(name, make_pair(make_fixnum(type), value));
+    PUSH_ROOT(env);
+    PUSH_ROOT(name);
+    PUSH_ROOT(value);
+    AUTO_ROOT(frame);
+    AUTO_ROOT(binding);
+    AUTO_ROOT(p);
+    p = make_fixnum(type);
+    p = make_pair(p, value);
+    p = make_pair(name, p);
+    binding = p;
+    frame = pair_car(env);
     frame = make_pair(binding, frame);
     pair_set_car(env, frame);
+    POP_ROOT(p);
+    POP_ROOT(binding);
+    POP_ROOT(frame);
+    POP_ROOT(value);
+    POP_ROOT(name);
+    POP_ROOT(env);
 }
 
 binding_t *env_lookup(env_t *env, obj_t *var)
@@ -37,8 +54,9 @@ binding_t *env_lookup(env_t *env, obj_t *var)
 	    obj_t *binding = pair_car(frame);
 	    assert(is_symbol(pair_car(binding)));
 	    assert(is_symbol(var));
-	    if (pair_car(binding) == var)
+	    if (pair_car(binding) == var) {
 		return binding;
+	    }
 	    frame = pair_cdr(frame);
 	}
 	env = pair_cdr(env);

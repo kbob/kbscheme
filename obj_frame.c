@@ -68,7 +68,20 @@ static obj_t *sf_get_ptr_op(const obj_t *obj, size_t index)
 
 static void sf_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 {
-    assert(false);
+    short_frame_t *fp = (short_frame_t *)obj;
+    switch (index) {
+    case 0:
+	fp->sf_parent = ptr;
+	break;
+    case 1:
+	fp->sf_subject = ptr;
+	break;
+    case 2:
+	fp->sf_environment = ptr;
+	break;
+    default:
+	assert(false);
+    }
 }
 
 static mem_ops_t short_frame_ops = {
@@ -138,7 +151,29 @@ static obj_t *lf_get_ptr_op(const obj_t *obj, size_t index)
 
 static void lf_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 {
-    assert(false);
+    long_frame_t *fp = (long_frame_t *)obj;
+    switch (index) {
+    case 0:
+	fp->lf_parent = ptr;
+	break;
+    case 1:
+	fp->lf_subject = ptr;
+	break;
+    case 2:
+	fp->lf_environment = ptr;
+	break;
+    case 3:
+	fp->lf_procedure = ptr;
+	break;
+    case 4:
+	fp->lf_arg_list = ptr;
+	break;
+    case 5:
+	fp->lf_last_arg = ptr;
+	break;
+    default:
+	assert(false);
+    }
 }
 
 static mem_ops_t long_frame_ops = {
@@ -166,9 +201,10 @@ obj_t *make_short_frame(obj_t         *parent,
     obj_t *obj = mem_alloc_obj(&short_frame_ops, sizeof (short_frame_t));
     short_frame_t *fp = (short_frame_t *)obj;
     fp->sf_continuation = continuation;
-    fp->sf_parent       = parent;
-    fp->sf_subject      = subject;
-    fp->sf_environment  = environment;
+    fp->sf_parent       = mem_move_obj(parent);
+    fp->sf_subject      = mem_move_obj(subject);
+    fp->sf_environment  = mem_move_obj(environment);
+    verify_heap();
     return obj;
 }
 
@@ -189,12 +225,13 @@ obj_t *make_long_frame(obj_t          *parent,
     obj_t *obj = mem_alloc_obj(&long_frame_ops, sizeof (long_frame_t));
     long_frame_t *fp = (long_frame_t *)obj;
     fp->lf_continuation = continuation;
-    fp->lf_parent       = parent;
-    fp->lf_subject      = subject;
-    fp->lf_environment  = environment;
-    fp->lf_procedure    = procedure;
-    fp->lf_arg_list     = arg_list;
-    fp->lf_last_arg     = last_arg;
+    fp->lf_parent       = mem_move_obj(parent);
+    fp->lf_subject      = mem_move_obj(subject);
+    fp->lf_environment  = mem_move_obj(environment);
+    fp->lf_procedure    = mem_move_obj(procedure);
+    fp->lf_arg_list     = mem_move_obj(arg_list);
+    fp->lf_last_arg     = mem_move_obj(last_arg);
+    verify_heap();
     return obj;
 }
 

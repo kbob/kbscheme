@@ -24,6 +24,7 @@ obj_t *make_fixnum(int value)
     obj_t *obj = mem_alloc_obj(&fixnum_ops, sizeof (fixnum_obj_t));
     fixnum_obj_t *fp = (fixnum_obj_t *)obj;
     fp->fixnum_value = value;
+    verify_heap();
     return obj;
 }
 

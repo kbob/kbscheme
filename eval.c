@@ -4,7 +4,9 @@
 
 #include "bind.h"
 #include "proc.h"
+#include "roots.h"
 
+#define EVAL_TRACE 1
 #ifdef EVAL_TRACE
 #include <stdio.h>			/* XXX */
 #include "print.h"			/* XXX */
@@ -72,13 +74,18 @@ inline eval_frame_t eval_application(eval_frame_t FRAME,
 				     obj_t *proc,
 				     obj_t *args)
 {
-    obj_t *body = procedure_body(proc);
+    AUTO_ROOT(body);
+    body = procedure_body(proc);
     if (procedure_is_C(proc))
 	GOTO_FRAME(make_short_frame, (C_procedure_t *)body, args, F_ENV);
-    obj_t *new_env = make_env(F_ENV);
-    obj_t *formals = procedure_args(proc);
-    obj_t *actuals = args;
-    obj_t *rest = NIL;			/* XXX use this. */
+    AUTO_ROOT(new_env);
+    AUTO_ROOT(formals);
+    AUTO_ROOT(actuals);
+    AUTO_ROOT(rest);
+    new_env = make_env(F_ENV);
+    formals = procedure_args(proc);
+    actuals = args;
+    rest = NIL;				/* XXX use this. */
     while (!is_null(formals) || ! is_null(actuals)) {
 	if (is_null(formals))
 	    RAISE("too many args");
@@ -102,8 +109,10 @@ DEFINE_EXTERN_BLOCK(b_eval)
     if (is_symbol(F_SUBJ))
 	RETURN(eval_symbol(FRAME));
     if (is_application(F_SUBJ)) {
-	obj_t *proc = pair_car(F_SUBJ);
-	obj_t *args = pair_cdr(F_SUBJ);
+	AUTO_ROOT(proc);
+	AUTO_ROOT(args);
+	proc = pair_car(F_SUBJ);
+	args = pair_cdr(F_SUBJ);
 	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, args, F_ENV);
     }
     RAISE(&syntax);
@@ -114,10 +123,18 @@ DEFINE_BLOCK(b_accum_operator)
     obj_t *proc = F_VAL;
     obj_t *args = F_SUBJ;
     if (procedure_is_special_form(proc) || is_null(args)) {
+#if 0
+	FRAME = eval_application(FRAME, proc, args);
+	POP_FUNCTION_ROOTS();
+	return FRAME;
+#else
 	return eval_application(FRAME, proc, args);
+#endif
     }
-    obj_t *first_arg = pair_car(args);
-    obj_t *rest_args = pair_cdr(args);
+    AUTO_ROOT(first_arg);
+    AUTO_ROOT(rest_args);
+    first_arg = pair_car(args);
+    rest_args = pair_cdr(args);
     EVAL_THEN_GOTO_FRAME(first_arg, F_ENV,
 			 make_long_frame,
 			 b_accum_arg, rest_args, F_ENV, proc, NIL, NIL);
@@ -153,6 +170,11 @@ DEFINE_BLOCK(b_accum_arg)
 
 obj_t *eval(obj_t *expr, env_t *env)
 {
+    printf("\n");
+    printf("eval\n");
+    printf("\n");
+    PUSH_ROOT(expr);
+    PUSH_ROOT(env);
     eval_frame_t FRAME = { make_short_frame(NIL, NULL, NIL, NIL), NIL };
     FRAME = MAKE_CALL(b_eval, expr, env);
     while (F_CONT) {
@@ -167,5 +189,7 @@ obj_t *eval(obj_t *expr, env_t *env)
 #endif
 	FRAME = (*F_CONT)(FRAME);
     }
+    POP_ROOT(env);
+    POP_ROOT(expr);
     return F_VAL;
 }

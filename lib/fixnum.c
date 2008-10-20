@@ -2,19 +2,19 @@
 
 #include "proc.h"
 
-DEFINE_PROC("number?")
+DEFINE_PROC(L"number?")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
     RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("integer?")
+DEFINE_PROC(L"integer?")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
     RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC("=")
+DEFINE_PROC(L"=")
 {
     obj_t *p = F_SUBJ;
     int x = fixnum_value(pair_car(p));
@@ -26,7 +26,7 @@ DEFINE_PROC("=")
     RETURN(make_boolean(true));
 }
 
-DEFINE_PROC("<")
+DEFINE_PROC(L"<")
 {
     obj_t *p = F_SUBJ;
     int x = fixnum_value(pair_car(p));
@@ -41,7 +41,7 @@ DEFINE_PROC("<")
     RETURN(make_boolean(true));
 }
 
-DEFINE_PROC(">")
+DEFINE_PROC(L">")
 {
     obj_t *p = F_SUBJ;
     int x = fixnum_value(pair_car(p));
@@ -56,7 +56,7 @@ DEFINE_PROC(">")
     RETURN(make_boolean(true));
 }
 
-DEFINE_PROC("<=")
+DEFINE_PROC(L"<=")
 {
     obj_t *p = F_SUBJ;
     int x = fixnum_value(pair_car(p));
@@ -71,7 +71,7 @@ DEFINE_PROC("<=")
     RETURN(make_boolean(true));
 }
 
-DEFINE_PROC(">=")
+DEFINE_PROC(L">=")
 {
     obj_t *p = F_SUBJ;
     int x = fixnum_value(pair_car(p));
@@ -86,18 +86,20 @@ DEFINE_PROC(">=")
     RETURN(make_boolean(true));
 }
 
-DEFINE_PROC("+")
+DEFINE_PROC(L"+")
 {
+    printf("PLUS is CALLED\n");
     obj_t *p = F_SUBJ;
     int sum = 0;
     while (!is_null(p)) {
 	sum += fixnum_value(pair_car(p));
 	p = pair_cdr(p);
     }
+    printf("PLUS is RETURNING\n");
     RETURN(make_fixnum(sum));
 }
 
-DEFINE_PROC("-")
+DEFINE_PROC(L"-")
 {
     obj_t *p = F_SUBJ;
     int diff = fixnum_value(pair_car(p));
@@ -111,7 +113,7 @@ DEFINE_PROC("-")
     RETURN(make_fixnum(diff));
 }
 
-DEFINE_PROC("*")
+DEFINE_PROC(L"*")
 {
     obj_t *p = F_SUBJ;
     int prod = 1;
@@ -122,7 +124,7 @@ DEFINE_PROC("*")
     RETURN(make_fixnum(prod));
 }
 
-DEFINE_PROC("div")
+DEFINE_PROC(L"div")
 {
     int dividend = fixnum_value(pair_car(F_SUBJ));
     int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
@@ -130,7 +132,7 @@ DEFINE_PROC("div")
     RETURN(make_fixnum(dividend / divisor));
 }
 
-DEFINE_PROC("mod")
+DEFINE_PROC(L"mod")
 {
     int dividend = fixnum_value(pair_car(F_SUBJ));
     int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
@@ -138,7 +140,7 @@ DEFINE_PROC("mod")
     RETURN(make_fixnum(dividend % divisor));
 }
 
-DEFINE_PROC("abs")
+DEFINE_PROC(L"abs")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
     int x = fixnum_value(pair_car(F_SUBJ));
