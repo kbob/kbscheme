@@ -13,31 +13,17 @@ env_t *make_env(env_t *parent)
 
 void env_bind(env_t *env, obj_t *name, binding_type_t type, obj_t *value)
 {
-    /* XXX rewrite binding as a mixvec. */
     assert(!is_null(env));
     assert(is_symbol(name));
     PUSH_ROOT(env);
-    PUSH_ROOT(name);
-    PUSH_ROOT(value);
-    AUTO_ROOT(frame, NIL);
-    AUTO_ROOT(binding, NIL);
-    AUTO_ROOT(p, NIL);
-    p = make_fixnum(type);
-    p = make_pair(p, value);
-    p = make_pair(name, p);
-    binding = p;
-    frame = pair_car(env);
+    AUTO_ROOT(binding, make_binding(name, type, value));
+    obj_t *frame = pair_car(env);
     frame = make_pair(binding, frame);
     pair_set_car(env, frame);
-    POP_ROOT(p);
-    POP_ROOT(binding);
-    POP_ROOT(frame);
-    POP_ROOT(value);
-    POP_ROOT(name);
-    POP_ROOT(env);
+    POP_FUNCTION_ROOTS();
 }
 
-binding_t *env_lookup(env_t *env, obj_t *var)
+obj_t *env_lookup(env_t *env, obj_t *var)
 {
     /*
      * for frame in env:
@@ -52,9 +38,8 @@ binding_t *env_lookup(env_t *env, obj_t *var)
 	obj_t *frame = pair_car(env);
 	while (!is_null(frame)) {
 	    obj_t *binding = pair_car(frame);
-	    assert(is_symbol(pair_car(binding)));
-	    assert(is_symbol(var));
-	    if (pair_car(binding) == var) {
+	    assert(is_binding(binding));
+	    if (binding_name(binding) == var) {
 		return binding;
 	    }
 	    frame = pair_cdr(frame);
@@ -64,30 +49,4 @@ binding_t *env_lookup(env_t *env, obj_t *var)
     fprintf(stderr, "unbound variable \"%ls\"\n",
 	    string_value(symbol_name(var)));
     assert(false && "unbound variable");
-}
-
-obj_t *binding_name(binding_t *binding)
-{
-    return pair_car(binding);
-}
-
-binding_type_t binding_type(binding_t *binding)
-{
-    return fixnum_value(pair_car(pair_cdr(binding)));
-}
-
-bool binding_is_mutable(binding_t *binding)
-{
-    return binding_type(binding) == BINDING_MUTABLE;
-}
-
-obj_t *binding_value(binding_t *binding)
-{
-    return pair_cdr(pair_cdr(binding));
-}
-
-void binding_set(binding_t *binding, obj_t *value)
-{
-    assert(binding_is_mutable(binding));
-    pair_set_cdr(pair_cdr(binding), value);
 }

@@ -141,7 +141,7 @@ DEFINE_SPECIAL_FORM(L"if")
 DEFINE_BLOCK(b_set_continue)
 {
     obj_t *var = F_SUBJ;
-    binding_t *binding = env_lookup(F_ENV, var);
+    obj_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
     env_bind(F_ENV, var, BINDING_MUTABLE, F_VAL);
     RETURN(NIL);

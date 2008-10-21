@@ -40,7 +40,7 @@ static obj_t *eval_symbol(eval_frame_t FRAME)
 static obj_t *eval_symbol(void)
 #endif
 {
-    binding_t *binding = env_lookup(F_ENV, F_SUBJ);
+    obj_t *binding = env_lookup(F_ENV, F_SUBJ);
     return binding_value(binding);
 }
 

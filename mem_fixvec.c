@@ -10,35 +10,35 @@
         obj_t        *fv##N##_ptrs[N]; 					\
     } fixvec##N##_t;							\
 									\
-    size_t fv##N##_size_op(const obj_t *obj) 				\
+    static size_t fv##N##_size_op(const obj_t *obj) 			\
     { 									\
 	return sizeof (fixvec##N##_t); 					\
     } 									\
  									\
-    size_t fv##N##_ptr_count_op(const obj_t *obj) 			\
+    static size_t fv##N##_ptr_count_op(const obj_t *obj) 		\
     { 									\
 	return N; 							\
     } 									\
  									\
-    void fv##N##_move_op(const obj_t *src, obj_t *dst) 			\
+    static void fv##N##_move_op(const obj_t *src, obj_t *dst) 		\
     { 									\
 	*(fixvec##N##_t *)dst = *(const fixvec##N##_t*)src;		\
     } 									\
  									\
-    void fv##N##_move_callback_op(const obj_t *src, 			\
+    static void fv##N##_move_callback_op(const obj_t *src, 		\
 			      obj_t *dst, 				\
 			      move_callback_t cb) 			\
     { 									\
 	int i; 								\
  									\
-	const fixvec##N##_t *vsrc = (fixvec##N##_t *)src; 		\
+	const fixvec##N##_t *vsrc = (const fixvec##N##_t *)src; 	\
 	fixvec##N##_t *vdst = (fixvec##N##_t *)dst; 			\
 	vdst->fv##N##_header = vsrc->fv##N##_header; 			\
 	for (i = 0; i < N; i++) 					\
 	    vdst->fv##N##_ptrs[i] = cb(vsrc->fv##N##_ptrs[i]); 		\
     } 									\
  									\
-    obj_t *fv##N##_get_ptr_op(const obj_t *obj, size_t index) 		\
+    static obj_t *fv##N##_get_ptr_op(const obj_t *obj, size_t index)	\
     { 									\
 	fixvec##N##_t *vec = (fixvec##N##_t *)obj; 			\
 	if (index < N) 							\
@@ -46,7 +46,7 @@
 	assert(false); 							\
     } 									\
  									\
-    void fv##N##_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)	\
+    static void fv##N##_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)\
     { 									\
 	fixvec##N##_t *vec = (fixvec##N##_t *)obj; 			\
 	if (index < N) 							\
@@ -55,20 +55,33 @@
 	    assert(false); 						\
     } 									\
  									\
-static mem_ops_t fixvec##N##_ops = { 					\
-    L"fixvec" #N, 							\
-    NULL, 								\
-    NULL, 								\
-    NULL,	 							\
-    fv##N##_size_op, 							\
-    fv##N##_ptr_count_op, 						\
-    fv##N##_move_op, 							\
-    fv##N##_move_callback_op, 						\
-    fv##N##_get_ptr_op, 						\
-    fv##N##_set_ptr_op, 						\
-    { } 								\
-};
-
+    static mem_ops_t fixvec##N##_ops = { 				\
+	L"fixvec" #N, 							\
+	NULL, 								\
+	NULL, 								\
+	NULL,	 							\
+	fv##N##_size_op, 						\
+	fv##N##_ptr_count_op, 						\
+	fv##N##_move_op, 						\
+	fv##N##_move_callback_op, 					\
+	fv##N##_get_ptr_op, 						\
+	fv##N##_set_ptr_op, 						\
+	{ } 								\
+    };									\
+									\
+obj_t *fixvec##N##_get_ptr(obj_t *obj, size_t index)			\
+{									\
+    assert_in_tospace(obj);						\
+    assert(index < N);							\
+    return ((fixvec##N##_t *)obj)->fv##N##_ptrs[index];			\
+}									\
+									\
+void fixvec##N##_set_ptr(obj_t *obj, size_t index, obj_t *ptr)		\
+{									\
+    assert_in_tospace(obj);						\
+    assert(index < N);							\
+    ((fixvec##N##_t *)obj)->fv##N##_ptrs[index] = ptr;			\
+}
 
 DEFINE_FIXVEC_TYPE(1)
 DEFINE_FIXVEC_TYPE(2)
@@ -115,7 +128,6 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
 	ops->mo_init = init_op;
     if (free_op)
 	ops->mo_free = free_op;
-    
 }
 
 obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)

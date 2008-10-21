@@ -187,7 +187,6 @@ void verify_heap()
 	p += size;
     }
 }
-#define verify_heap() ((void) 0)	/* XXX */
 
 obj_t *move_obj(obj_t *obj)
 {
@@ -292,7 +291,7 @@ obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size)
     verify_heap();
     remember_ops(ops);
     size_t alloc_size = aligned_size(size);
-    if (next_alloc > to_space_end - alloc_size) {
+    if (1 || next_alloc > to_space_end - alloc_size) {
 	copy_heap();
 	assert(next_alloc <= to_space_end - alloc_size && "out of memory");
     }

@@ -4,26 +4,29 @@ DONE	Clean up and comment second half of proc.h.
 DONE	Change mem_init_op to allow NULL.
 	add procedure prototypes of some sort.
 	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
-	It should be illegal to define a function twice.	
+ drop	It should be illegal to define a function twice.	
 	Fix the makefile so subdirectories are rebuilt.
-	mem_fixvec should export non-virtual element accessors.
+DONE	mem_fixvec should export non-virtual element accessors.
 
 DONE	nonrecursive eval
  DONE	    define C procedure API.
  DONE	    threaded model?
  DONE	    documentation
-	    clean up proc.h somehow?
+ DONE	    clean up proc.h somehow?
 
 	full mem model
  DONE	    define obj ops.
  DONE	    rewrite base objects.
  DONE	    rewrite frames to use objects.
-	    write mixvec.
-	    rewrite binding as mixvec.
-	    rewrite procedure as mixvec?
+ DONE	    write mixvec.
+ DONE	    rewrite binding as mixvec.
+  no	    rewrite procedure as mixvec?
  DONE	    must remove value from frame - not thread safe.
 
 	GC
+ DONE	    stop and copy algorithm
+	    clean up
+	    create run-time parameter to run debug code.
 
 	decentralize unit testing.
 

@@ -234,6 +234,7 @@
     } while (0)
 #endif
 #else
+#if 0
 #define RETURN(val)							\
     do {								\
         AUTO_ROOT(val__, (val));					\
@@ -241,6 +242,15 @@
         POP_FUNCTION_ROOTS();						\
         return val__;							\
     } while (0)
+#else
+#define RETURN(val) \
+do { \
+    obj_t *val__ = (val); \
+    FRAME = F_PARENT; \
+    POP_FUNCTION_ROOTS(); \
+    return val__; \
+} while (0)
+#endif
 #endif
 
 /* Evaluate the expression in the environment and return the
