@@ -6,32 +6,24 @@ static proc_descriptor_t *proc_descs;
 
 void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
 {
-    printf("binding proc %ls\n", name);
-    AUTO_ROOT(env);
-    env = library_env(library);
-    AUTO_ROOT(code);
-    code = make_C_procedure(proc, NIL, env);
-    AUTO_ROOT(sym);
-    sym = make_symbol(name);
-    env_bind(env, sym, BINDING_MUTABLE, code);
-    POP_ROOT(sym);
+    //printf("binding proc %ls\n", name);
+    AUTO_ROOT(env, library_env(library));
+    AUTO_ROOT(code, make_C_procedure(proc, NIL, env));
+    obj_t *sym = make_symbol(name);
     POP_ROOT(code);
     POP_ROOT(env);
+    env_bind(env, sym, BINDING_MUTABLE, code);
 }
 
 void bind_special_form(C_procedure_t *form,
 		       obj_t *library,
 		       const wchar_t *name)
 {
-    printf("binding special form %ls\n", name);
-    AUTO_ROOT(env);
-    env = library_env(library);
-    AUTO_ROOT(code);
-    code = make_C_special_form_procedure(form, NIL, env);
-    AUTO_ROOT(sym);
-    sym = make_symbol(name);
+    //printf("binding special form %ls\n", name);
+    AUTO_ROOT(env, library_env(library));
+    AUTO_ROOT(code, make_C_special_form_procedure(form, NIL, env));
+    obj_t *sym = make_symbol(name);
     env_bind(env, sym, BINDING_IMMUTABLE, code);
-    POP_ROOT(sym);
     POP_ROOT(code);
     POP_ROOT(env);
 }

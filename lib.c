@@ -7,7 +7,11 @@ ROOT(r6rs_base);
 
 lib_t *make_library(obj_t *namespec)
 {
-    return make_pair(make_env(NIL), NULL);
+    PUSH_ROOT(namespec);
+    AUTO_ROOT(env, make_env(NIL));
+    obj_t *lib = make_pair(env, namespec);
+    POP_FUNCTION_ROOTS();
+    return lib;
 }
 
 env_t *library_env(lib_t *lib)
@@ -19,10 +23,8 @@ lib_t *r6rs_base_library(void)
 {
     if (!r6rs_base) {
 	/* (rnrs base (6)) */
-	AUTO_ROOT(sym);
-	AUTO_ROOT(p);
-	sym = make_fixnum(6);
-	p = make_pair(sym, NIL);
+	AUTO_ROOT(sym, make_fixnum(6));
+	AUTO_ROOT(p, make_pair(sym, NIL));
 	p = make_pair(p, NIL);
 	sym = make_symbol(L"rnrs");
 	p = make_pair(sym, p);
@@ -34,4 +36,3 @@ lib_t *r6rs_base_library(void)
     }
     return r6rs_base;
 }
-

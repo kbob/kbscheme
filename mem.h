@@ -83,7 +83,7 @@ extern void assert_in_tospace(const obj_t *);
 
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t);
 
-extern obj_t *mem_move_obj(obj_t *);
+//XXX extern obj_t *mem_move_obj(obj_t *);
 
 extern void verify_heap(void);		// XXX
 

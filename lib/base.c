@@ -60,8 +60,8 @@ DEFINE_BLOCK(b_define_continue)
 
 DEFINE_SPECIAL_FORM(L"define")
 {
-    obj_t *var = pair_car(F_SUBJ);
-    obj_t *rest = pair_cdr(F_SUBJ);
+    AUTO_ROOT(var, pair_car(F_SUBJ));
+    AUTO_ROOT(rest, pair_cdr(F_SUBJ));
     obj_t *value;
     if (is_pair(var)) {
 	obj_t *formals = pair_cdr(var);
@@ -71,7 +71,7 @@ DEFINE_SPECIAL_FORM(L"define")
 	value = NIL;
     } else {
 	assert(is_null(pair_cdr(rest)));
-	obj_t *exp = pair_car(rest);
+	AUTO_ROOT(exp, pair_car(rest));
 	EVAL_THEN_GOTO(exp, F_ENV, b_define_continue, F_SUBJ, F_ENV);
     }
     env_bind(F_ENV, var, BINDING_MUTABLE, value);
@@ -128,8 +128,8 @@ DEFINE_BLOCK(b_continue_if)
 
 DEFINE_SPECIAL_FORM(L"if")
 {
-    obj_t *test = pair_car(F_SUBJ);
-    obj_t *subj_cdr = pair_cdr(F_SUBJ);
+    AUTO_ROOT(test, pair_car(F_SUBJ));
+    AUTO_ROOT(subj_cdr, pair_cdr(F_SUBJ));
     EVAL_THEN_GOTO(test, F_ENV, b_continue_if, subj_cdr, F_ENV);
 }
 
@@ -149,8 +149,8 @@ DEFINE_BLOCK(b_set_continue)
 
 DEFINE_SPECIAL_FORM(L"set!")
 {
-    obj_t *var = pair_car(F_SUBJ);
-    obj_t *exp = pair_car(pair_cdr(F_SUBJ));
+    AUTO_ROOT(var, pair_car(F_SUBJ));
+    AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
     EVAL_THEN_GOTO(exp, F_ENV, b_set_continue, var, F_ENV);
 }
 

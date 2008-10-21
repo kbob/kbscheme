@@ -165,8 +165,13 @@
 #define DECLARE_EXTERN_BLOCK(C_name) DECLARE_PROC_(extern, C_name);
 #define DECLARE_STATIC_BLOCK(C_name) DECLARE_PROC_(static, C_name);
 
+#if PASS_FRAMES
 #define DECLARE_PROC_(storage_class, C_name) \
     storage_class eval_frame_t C_name(eval_frame_t FRAME)
+#else
+#define DECLARE_PROC_(storage_class, C_name) \
+    storage_class obj_t *C_name(obj_t *VALUE)
+#endif
 
 #define DEFINE_GENERAL_PROC_(library, 					\
 			     storage_class, 				\
@@ -193,6 +198,7 @@
 #define CAT_(a, b) CAT__(a, b)
 #define CAT__(a, b) a ## b
 
+#if PASS_FRAMES
 /* FRAME member accessors */
 #define F_PARENT        (frame_get_parent(FRAME.ef_frame))
 #define F_CONT          (frame_get_continuation(FRAME.ef_frame))
@@ -202,8 +208,20 @@
 #define F_ARGL          (frame_get_arg_list(FRAME.ef_frame))
 #define F_LARG          (frame_get_last_arg(FRAME.ef_frame))
 #define F_VAL           (FRAME.ef_value)
+#else
+/* FRAME member accessors */
+#define F_PARENT        (frame_get_parent(FRAME))
+#define F_CONT          (frame_get_continuation(FRAME))
+#define F_SUBJ          (frame_get_subject(FRAME))
+#define F_ENV           (frame_get_environment(FRAME))
+#define F_PROC          (frame_get_procedure(FRAME))
+#define F_ARGL          (frame_get_arg_list(FRAME))
+#define F_LARG          (frame_get_last_arg(FRAME))
+#define F_VAL           (VALUE)
+#endif
 
 /* Return the value as the result of this function. */
+#if PASS_FRAMES
 #if 0
 #define RETURN(val) return (eval_frame_t) { F_PARENT, (val) };
 #else
@@ -213,6 +231,15 @@
 	FRAME = (eval_frame_t) { F_PARENT, (val) };			\
 	POP_FUNCTION_ROOTS();						\
 	return FRAME;							\
+    } while (0)
+#endif
+#else
+#define RETURN(val)							\
+    do {								\
+        AUTO_ROOT(val__, (val));					\
+        FRAME = F_PARENT;						\
+        POP_FUNCTION_ROOTS();						\
+        return val__;							\
     } while (0)
 #endif
 
@@ -247,14 +274,16 @@
 #else
 #define GOTO_FRAME(factory, target, ...)				\
     do {								\
+        FRAME = MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);	\
         POP_FUNCTION_ROOTS();						\
-        return MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);	\
+	return NIL;							\
     } while (0);    
 #endif
 
 /* Return from this block, then call callee, then goto target.
  * Callee and target are tuples (block, arg, arg...).
  */
+#if PASS_FRAMES
 #define CALL_THEN_GOTO(callee, target) 					\
     do { 								\
 	PUSH_ROOT(FRAME.ef_frame);					\
@@ -263,7 +292,17 @@
 	POP_FUNCTION_ROOTS();						\
 	return FRAME; 							\
     } while (0)
+#else
+#define CALL_THEN_GOTO(callee, target) 					\
+    do { 								\
+	FRAME = MAKE_GOTO target; 					\
+	FRAME = MAKE_CALL callee;	 				\
+	POP_FUNCTION_ROOTS();						\
+	return NIL; 							\
+    } while (0)
+#endif
 
+#if PASS_FRAMES
 #define CALL_THEN_GOTO_FRAME(callee, target) 				\
     do { 								\
 	PUSH_ROOT(FRAME.ef_frame);					\
@@ -271,8 +310,17 @@
 	FRAME = MAKE_CALL callee; 					\
 	POP_ROOT(FRAME.ef_frame);					\
 	POP_FUNCTION_ROOTS();						\
-	return FRAME; 							\
+	return NIL; 							\
     } while (0)
+#else
+#define CALL_THEN_GOTO_FRAME(callee, target) 				\
+    do { 								\
+	FRAME = MAKE_GOTO_FRAME target; 				\
+	FRAME = MAKE_CALL callee; 					\
+	POP_FUNCTION_ROOTS();						\
+	return NIL; 							\
+    } while (0)
+#endif
 
 /* Make an activation frame whose continuation is this frame's
    continuation.
@@ -280,15 +328,24 @@
 #define MAKE_GOTO(target, ...) \
     MAKE_GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
 
+#if PASS_FRAMES
 #define MAKE_GOTO_FRAME(factory, target, ...) \
     ((eval_frame_t) { factory(F_PARENT, (target), __VA_ARGS__), NIL })
+#else
+#define MAKE_GOTO_FRAME(factory, target, ...) \
+    (factory(F_PARENT, (target), __VA_ARGS__))
+#endif
 
 /* Make an activation frame whose continuation is the current frame.
  */
+#if PASS_FRAMES
 #define MAKE_CALL(target, ...)						\
     ((eval_frame_t) {							\
 	make_short_frame(FRAME.ef_frame, (target), __VA_ARGS__), NIL	\
      })
+#else
+#define MAKE_CALL(target, ...) (make_short_frame(FRAME, (target), __VA_ARGS__))
+#endif
 
 typedef void binder_t(C_procedure_t, lib_t *, const wchar_t *name);
 typedef struct proc_descriptor proc_descriptor_t;
@@ -300,6 +357,8 @@ struct proc_descriptor {
     binder_t          *pd_binder;
     proc_descriptor_t *pd_next;
 };
+
+extern obj_t *FRAME;
 
 DECLARE_EXTERN_BLOCK(b_eval);
 

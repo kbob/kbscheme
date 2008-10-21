@@ -17,9 +17,7 @@ static obj_t *find_symbol(const wchar_t *name)
     obj_t *p, *sym;
     obj_t *sym_name;
 
-    int i = 0;
     for (p = all_symbols_list; !is_null(p); p = pair_cdr(p)) {
-	printf("iter %d\n", i++);
 	assert_in_tospace(p);
 	assert(is_pair(p));
 	sym = pair_car(p);
@@ -38,8 +36,7 @@ static obj_t *find_symbol(const wchar_t *name)
 
 extern obj_t *make_symbol(const wchar_t *name)
 {
-    AUTO_ROOT(symbol);
-    symbol = find_symbol(name);
+    AUTO_ROOT(symbol, find_symbol(name));
     if (is_null(symbol)) {
 	/* Not found.  Create one. */
 	if (!symbol_ops.mo_super)

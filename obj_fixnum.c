@@ -25,6 +25,7 @@ obj_t *make_fixnum(int value)
     fixnum_obj_t *fp = (fixnum_obj_t *)obj;
     fp->fixnum_value = value;
     verify_heap();
+    //printf("make_fixnum(%d) => %p\n", value, obj);
     return obj;
 }
 

@@ -5,17 +5,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/mman.h>
 #include <unistd.h>
 
 typedef struct word {
     intptr_t word_word;
 } word_t;
 
-//#define INIT_HEAP_WORDS 65536
-#define INIT_HEAP_WORDS 4096
+#define N_SPACES 100
+#define INIT_HEAP_WORDS 65536
+//#define INIT_HEAP_WORDS 4096
 
+static void *spaces[N_SPACES];
+static size_t current_space;
 static word_t initial_heap[INIT_HEAP_WORDS];
-static void *from_space, *to_space = initial_heap;
+/*XXX static*/ void *from_space, *to_space = initial_heap;
 static void *from_space_end, *to_space_end = &initial_heap[INIT_HEAP_WORDS];
 static void *next_alloc = initial_heap;
 static bool heap_allocation_needed = true;
@@ -44,26 +48,63 @@ static size_t aligned_size(size_t size)
 static void flip()
 {
     if (heap_allocation_needed) {
-	printf("flipping: allocating new heap\n");
+	//printf("flipping: allocating new heap\n");
+#if 0
 	to_space = sbrk(heap_size_bytes);
 	from_space = sbrk(heap_size_bytes);
 	to_space_end = to_space + heap_size_bytes;
 	from_space_end = from_space + heap_size_bytes;
 	heap_allocation_needed = false;
+#else
+	from_space = to_space;
+	from_space_end = to_space_end;
+	spaces[0] = sbrk(N_SPACES * heap_size_bytes);
+	int i;
+	for (i = 1; i < N_SPACES; i++) {
+	    spaces[i] = spaces[i - 1] + heap_size_bytes;
+	    assert(!((intptr_t)spaces[0] & 4095));
+	    int rc = mprotect(spaces[i], heap_size_bytes, PROT_NONE);
+	    if (rc != 0)
+		perror("mprotect(PROT_NONE)");
+	    
+	}
+	current_space = 0;
+	to_space = spaces[current_space % N_SPACES];
+	to_space_end = to_space + heap_size_bytes;
+	heap_allocation_needed = false;
+#endif
     } else {
-	printf("flipping: reusing old heap\n");
+	//printf("flipping: reusing old heap\n");
+#if 0
 	void *tmp = to_space;
 	to_space = from_space;
 	from_space = tmp;
 	tmp = to_space_end;
 	to_space_end = from_space_end;
 	from_space_end = tmp;
+#else
+	if (!((intptr_t)from_space & 4095)) {
+	    int rc = mprotect(from_space, heap_size_bytes, PROT_NONE);
+	    if (rc != 0)
+		perror("mprotect(PROT_NONE)");
+	}
+	current_space++;
+	from_space = to_space;
+	from_space_end = to_space_end;
+	to_space = spaces[current_space % N_SPACES];
+	to_space_end = to_space + heap_size_bytes;
+	int rc = mprotect(to_space, heap_size_bytes, PROT_READ | PROT_WRITE);
+	if (rc != 0)
+	    perror("mprotect(READ|WRITE)");
+#endif
     }
     next_alloc = to_space;
     scan = to_space;
+#if 0
     word_t *p;
     for (p = (word_t *)to_space; p < (word_t *)to_space_end; p++)
 	p->word_word = 0xdeafb0bb;
+#endif
 }
 
 static const mem_ops_t *known_ops[20];
@@ -113,7 +154,7 @@ void verify_object(obj_t *obj, bool scanned)
 
 void verify_heap()
 {
-    printf("verify %p .. %p\n", to_space, next_alloc);
+    //printf("verify %p .. %p\n", to_space, next_alloc);
     void *p = to_space;
     while (p < scan) {
 	obj_t *obj = (obj_t *)p;
@@ -146,14 +187,15 @@ void verify_heap()
 	p += size;
     }
 }
+#define verify_heap() ((void) 0)	/* XXX */
 
-obj_t *mem_move_obj(obj_t *obj)
+obj_t *move_obj(obj_t *obj)
 {
     if (is_null(obj) || is_in_tospace(obj))
 	return obj;
     if (OBJ_IS_FWD(obj))
 	return OBJ_FWD_PTR(obj);
-    printf("move: obj=%p ops_word=0x%x\n", obj, OBJ_OPS_WORD(obj));
+    //printf("move: obj=%p ops_word=0x%x\n", obj, OBJ_OPS_WORD(obj));
     assert(is_known_ops(OBJ_MEM_OPS(obj)));
     size_t size = aligned_size(OBJ_MEM_OPS(obj)->mo_size(obj));
     assert(next_alloc + size <= to_space_end);
@@ -163,8 +205,8 @@ obj_t *mem_move_obj(obj_t *obj)
     assert(next_alloc <= to_space_end);
     OBJ_MEM_OPS(obj)->mo_move(obj, new_obj);
     OBJ_SET_FWD(obj, new_obj);
-    printf("mem_move_obj(%ls %p -> %p) %d ptrs\n",
-	   OBJ_MEM_OPS(new_obj)->mo_name, obj, new_obj, OBJ_MEM_OPS(new_obj)->mo_ptr_count(new_obj));
+    //printf("move_obj(%ls %p -> %p) %d ptrs\n",
+    //	   OBJ_MEM_OPS(new_obj)->mo_name, obj, new_obj, OBJ_MEM_OPS(new_obj)->mo_ptr_count(new_obj));
     return new_obj;
 }
 
@@ -172,14 +214,50 @@ static void *scan_obj(obj_t *obj)
 {
     mem_ops_t *ops = OBJ_MEM_OPS(obj);
     assert(is_known_ops(ops));
+    //printf("scan_obj<%ls>(%p)\n", ops->mo_name, obj);
     size_t size = aligned_size(ops->mo_size(obj));
     size_t i, n_ptrs = ops->mo_ptr_count(obj);
-    for (i = 0; i < n_ptrs; i++)
-	ops->mo_set_ptr(obj, i, mem_move_obj(ops->mo_get_ptr(obj, i)));
+    for (i = 0; i < n_ptrs; i++) {
+#if 0
+	ops->mo_set_ptr(obj, i, move_obj(ops->mo_get_ptr(obj, i)));
+#else
+	obj_t *p0 = ops->mo_get_ptr(obj, i);
+	assert(is_in_tospace(p0) || IS_IN_FROMSPACE(p0));
+	obj_t *p1 = move_obj(p0);
+	assert(is_in_tospace(p1));
+	//printf("   mo_set_ptr<%ls>(%p, %d, %p)\n", ops->mo_name, obj, i, p1);
+	ops->mo_set_ptr(obj, i, p1);
+#endif
+    }
     return (void *) obj + size;
 }
 
+#if 0
+obj_t *mem_move_obj(obj_t *obj)
+{
+    obj_t *new_obj = move_obj(obj);
+    if (new_obj != obj) {
+	void *scanp = new_obj;
+	while (scanp < next_alloc)
+	    scanp = scan_obj(scanp);
+	assert(scanp == next_alloc);
+    }
+    return new_obj;
+}
+#endif
+
 //#include "print.h"			/* XXX */
+
+void scan_stack()
+{
+    intptr_t bottom = 0;
+    char *top = getenv("HOME");
+    intptr_t *p;
+    assert(!((intptr_t)&bottom & 3));
+    for (p = &bottom; p < (intptr_t *)top; p++)
+	if (IS_IN_FROMSPACE(p))
+	    printf("   fromspace %p\n", p);
+}
 
 static void copy_heap()
 {
@@ -189,8 +267,14 @@ static void copy_heap()
 	verify_heap();
 	root_descriptor_t *desc;
 	for (desc = get_thread_roots(); desc; desc = desc->rd_next) {
-	    printf("   moving root %ls\n", desc->rd_name);
-	    *desc->rd_root = mem_move_obj(*desc->rd_root);
+#if 1
+	    *desc->rd_root = move_obj(*desc->rd_root);
+#else
+	    obj_t *tmp = move_obj(*desc->rd_root);
+	    printf("   moving root %s::%ls %p -> %p\n",
+		   desc->rd_func ? desc->rd_func : "", desc->rd_name, *desc->rd_root, tmp);
+	    *desc->rd_root = tmp;
+#endif
 	    verify_heap();
 	}
 	while (scan < next_alloc) {
@@ -198,6 +282,7 @@ static void copy_heap()
 	    verify_heap();
 	}
 	assert(scan == next_alloc);
+	scan_stack();
     }
 }
 
@@ -207,7 +292,7 @@ obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size)
     verify_heap();
     remember_ops(ops);
     size_t alloc_size = aligned_size(size);
-    if (1 || next_alloc > to_space_end - alloc_size) {
+    if (next_alloc > to_space_end - alloc_size) {
 	copy_heap();
 	assert(next_alloc <= to_space_end - alloc_size && "out of memory");
     }

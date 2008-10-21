@@ -33,7 +33,7 @@ static size_t proc_ptr_count_op(const obj_t *obj)
 
 static void proc_move_op(const obj_t *src, obj_t *dst)
 {
-    memcpy(dst, src, sizeof (proc_obj_t));
+    *(proc_obj_t *)dst = *(const proc_obj_t *)src;
 }
 
 static void proc_move_callback_op(const obj_t *src,
@@ -91,45 +91,52 @@ static mem_ops_t proc_ops = {
     { }
 };
 
-static obj_t *make_proc(int flags, void *body, obj_t *args, obj_t *env)
+static obj_t *make_proc(int flags, obj_t **body, obj_t *args, obj_t *env)
 {
     assert_in_tospace(args);
     assert_in_tospace(env);
+    PUSH_ROOT(args);
+    PUSH_ROOT(env);
     obj_t *obj = mem_alloc_obj(&proc_ops, sizeof (proc_obj_t));
     proc_obj_t *proc = (proc_obj_t *)obj;
     proc->proc_flags = flags;
-    proc->proc_args = mem_move_obj(args);
-    proc->proc_env = mem_move_obj(env);
-    if (flags * PF_COMPILED_C)
-	proc->proc_u.pu_code = body;
-    else 
-	proc->proc_u.pu_body = mem_move_obj(body);
+    proc->proc_args = args;
+    proc->proc_env = env;
+    proc->proc_u.pu_body = *body;
     verify_heap();
+    POP_FUNCTION_ROOTS();
     return obj;
 }
 
 obj_t *make_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
     assert_in_tospace(body);
-    return make_proc(0, body, arglist, env);
+    PUSH_ROOT(body);
+    obj_t *proc = make_proc(0, &body, arglist, env);
+    POP_ROOT(body);
+    return proc;
 }
 
 obj_t *make_special_form_procedure(obj_t *body, obj_t *arglist, obj_t *env)
 {
     assert_in_tospace(body);
-    return make_proc(PF_SPECIAL_FORM, body, arglist, env);
+    PUSH_ROOT(body);
+    obj_t *proc = make_proc(PF_SPECIAL_FORM, &body, arglist, env);
+    POP_ROOT(body);
+    return proc;
 }
 
 obj_t *make_C_procedure(C_procedure_t *code, obj_t *arglist, obj_t *env)
 {
-    return make_proc(PF_COMPILED_C, code, arglist, env);
+    return make_proc(PF_COMPILED_C, (obj_t **)&code, arglist, env);
 }
 
 obj_t *make_C_special_form_procedure(C_procedure_t *code,
 				     obj_t *arglist,
 				     obj_t *env)
 {
-    return make_proc(PF_COMPILED_C | PF_SPECIAL_FORM, code, arglist, env);
+    return make_proc(PF_COMPILED_C | PF_SPECIAL_FORM,
+		     (obj_t **)&code, arglist, env);
 }
 
 bool is_procedure(obj_t *obj)

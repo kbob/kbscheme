@@ -19,9 +19,9 @@ void env_bind(env_t *env, obj_t *name, binding_type_t type, obj_t *value)
     PUSH_ROOT(env);
     PUSH_ROOT(name);
     PUSH_ROOT(value);
-    AUTO_ROOT(frame);
-    AUTO_ROOT(binding);
-    AUTO_ROOT(p);
+    AUTO_ROOT(frame, NIL);
+    AUTO_ROOT(binding, NIL);
+    AUTO_ROOT(p, NIL);
     p = make_fixnum(type);
     p = make_pair(p, value);
     p = make_pair(name, p);

@@ -19,17 +19,16 @@ int main(int argc, char *argv[])
     else {
 	instream_t *ip = make_readline_instream();
 	outstream_t *out = make_file_outstream(stdout);
-	AUTO_ROOT(obj);
 	while (true) {
-	    obj = micro_read(ip);
+	    AUTO_ROOT(obj, micro_read(ip));
 	    if (is_symbol(obj) &&
 		!wcscmp(string_value(symbol_name(obj)), L"exit"))
 		break;
 	    obj = eval(obj, library_env(r6rs_base_library()));
 	    print(obj, out);
+	    POP_ROOT(obj);
 	}
 	printf("\n");
-	POP_ROOT(obj);
     }
     return 0;
 }

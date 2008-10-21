@@ -22,13 +22,7 @@
  									\
     void fv##N##_move_op(const obj_t *src, obj_t *dst) 			\
     { 									\
-	int i; 								\
- 									\
-	const fixvec##N##_t *vsrc = (fixvec##N##_t *)src; 		\
-	fixvec##N##_t *vdst = (fixvec##N##_t *)dst; 			\
-	vdst->fv##N##_header = vsrc->fv##N##_header; 			\
-	for (i = 0; i < N; i++) 					\
-	    vdst->fv##N##_ptrs[i] = vsrc->fv##N##_ptrs[i]; 		\
+	*(fixvec##N##_t *)dst = *(const fixvec##N##_t*)src;		\
     } 									\
  									\
     void fv##N##_move_callback_op(const obj_t *src, 			\
@@ -127,10 +121,12 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
 obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)
 {
     assert_in_tospace(ptr0);
+    PUSH_ROOT(ptr0);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec1_t));
     fixvec1_t *vec = (fixvec1_t *)obj;
-    vec->fv1_ptrs[0] = mem_move_obj(ptr0);
+    vec->fv1_ptrs[0] = ptr0;
     verify_heap();
+    POP_FUNCTION_ROOTS();
     return obj;
 }
 
@@ -138,11 +134,14 @@ obj_t *alloc_fixvec2(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1)
 {
     assert_in_tospace(ptr0);
     assert_in_tospace(ptr1);
+    PUSH_ROOT(ptr0);
+    PUSH_ROOT(ptr1);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec2_t));
     fixvec2_t *vec = (fixvec2_t *)obj;
-    vec->fv2_ptrs[0] = mem_move_obj(ptr0);
-    vec->fv2_ptrs[1] = mem_move_obj(ptr1);
+    vec->fv2_ptrs[0] = ptr0;
+    vec->fv2_ptrs[1] = ptr1;
     verify_heap();
+    POP_FUNCTION_ROOTS();
     return obj;
 }
 
@@ -152,13 +151,17 @@ obj_t *alloc_fixvec3(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1, obj_t *ptr2)
     assert_in_tospace(ptr0);
     assert_in_tospace(ptr1);
     assert_in_tospace(ptr2);
+    PUSH_ROOT(ptr0);
+    PUSH_ROOT(ptr1);
+    PUSH_ROOT(ptr2);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec3_t));
     fixvec3_t *vec = (fixvec3_t *)obj;
-    vec->fv3_ptrs[0] = mem_move_obj(ptr0);
-    vec->fv3_ptrs[1] = mem_move_obj(ptr1);
-    vec->fv3_ptrs[2] = mem_move_obj(ptr2);
+    vec->fv3_ptrs[0] = ptr0;
+    vec->fv3_ptrs[1] = ptr1;
+    vec->fv3_ptrs[2] = ptr2;
     obj = move_obj(obj);
     verify_heap();
+    POP_FUNCTION_ROOTS();
     return obj;
 }
 
@@ -169,14 +172,19 @@ obj_t *alloc_fixvec4(mem_ops_t *ops,
     assert_in_tospace(ptr1);
     assert_in_tospace(ptr2);
     assert_in_tospace(ptr3);
+    PUSH_ROOT(ptr0);
+    PUSH_ROOT(ptr1);
+    PUSH_ROOT(ptr2);
+    PUSH_ROOT(ptr3);
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec4_t));
     fixvec4_t *vec = (fixvec4_t *)obj;
-    vec->fv4_ptrs[0] = mem_move_obj(ptr0);
-    vec->fv4_ptrs[1] = mem_move_obj(ptr1);
-    vec->fv4_ptrs[2] = mem_move_obj(ptr2);
-    vec->fv4_ptrs[3] = mem_move_obj(ptr3);
+    vec->fv4_ptrs[0] = ptr0;
+    vec->fv4_ptrs[1] = ptr1;
+    vec->fv4_ptrs[2] = ptr2;
+    vec->fv4_ptrs[3] = ptr3;
     obj = move_obj(obj);
     verify_heap();
+    POP_FUNCTION_ROOTS();
     return obj;
 }
 #endif

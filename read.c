@@ -6,6 +6,7 @@
 #include <wctype.h>
 
 #include "obj.h"
+#include "roots.h"
 #include "types.h"
 
 typedef enum token_type {
@@ -21,9 +22,9 @@ typedef struct token {
     obj_t        *tok_obj;
 } token_t;
 
-static token_t make_token(token_type_t type, obj_t *op)
+static token_t make_token(token_type_t type, obj_t *obj)
 {
-    token_t tok = { type, op ? op : NIL };
+    token_t tok = { type, obj };
     return tok;
 }
 
@@ -38,13 +39,13 @@ static token_t scan(instream_t *ip)
     while ((wc = instream_getwc(ip)) != WEOF && iswspace(wc))
 	continue;
     if (wc == WEOF) {
-	return make_token(TOK_EOF, NULL);
+	return make_token(TOK_EOF, NIL);
     }
     if (wc == L'(') {
-	return make_token(TOK_LPAREN, NULL);
+	return make_token(TOK_LPAREN, NIL);
     }
     if (wc == L')') {
-	return make_token(TOK_RPAREN, NULL);
+	return make_token(TOK_RPAREN, NIL);
     }
     if (iswdigit(wc)) {
 	instream_ungetwc(wc, ip);
@@ -109,20 +110,26 @@ static obj_t *read_object(instream_t *ip, token_t *tok_out)
 static obj_t *read_sequence(instream_t *ip)
 {
     token_t tok;
-    obj_t *op = read_object(ip, &tok);
-    if (tok.tok_type != TOK_RPAREN && tok.tok_type != TOK_EOF)
-	op = make_pair(op, read_sequence(ip));
-    return op;
+    AUTO_ROOT(obj, read_object(ip, &tok));
+    if (tok.tok_type != TOK_RPAREN && tok.tok_type != TOK_EOF) {
+	PUSH_ROOT(tok.tok_obj);
+	AUTO_ROOT(cdr, read_sequence(ip));
+	obj = make_pair(obj, cdr);
+	POP_ROOT(cdr);
+	POP_ROOT(tok.tok_obj);
+    }
+    POP_ROOT(obj);
+    return obj;
 }
 
 obj_t *micro_read(instream_t *ip)
 {
     token_t tok;
-    obj_t *op = read_object(ip, &tok);
+    obj_t *obj = read_object(ip, &tok);
     if (tok.tok_type == TOK_RPAREN) {
 	fprintf(stderr, "unexpected close parenthesis\n");
 	return NIL;
     } else if (tok.tok_type == TOK_EOF)
 	return make_symbol(L"exit");	/* XXX raise an exception? */
-    return op;
+    return obj;
 }

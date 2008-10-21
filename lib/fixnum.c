@@ -88,14 +88,12 @@ DEFINE_PROC(L">=")
 
 DEFINE_PROC(L"+")
 {
-    printf("PLUS is CALLED\n");
     obj_t *p = F_SUBJ;
     int sum = 0;
     while (!is_null(p)) {
 	sum += fixnum_value(pair_car(p));
 	p = pair_cdr(p);
     }
-    printf("PLUS is RETURNING\n");
     RETURN(make_fixnum(sum));
 }
 

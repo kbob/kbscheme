@@ -20,14 +20,14 @@ static size_t bool_ptr_count_op(const obj_t *op)
 
 static void bool_move_op(const obj_t *src, obj_t *dst)
 {
-    *(bool_obj_t *)dst = *(bool_obj_t *)src;
+    *(bool_obj_t *)dst = *(const bool_obj_t *)src;
 }
 
 static void bool_move_callback_op(const obj_t *src,
 				  obj_t *dst,
 				  move_callback_t cb)
 {
-    *(bool_obj_t *)dst = *(bool_obj_t *)src;
+    *(bool_obj_t *)dst = *(const bool_obj_t *)src;
 }
 
 static obj_t *bool_get_ptr_op(const obj_t *op, size_t index)
