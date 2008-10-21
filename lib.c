@@ -31,8 +31,7 @@ lib_t *r6rs_base_library(void)
 	sym = make_symbol(L"base");
 	p = make_pair(sym, p);
 	r6rs_base = make_library(p);
-	POP_ROOT(p);
-	POP_ROOT(sym);
+	POP_FUNCTION_ROOTS();
     }
     return r6rs_base;
 }

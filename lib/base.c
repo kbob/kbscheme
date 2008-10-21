@@ -54,7 +54,7 @@ DEFINE_PROC(L"string?")
 DEFINE_BLOCK(b_define_continue)
 {
     obj_t *var = pair_car(F_SUBJ);
-    env_bind(F_ENV, var, BINDING_MUTABLE, F_VAL);
+    env_bind(F_ENV, var, BINDING_MUTABLE, VALUE);
     RETURN(NIL);
 }
 
@@ -114,7 +114,7 @@ DEFINE_SPECIAL_FORM(L"lambda")
 
 DEFINE_BLOCK(b_continue_if)
 {
-    obj_t *truth = F_VAL;
+    obj_t *truth = VALUE;
     if (!is_boolean(truth) || boolean_value(truth)) {
 	obj_t *consequent = pair_car(F_SUBJ);
 	TAIL_EVAL(consequent, F_ENV);
@@ -143,7 +143,7 @@ DEFINE_BLOCK(b_set_continue)
     obj_t *var = F_SUBJ;
     obj_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
-    env_bind(F_ENV, var, BINDING_MUTABLE, F_VAL);
+    env_bind(F_ENV, var, BINDING_MUTABLE, VALUE);
     RETURN(NIL);
 }
 

@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "bool.h"
 #include "obj.h"
 #include "roots.h"
 
@@ -16,18 +15,10 @@
 
 #define OBJ_MEM_OPS(obj) ((mem_ops_t *)(OBJ_OPS_WORD(obj) & OBJ_OPS_MASK))
 
-#if 0
-#define OBJ_IS_FWD(obj) (OBJ_GC_MARK(obj))
-#define OBJ_FWD_PTR(obj) ((obj_t *)(OBJ_OPS_WORD(obj) & OBJ_OPS_MASK))
-#define OBJ_SET_FWD(obj, fwd) \
-    (OBJ_OPS_WORD(obj) = (intptr_t)(fwd) | OBJ_MARK_MASK)
-
-#else
 #define OBJ_IS_FWD(obj) (OBJ_GC_MARK(obj))
 #define OBJ_FWD_PTR(obj) ((obj_t *)(~OBJ_OPS_WORD(obj)))
 #define OBJ_SET_FWD(obj, fwd) \
     (OBJ_OPS_WORD(obj) = ~(intptr_t)(fwd))
-#endif
 
 typedef struct mem_ops mem_ops_t;
 typedef obj_t *move_callback_t(const obj_t *);

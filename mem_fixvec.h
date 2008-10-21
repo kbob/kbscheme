@@ -24,14 +24,6 @@ extern obj_t *alloc_fixvec2(mem_ops_t *, obj_t *, obj_t *);
 extern obj_t *fixvec2_get_ptr(obj_t *obj, size_t index);
 extern void  fixvec2_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
 
-#if 0
-extern obj_t *alloc_fixvec3(mem_ops_t *, obj_t *, obj_t *, obj_t *);
-extern obj_t *fixvec3_get_ptr(obj_t *obj, size_t index);
-extern void  fixvec3_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
-
-extern obj_t *alloc_fixvec4(mem_ops_t *, obj_t *, obj_t *, obj_t *, obj_t *);
-extern obj_t *fixvec4_get_ptr(obj_t *obj, size_t index);
-extern void  fixvec4_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
-#endif
+/* Add more as needed... */
 
 #endif /* !MEM_FIXVEC_INCLUDED */

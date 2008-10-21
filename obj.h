@@ -3,8 +3,6 @@
 
 #include "bool.h"
 
-#define PASS_FRAMES 0			// XXX
-
 typedef struct object obj_t; /* obj_t is abstract and never defined */
 
 #define NIL ((obj_t *)0)

@@ -10,8 +10,7 @@ void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
     AUTO_ROOT(env, library_env(library));
     AUTO_ROOT(code, make_C_procedure(proc, NIL, env));
     obj_t *sym = make_symbol(name);
-    POP_ROOT(code);
-    POP_ROOT(env);
+    POP_FUNCTION_ROOTS();
     env_bind(env, sym, BINDING_MUTABLE, code);
 }
 
@@ -23,9 +22,8 @@ void bind_special_form(C_procedure_t *form,
     AUTO_ROOT(env, library_env(library));
     AUTO_ROOT(code, make_C_special_form_procedure(form, NIL, env));
     obj_t *sym = make_symbol(name);
+    POP_FUNCTION_ROOTS();
     env_bind(env, sym, BINDING_IMMUTABLE, code);
-    POP_ROOT(code);
-    POP_ROOT(env);
 }
 
 void register_proc(proc_descriptor_t *desc)

@@ -85,10 +85,6 @@ void fixvec##N##_set_ptr(obj_t *obj, size_t index, obj_t *ptr)		\
 
 DEFINE_FIXVEC_TYPE(1)
 DEFINE_FIXVEC_TYPE(2)
-#if 0
-DEFINE_FIXVEC_TYPE(3)
-DEFINE_FIXVEC_TYPE(4)
-#endif
 
 void mem_fixvec_create_ops(mem_ops_t *ops,
 			   wchar_t *name,
@@ -106,16 +102,6 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
     case 2:
 	super = &fixvec2_ops;
 	break;
-
-#if 0
-    case 3:
-	super = &fixvec3_ops;
-	break;
-
-    case 4:
-	super = &fixvec4_ops;
-	break;
-#endif
 
     default:
 	assert(false);
@@ -156,47 +142,3 @@ obj_t *alloc_fixvec2(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1)
     POP_FUNCTION_ROOTS();
     return obj;
 }
-
-#if 0
-obj_t *alloc_fixvec3(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1, obj_t *ptr2)
-{
-    assert_in_tospace(ptr0);
-    assert_in_tospace(ptr1);
-    assert_in_tospace(ptr2);
-    PUSH_ROOT(ptr0);
-    PUSH_ROOT(ptr1);
-    PUSH_ROOT(ptr2);
-    obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec3_t));
-    fixvec3_t *vec = (fixvec3_t *)obj;
-    vec->fv3_ptrs[0] = ptr0;
-    vec->fv3_ptrs[1] = ptr1;
-    vec->fv3_ptrs[2] = ptr2;
-    obj = move_obj(obj);
-    verify_heap();
-    POP_FUNCTION_ROOTS();
-    return obj;
-}
-
-obj_t *alloc_fixvec4(mem_ops_t *ops,
-		     obj_t *ptr0, obj_t *ptr1, obj_t *ptr2, obj_t *ptr3)
-{
-    assert_in_tospace(ptr0);
-    assert_in_tospace(ptr1);
-    assert_in_tospace(ptr2);
-    assert_in_tospace(ptr3);
-    PUSH_ROOT(ptr0);
-    PUSH_ROOT(ptr1);
-    PUSH_ROOT(ptr2);
-    PUSH_ROOT(ptr3);
-    obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec4_t));
-    fixvec4_t *vec = (fixvec4_t *)obj;
-    vec->fv4_ptrs[0] = ptr0;
-    vec->fv4_ptrs[1] = ptr1;
-    vec->fv4_ptrs[2] = ptr2;
-    vec->fv4_ptrs[3] = ptr3;
-    obj = move_obj(obj);
-    verify_heap();
-    POP_FUNCTION_ROOTS();
-    return obj;
-}
-#endif
