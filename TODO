@@ -4,7 +4,7 @@ DONE	Clean up and comment second half of proc.h.
 DONE	Change mem_init_op to allow NULL.
 	add procedure prototypes of some sort.
 	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ))
- drop	It should be illegal to define a function twice.	
+	It should be illegal to define a C function twice.
 	Fix the makefile so subdirectories are rebuilt.
 DONE	mem_fixvec should export non-virtual element accessors.
 
@@ -22,6 +22,7 @@ DONE	nonrecursive eval
  DONE	    rewrite binding as mixvec.
   no	    rewrite procedure as mixvec?
  DONE	    must remove value from frame - not thread safe.
+	    drop mem_init_op and mem_free_op.
 
 	GC
  DONE	    stop and copy algorithm

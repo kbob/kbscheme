@@ -214,7 +214,8 @@
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
  */
-#define TAIL_EVAL(exp, env) GOTO(b_eval, (exp), (env))
+//#define TAIL_EVAL(exp) GOTO(b_eval, (exp), frame_get_environment(F_PARENT))
+#define TAIL_EVAL(exp) GOTO(b_eval, (exp), F_ENV)
 
 /* Raise an exception. */
 #define RAISE(condition) (assert(false && "XXX implement RAISE"))

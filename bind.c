@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include "print.h"			/* XXX */
 #include "roots.h"
 #include "types.h"
 
@@ -34,12 +35,28 @@ obj_t *env_lookup(env_t *env, obj_t *var)
      */
 
     assert(is_symbol(var));
+    printf("lookup(%ls)\n", string_value(symbol_name(var)));
     while (!is_null(env)) {
 	obj_t *frame = pair_car(env);
+	if (pair_cdr(env)) {
+	    printf("   FRAME");
+	    obj_t *p = frame;
+	    while (p) {
+		printf(" ");
+		princ_stdout(binding_name(pair_car(p)));
+		printf(": ");
+		princ_stdout(binding_value(pair_car(p)));
+		p = pair_cdr(p);
+	    }
+	    printf("\n");
+	} else {
+	    printf("   FRAME [builtins]\n");
+	}
 	while (!is_null(frame)) {
 	    obj_t *binding = pair_car(frame);
 	    assert(is_binding(binding));
 	    if (binding_name(binding) == var) {
+		printf("   found\n\n");
 		return binding;
 	    }
 	    frame = pair_cdr(frame);

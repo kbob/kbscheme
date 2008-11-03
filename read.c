@@ -22,7 +22,7 @@ typedef struct token {
     obj_t        *tok_obj;
 } token_t;
 
-static token_t make_token(token_type_t type, obj_t *obj)
+static inline token_t make_token(token_type_t type, obj_t *obj)
 {
     token_t tok = { type, obj };
     return tok;

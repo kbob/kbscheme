@@ -117,13 +117,13 @@ DEFINE_BLOCK(b_continue_if)
     obj_t *truth = VALUE;
     if (!is_boolean(truth) || boolean_value(truth)) {
 	obj_t *consequent = pair_car(F_SUBJ);
-	TAIL_EVAL(consequent, F_ENV);
+	TAIL_EVAL(consequent);
     }
     obj_t *cddr = pair_cdr(F_SUBJ);
     if (is_null(cddr))
 	RETURN(cddr);
     obj_t *alternate = pair_car(cddr);
-    TAIL_EVAL(alternate, F_ENV);
+    TAIL_EVAL(alternate);
 }
 
 DEFINE_SPECIAL_FORM(L"if")
@@ -334,8 +334,8 @@ DEFINE_PROC(L"null?")
 #if 0
 DEFINE_PROC(L"call-with-current-continuation")
 {
-    obj_t *proc = pair_car(F_SUBJ);
     obj_t *args = make_pair(FRAME, NIL);
+    obj_t *proc = pair_car(F_SUBJ);
     return eval_application(FRAME, proc, args);
 }
 REBIND_PROC(L"call-with-current-continuation", L"call/cc");

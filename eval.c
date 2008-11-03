@@ -6,7 +6,7 @@
 #include "proc.h"
 #include "roots.h"
 
-//#define EVAL_TRACE 1
+#define EVAL_TRACE 1
 #ifdef EVAL_TRACE
 #include <stdio.h>			/* XXX */
 #include "print.h"			/* XXX */
@@ -73,9 +73,35 @@ void print_stack(const char *label)
     printf("\n");
 }
 
+static void print_env(obj_t *env)
+{
+    const char *sep = "";
+    while (env) {
+	printf("%s", sep);
+	if (pair_cdr(env)) {
+	    obj_t *f = pair_car(env);
+	    printf("[");
+	    sep = "";
+	    while (f) {
+		obj_t *binding = pair_car(f);
+		printf("%s", sep);
+		princ_stdout(binding_name(binding));
+		printf(": ");
+		princ_stdout(binding_value(binding));
+		f = pair_cdr(f);
+		sep = ", ";
+	    }
+	    printf("]");
+	} else
+	    printf("[builtins]\n");
+	env = pair_cdr(env);
+	sep = " -> ";
+    }
+}
+
 #endif /* EVAL_TRACE */
 
-inline obj_t *eval_application(obj_t *proc, obj_t *args)
+obj_t *eval_application(obj_t *proc, obj_t *args)
 {
     PUSH_ROOT(proc);
     PUSH_ROOT(args);
@@ -134,8 +160,10 @@ DEFINE_BLOCK(b_eval_sequence)
 {
     AUTO_ROOT(first, pair_car(F_SUBJ));
     AUTO_ROOT(rest, pair_cdr(F_SUBJ));
-    if (is_null(rest))
-	GOTO(b_eval, first, F_ENV);	/* Optimize tail recursion. */
+    if (is_null(rest)) {
+	printf("tail goto\n");
+	TAIL_EVAL(first);
+    }
     EVAL_THEN_GOTO(first, F_ENV, b_eval_sequence, rest, F_ENV);
 }
 
@@ -172,6 +200,8 @@ obj_t *eval(obj_t *expr, env_t *env)
 	print_stdout(F_SUBJ);
 	printf("   VALUE => ");
 	print_stdout(value);
+	printf("   ENV => ");
+	print_env(F_ENV);
 	printf("\n");
 #endif
 	value = (*F_CONT)(value);
