@@ -58,9 +58,11 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *
  * Procedures, blocks, and special forms all have the same calling
- * convention.  They're called with one arg, an eval_frame_t structure
- * named FRAME, and they return an eval_frame_t for the next frame to
- * execute.
+ * convention.  They're called with one arg, an (obj_t *), which is
+ * the value returned by the previous procedure, and they return their
+ * own result as an (obj_t *).  They also rely on a frame object
+ * referenced by the thread-global variable FRAME.  They pass control
+ * by creating a new frame and assigning it to FRAME.
  *
  * The procedure can access FRAME directly or it can access the
  * registers through the F_* macros.
@@ -214,7 +216,6 @@
 /* Evaluate the expression in the environment and return the
    result to this block's caller.
  */
-//#define TAIL_EVAL(exp) GOTO(b_eval, (exp), frame_get_environment(F_PARENT))
 #define TAIL_EVAL(exp) GOTO(b_eval, (exp), F_ENV)
 
 /* Raise an exception. */
@@ -242,7 +243,7 @@
         FRAME = MAKE_GOTO_FRAME((factory), (target), __VA_ARGS__);	\
         POP_FUNCTION_ROOTS();						\
 	return NIL;							\
-    } while (0);    
+    } while (0)
 
 /* Return from this block, then call callee, then goto target.
  * Callee and target are tuples (block, arg, arg...).

@@ -3,7 +3,10 @@
 #include <assert.h>
 #include <stdio.h>
 
+//#define ENV_TRACE 1
+#ifdef ENV_TRACE
 #include "print.h"			/* XXX */
+#endif
 #include "roots.h"
 #include "types.h"
 
@@ -35,9 +38,12 @@ obj_t *env_lookup(env_t *env, obj_t *var)
      */
 
     assert(is_symbol(var));
+#ifdef ENV_TRACE
     printf("lookup(%ls)\n", string_value(symbol_name(var)));
+#endif
     while (!is_null(env)) {
 	obj_t *frame = pair_car(env);
+#ifdef ENV_TRACE
 	if (pair_cdr(env)) {
 	    printf("   FRAME");
 	    obj_t *p = frame;
@@ -52,11 +58,14 @@ obj_t *env_lookup(env_t *env, obj_t *var)
 	} else {
 	    printf("   FRAME [builtins]\n");
 	}
+#endif
 	while (!is_null(frame)) {
 	    obj_t *binding = pair_car(frame);
 	    assert(is_binding(binding));
 	    if (binding_name(binding) == var) {
+#ifdef ENV_TRACE
 		printf("   found\n\n");
+#endif
 		return binding;
 	    }
 	    frame = pair_cdr(frame);

@@ -6,7 +6,7 @@
 #include "proc.h"
 #include "roots.h"
 
-#define EVAL_TRACE 1
+//#define EVAL_TRACE 1
 #ifdef EVAL_TRACE
 #include <stdio.h>			/* XXX */
 #include "print.h"			/* XXX */
@@ -108,7 +108,7 @@ obj_t *eval_application(obj_t *proc, obj_t *args)
     AUTO_ROOT(body, procedure_body(proc));
     if (procedure_is_C(proc))
 	GOTO_FRAME(make_short_frame, (C_procedure_t *)body, args, F_ENV);
-    AUTO_ROOT(new_env, make_env(F_ENV));
+    AUTO_ROOT(new_env, make_env(procedure_env(proc)));
     AUTO_ROOT(formals, procedure_args(proc));
     AUTO_ROOT(actuals, args);
     AUTO_ROOT(rest, NIL);		/* XXX use this. */
@@ -160,10 +160,8 @@ DEFINE_BLOCK(b_eval_sequence)
 {
     AUTO_ROOT(first, pair_car(F_SUBJ));
     AUTO_ROOT(rest, pair_cdr(F_SUBJ));
-    if (is_null(rest)) {
-	printf("tail goto\n");
+    if (is_null(rest))
 	TAIL_EVAL(first);
-    }
     EVAL_THEN_GOTO(first, F_ENV, b_eval_sequence, rest, F_ENV);
 }
 
