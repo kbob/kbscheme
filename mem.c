@@ -13,8 +13,8 @@ typedef struct word {
 } word_t;
 
 #define N_SPACES 100
-//#define INIT_HEAP_WORDS 65536
-#define INIT_HEAP_WORDS 4096
+#define INIT_HEAP_WORDS 65536
+//#define INIT_HEAP_WORDS 4096
 
 static void *spaces[N_SPACES];
 static size_t current_space;
@@ -48,7 +48,7 @@ static size_t aligned_size(size_t size)
 static void flip()
 {
     if (heap_allocation_needed) {
-	printf("flipping: allocating new heap\n");
+	//printf("flipping: allocating new heap\n");
 #if 0
 	to_space = sbrk(heap_size_bytes);
 	from_space = sbrk(heap_size_bytes);
@@ -74,7 +74,7 @@ static void flip()
 	heap_allocation_needed = false;
 #endif
     } else {
-	printf("flipping: reusing old heap\n");
+	//printf("flipping: reusing old heap\n");
 #if 0
 	void *tmp = to_space;
 	to_space = from_space;
