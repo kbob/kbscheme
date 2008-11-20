@@ -1,2 +1,1 @@
-scheme clean:
-	make -C .. $@
+../makefiles/module-makefile
