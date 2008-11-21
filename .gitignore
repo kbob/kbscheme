@@ -1,0 +1,11 @@
+ATTIC
+scheme
+a.out
+core
+*.[oa]
+*~
+*.pyc
+.*.d
+.*.d.[0-9]*
+*.a
+*.so
