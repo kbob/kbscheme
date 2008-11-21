@@ -1,5 +1,8 @@
 #include "proc.h"
 
+#include <stdlib.h>
+#include <wchar.h>
+
 #include "roots.h"
 
 static proc_descriptor_t *proc_descs;
@@ -28,6 +31,16 @@ void bind_special_form(C_procedure_t *form,
 
 void register_proc(proc_descriptor_t *desc)
 {
+#ifndef NDEBUG
+    proc_descriptor_t *p = proc_descs;
+    while (p) {
+	if (!wcscmp(p->pd_name, desc->pd_name)) {
+	    fprintf(stderr, "duplicate proc name \"%ls\"\n", p->pd_name);
+	    abort();
+	}
+	p = p->pd_next;
+    }
+#endif
     desc->pd_next = proc_descs;
     proc_descs = desc;
 }

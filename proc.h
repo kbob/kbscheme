@@ -187,7 +187,6 @@
 	    NULL							\
 	};								\
 	register_proc(&desc);						\
-        /* binder(C_name, library, scheme_name); */ 			\
     } 									\
     DECLARE_PROC_(storage_class, C_name)
 

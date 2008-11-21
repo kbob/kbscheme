@@ -11,11 +11,12 @@ scheme_cfiles := main.c bind.c eval.c io.c lib.c obj.c print.c proc.c \
                  obj_symbol.c obj_pair.c obj_procedure.c obj_frame.c \
                  obj_binding.c
   scheme_libs := librnrs
-scheme_ldlibs := -lreadline
+scheme_ldlibs := -Wl,--no-whole-archive -lreadline
 
      CPPFLAGS := -D_GNU_SOURCE -I.
        CFLAGS := -g -Wall -Werror
-#      libtype := static
+      LDFLAGS := -Wl,--whole-archive
+      libtype := static
 
 default: all
 

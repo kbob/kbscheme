@@ -2,7 +2,7 @@
 
 #include "proc.h"
 
-DEFINE_PROC(L"number?")
+DEFINE_PROC(L"fixnum?")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
     RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
