@@ -18,14 +18,14 @@ extern void mem_mixvec_create_ops(mem_ops_t *,
 				  mem_free_op);
 
 
-#define DECLARE_MIXVECMN(MN) 						\
-    extern obj_t *alloc_mixvec_##MN(mem_ops_t *); 			\
-    extern int mixvec_##MN##_get_int(obj_t *obj, size_t index); 	\
-    extern void mixvec_##MN##_set_int(obj_t *obj, size_t index, int value); \
-    extern obj_t *mixvec_##MN##_get_ptr(obj_t *obj, size_t index); 	\
-    extern void  mixvec_##MN##_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
+#define DECLARE_MIXVEC(M, N) DECLARE_MIXVECMVMN_(mixvec_##M##_##N)
 
-#define DECLARE_MIXVEC(M, N) DECLARE_MIXVECMN(M##_##N)
+#define DECLARE_MIXVECMVMN_(MVMN) 					\
+    extern obj_t *alloc_##MVMN(mem_ops_t *);				\
+    extern intptr_t MVMN##_get_int(obj_t *obj, size_t index);		\
+    extern void MVMN##_set_int(obj_t *obj, size_t index, intptr_t value); \
+    extern obj_t *MVMN##_get_ptr(obj_t *obj, size_t index);		\
+    extern void  MVMN##_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
 
 DECLARE_MIXVEC(1, 2)
 /* Declare more as needed. */

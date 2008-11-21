@@ -8,7 +8,7 @@
 									\
     typedef struct mixvec_##MN {					\
 	obj_header_t  mv_##MN##_header;					\
-	int           mv_##MN##_ints[M];				\
+	intptr_t      mv_##MN##_ints[M];				\
 	obj_t        *mv_##MN##_ptrs[N];				\
     } mixvec_##MN##_t;							\
 									\
@@ -80,14 +80,14 @@
 	return obj;							\
     }									\
 									\
-    int mixvec_##MN##_get_int(obj_t *obj, size_t index)			\
+    intptr_t mixvec_##MN##_get_int(obj_t *obj, size_t index)		\
     {									\
 	assert_in_tospace(obj);						\
 	assert(index < M);						\
 	return ((mixvec_##MN##_t *)obj)->mv_##MN##_ints[index];		\
     }									\
 									\
-    void mixvec_##MN##_set_int(obj_t *obj, size_t index, int value)	\
+    void mixvec_##MN##_set_int(obj_t *obj, size_t index, intptr_t value) \
     {									\
 	assert_in_tospace(obj);						\
 	assert(index < M);						\

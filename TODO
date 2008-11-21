@@ -21,7 +21,7 @@ DONE	nonrecursive eval
  DONE	    write mixvec.
  DONE	    rewrite binding as mixvec.
   no	    rewrite procedure as mixvec?
-	    change mixvec's int type to intptr_t
+ DONE	    change mixvec's int type to intptr_t
 	    rewrite frame as mixvec.
  DONE	    must remove value from frame - not thread safe.
 	    drop mem_init_op and mem_free_op.
