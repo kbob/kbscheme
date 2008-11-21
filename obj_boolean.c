@@ -43,8 +43,6 @@ static void bool_set_ptr_op(obj_t *op, size_t index, obj_t *elem)
 static mem_ops_t true_ops = {
     L"true",
     NULL,
-    NULL,
-    NULL,
     bool_size_op,
     bool_ptr_count_op,
     bool_move_op,
@@ -56,8 +54,6 @@ static mem_ops_t true_ops = {
 
 static mem_ops_t false_ops = {
     L"false",
-    NULL,
-    NULL,
     NULL,
     bool_size_op,
     bool_ptr_count_op,

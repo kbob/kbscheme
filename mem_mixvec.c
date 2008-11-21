@@ -56,8 +56,6 @@
     static mem_ops_t mixvec_##MN##_ops = {				\
 	L"mixvec_" #MN,							\
 	NULL,								\
-	NULL,								\
-	NULL,								\
 	mv_##MN##_size_op,						\
 	mv_##MN##_ptr_count_op,						\
 	mv_##MN##_move_op,						\
@@ -113,9 +111,7 @@ DEFINE_MIXVEC_TYPE(1, 2, 1_2)
 void mem_mixvec_create_ops(mem_ops_t  *ops,
 			   wchar_t    *name,
 			   size_t      nints,
-			   size_t      nptrs,
-			   mem_init_op init_op,
-			   mem_free_op free_op)
+			   size_t      nptrs)
 {
     mem_ops_t *super;
     if (nints == 1 && nptrs == 2)
@@ -125,6 +121,4 @@ void mem_mixvec_create_ops(mem_ops_t  *ops,
     *ops = *super;
     ops->mo_name = name;
     ops->mo_super = super;
-    ops->mo_init = init_op;
-    ops->mo_free = free_op;
 }

@@ -80,8 +80,6 @@ void proc_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 static mem_ops_t proc_ops = {
     L"procedure",
     NULL,
-    NULL,
-    NULL,
     proc_size_op,
     proc_ptr_count_op,
     proc_move_op,

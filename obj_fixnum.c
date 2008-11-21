@@ -19,8 +19,7 @@ static size_t fixnum_size_op(const obj_t *obj)
 obj_t *make_fixnum(int value)
 {
     if (!fixnum_ops.mo_super)
-	mem_scalar_create_ops(&fixnum_ops, L"fixnum",
-			      NULL, NULL, fixnum_size_op);
+	mem_scalar_create_ops(&fixnum_ops, L"fixnum", fixnum_size_op);
     obj_t *obj = mem_alloc_obj(&fixnum_ops, sizeof (fixnum_obj_t));
     fixnum_obj_t *fp = (fixnum_obj_t *)obj;
     fp->fixnum_value = value;

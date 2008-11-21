@@ -10,11 +10,7 @@
  * Example fixvecs: symbol, pair.
  */
 
-extern void mem_fixvec_create_ops(mem_ops_t *,
-				  wchar_t *name,
-				  size_t len,
-				  mem_init_op,
-				  mem_free_op);
+extern void mem_fixvec_create_ops(mem_ops_t *, wchar_t *name, size_t len);
 
 extern obj_t *alloc_fixvec1(mem_ops_t *, obj_t *);
 extern obj_t *fixvec1_get_ptr(obj_t *obj, size_t index);

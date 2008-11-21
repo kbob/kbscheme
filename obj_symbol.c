@@ -37,7 +37,7 @@ extern obj_t *make_symbol(const wchar_t *name)
     if (is_null(symbol)) {
 	/* Not found.  Create one. */
 	if (!symbol_ops.mo_super)
-	    mem_fixvec_create_ops(&symbol_ops, L"symbol", 1, NULL, NULL);
+	    mem_fixvec_create_ops(&symbol_ops, L"symbol", 1);
 	symbol = alloc_fixvec1(&symbol_ops, make_string(name));
 	PUSH_ROOT(symbol);
 	/* with lock */ {

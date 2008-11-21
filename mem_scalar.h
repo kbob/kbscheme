@@ -10,10 +10,6 @@
  * Example scalars: fixnum, flonum, character.
  */
 
-extern void mem_scalar_create_ops(mem_ops_t *,
-				  wchar_t *name,
-				  mem_init_op,
-				  mem_free_op,
-				  mem_size_op);
+extern void mem_scalar_create_ops(mem_ops_t *, wchar_t *name, mem_size_op);
 
 #endif /* !MEM_SCALAR_INCLUDED */

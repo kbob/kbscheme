@@ -27,12 +27,6 @@ typedef struct obj_header {
     intptr_t ob_ops_;
 } obj_header_t;
 
-/* initialize a newly allocated object. */
-typedef void   mem_init_op(obj_t *, size_t);
-
-/* finalize an object. */
-typedef void   mem_free_op(obj_t *);
-
 /* return the object's size in bytes. */
 typedef size_t mem_size_op(const obj_t *);
 
@@ -57,8 +51,6 @@ typedef struct mem_end_marker { } mem_end_marker_t;
 struct mem_ops {
     const wchar_t        *mo_name;	/* object class's name */
     mem_ops_t            *mo_super;	/* superclass pointer */
-    mem_init_op          *mo_init;
-    mem_free_op          *mo_free;
     mem_size_op          *mo_size;
     mem_ptr_count_op     *mo_ptr_count;
     mem_move_op          *mo_move;

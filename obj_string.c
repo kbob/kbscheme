@@ -26,8 +26,7 @@ static size_t string_size_op(const obj_t *obj)
 obj_t *make_string(const wchar_t *value)
 {
     if (!string_ops.mo_super)
-	mem_scalar_create_ops(&string_ops, L"string",
-			      NULL, NULL, string_size_op);
+	mem_scalar_create_ops(&string_ops, L"string", string_size_op);
     size_t len = wcslen(value);
     obj_t *obj = mem_alloc_obj(&string_ops, len_to_bytes(len));
     string_obj_t *sp = (string_obj_t *)obj;

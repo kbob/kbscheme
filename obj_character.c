@@ -21,8 +21,7 @@ static size_t character_size_op(const obj_t *obj)
 obj_t *make_character(wchar_t value)
 {
     if (!character_ops.mo_super)
-	mem_scalar_create_ops(&character_ops, L"character",
-			      NULL, NULL, character_size_op);
+	mem_scalar_create_ops(&character_ops, L"character", character_size_op);
     obj_t *obj = mem_alloc_obj(&character_ops, sizeof (character_obj_t));
     character_obj_t *cp = (character_obj_t *)obj;
     cp->character_value = value;

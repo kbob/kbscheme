@@ -87,8 +87,6 @@ static void sf_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 static mem_ops_t short_frame_ops = {
     L"short frame",
     NULL,
-    NULL,
-    NULL,
     sf_size_op,
     sf_ptr_count_op,
     sf_move_op,
@@ -178,8 +176,6 @@ static void lf_set_ptr_op(obj_t *obj, size_t index, obj_t *ptr)
 
 static mem_ops_t long_frame_ops = {
     L"long frame",
-    NULL,
-    NULL,
     NULL,
     lf_size_op,
     lf_ptr_count_op,

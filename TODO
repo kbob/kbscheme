@@ -24,7 +24,7 @@ DONE	nonrecursive eval
  DONE	    change mixvec's int type to intptr_t
 	    rewrite frame as mixvec.
  DONE	    must remove value from frame - not thread safe.
-	    drop mem_init_op and mem_free_op.
+ DONE	    drop mem_init_op and mem_free_op.
 
 	GC
  DONE	    stop and copy algorithm

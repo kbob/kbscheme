@@ -58,8 +58,6 @@
     static mem_ops_t fixvec##N##_ops = { 				\
 	L"fixvec" #N, 							\
 	NULL, 								\
-	NULL, 								\
-	NULL,	 							\
 	fv##N##_size_op, 						\
 	fv##N##_ptr_count_op, 						\
 	fv##N##_move_op, 						\
@@ -86,11 +84,7 @@ void fixvec##N##_set_ptr(obj_t *obj, size_t index, obj_t *ptr)		\
 DEFINE_FIXVEC_TYPE(1)
 DEFINE_FIXVEC_TYPE(2)
 
-void mem_fixvec_create_ops(mem_ops_t *ops,
-			   wchar_t *name,
-			   size_t len,
-			   mem_init_op init_op,
-			   mem_free_op free_op)
+void mem_fixvec_create_ops(mem_ops_t *ops, wchar_t *name, size_t len)
 {
     mem_ops_t *super;
 
@@ -110,10 +104,6 @@ void mem_fixvec_create_ops(mem_ops_t *ops,
     *ops = *super;
     ops->mo_name = name;
     ops->mo_super = super;
-    if (init_op)
-	ops->mo_init = init_op;
-    if (free_op)
-	ops->mo_free = free_op;
 }
 
 obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)

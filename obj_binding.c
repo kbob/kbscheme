@@ -14,7 +14,7 @@ obj_t *make_binding(obj_t *name, binding_type_t type, obj_t *value)
     PUSH_ROOT(name);
     PUSH_ROOT(value);
     if (!binding_ops.mo_super)
-	mem_mixvec_create_ops(&binding_ops, L"binding", 1, 2, NULL, NULL);
+	mem_mixvec_create_ops(&binding_ops, L"binding", 1, 2);
     obj_t *binding = alloc_mixvec_1_2(&binding_ops);
     mixvec_1_2_set_int(binding, 0, type);
     mixvec_1_2_set_ptr(binding, 0, name);

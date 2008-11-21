@@ -11,7 +11,7 @@ extern obj_t *make_pair(obj_t *car, obj_t *cdr)
     assert_in_tospace(car);
     assert_in_tospace(cdr);
     if (!pair_ops.mo_super)
-	mem_fixvec_create_ops(&pair_ops, L"pair", 2, NULL, NULL);
+	mem_fixvec_create_ops(&pair_ops, L"pair", 2);
     return alloc_fixvec2(&pair_ops, car, cdr);
 }
 

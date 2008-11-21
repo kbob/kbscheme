@@ -35,8 +35,6 @@ static mem_ops_t scalar_ops = {
     NULL,
     NULL,
     NULL,
-    NULL,
-    NULL,
     scalar_ptr_count_op,
     scalar_move_op,
     scalar_move_callback_op,
@@ -45,18 +43,10 @@ static mem_ops_t scalar_ops = {
     { }
 };
 
-void mem_scalar_create_ops(mem_ops_t *ops,
-			   wchar_t *name,
-			   mem_init_op init_op,
-			   mem_free_op free_op,
-			   mem_size_op size_op)
+void mem_scalar_create_ops(mem_ops_t *ops, wchar_t *name, mem_size_op size_op)
 {
     *ops = scalar_ops;
     ops->mo_super = &scalar_ops;
     ops->mo_name = name;
     ops->mo_size = size_op;
-    if (init_op)
-	ops->mo_init = init_op;
-    if (free_op)
-	ops->mo_free = free_op;
 }

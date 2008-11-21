@@ -303,10 +303,7 @@ obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size)
         next_alloc += alloc_size;
     }
     *p = ops;
-    obj_t *obj = (obj_t *)p;
-    if (ops->mo_init)
-	ops->mo_init(obj, size);
-    return obj;
+    return (obj_t *)p;
 }
 
 void set_heap_size_bytes(size_t usable_size_bytes)

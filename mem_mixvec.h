@@ -11,11 +11,9 @@
  */
 
 extern void mem_mixvec_create_ops(mem_ops_t *,
-				  wchar_t *name,
-				  size_t word_count,
-				  size_t ptr_count,
-				  mem_init_op,
-				  mem_free_op);
+				  wchar_t   *name,
+				  size_t     word_count,
+				  size_t     ptr_count);
 
 
 #define DECLARE_MIXVEC(M, N) DECLARE_MIXVECMVMN_(mixvec_##M##_##N)
