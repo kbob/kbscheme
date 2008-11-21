@@ -26,6 +26,8 @@ extern void mem_mixvec_create_ops(mem_ops_t *,
     extern void  MVMN##_set_ptr(obj_t *obj, size_t index, obj_t *ptr);
 
 DECLARE_MIXVEC(1, 2)
+DECLARE_MIXVEC(1, 3)
+DECLARE_MIXVEC(1, 6)
 /* Declare more as needed. */
 
 #endif /* !MEM_MIXVEC_INCLUDED */

@@ -107,6 +107,8 @@
     }
 
 DEFINE_MIXVEC_TYPE(1, 2, 1_2)
+DEFINE_MIXVEC_TYPE(1, 3, 1_3)
+DEFINE_MIXVEC_TYPE(1, 6, 1_6)
 
 void mem_mixvec_create_ops(mem_ops_t  *ops,
 			   wchar_t    *name,
@@ -116,6 +118,10 @@ void mem_mixvec_create_ops(mem_ops_t  *ops,
     mem_ops_t *super;
     if (nints == 1 && nptrs == 2)
 	super = &mixvec_1_2_ops;
+    else if (nints == 1 && nptrs == 3)
+	super = &mixvec_1_3_ops;
+    else if (nints == 1 && nptrs == 6)
+	super = &mixvec_1_6_ops;
     else
 	assert(false);
     *ops = *super;
