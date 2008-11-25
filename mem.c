@@ -133,7 +133,7 @@ void remember_ops(const mem_ops_t *ops)
 void verify_object(obj_t *obj, bool scanned)
 {
     if (scanned)
-	assert(!OBJ_GC_MARK(obj));
+	assert(!OBJ_IS_FWD(obj));
     mem_ops_t *ops = OBJ_MEM_OPS(obj);
     assert(is_known_ops(ops));
     size_t i, nptr = ops->mo_ptr_count(obj);
