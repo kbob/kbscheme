@@ -32,7 +32,6 @@ obj_t *make_string(const wchar_t *value)
     string_obj_t *sp = (string_obj_t *)obj;
     sp->string_len = len;
     wcscpy(sp->string_value, value);
-    verify_heap();
     return obj;
 }
 

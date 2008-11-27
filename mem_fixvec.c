@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include "roots.h"
+
 #define DEFINE_FIXVEC_TYPE(N)						\
 									\
     typedef struct fixvec##N { 						\
@@ -113,7 +115,6 @@ obj_t *alloc_fixvec1(mem_ops_t *ops, obj_t *ptr0)
     obj_t *obj = mem_alloc_obj(ops, sizeof (fixvec1_t));
     fixvec1_t *vec = (fixvec1_t *)obj;
     vec->fv1_ptrs[0] = ptr0;
-    verify_heap();
     POP_FUNCTION_ROOTS();
     return obj;
 }
@@ -128,7 +129,6 @@ obj_t *alloc_fixvec2(mem_ops_t *ops, obj_t *ptr0, obj_t *ptr1)
     fixvec2_t *vec = (fixvec2_t *)obj;
     vec->fv2_ptrs[0] = ptr0;
     vec->fv2_ptrs[1] = ptr1;
-    verify_heap();
     POP_FUNCTION_ROOTS();
     return obj;
 }

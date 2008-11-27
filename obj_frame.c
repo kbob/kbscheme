@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "mem_mixvec.h"
+#include "roots.h"
 
 static mem_ops_t short_frame_ops;
 static mem_ops_t long_frame_ops;

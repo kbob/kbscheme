@@ -1,11 +1,10 @@
 #ifndef MEM_INCLUDED
 #define MEM_INCLUDED
 
-#include <stddef.h>
 #include <stdint.h>
+#include <wchar.h>
 
 #include "obj.h"
-#include "roots.h"
 
 /*
  * The first word of each memory object is the "ops word".
@@ -31,7 +30,8 @@
 
 #define OBJ_MEM_OPS(obj) ((mem_ops_t *)(OBJ_OPS_WORD(obj)))
 
-#define OBJ_IS_FWD(obj) ((intptr_t)(obj) & OBJ_MARK_MASK)
+//#define OBJ_IS_FWD(obj) ((intptr_t)(obj) & OBJ_MARK_MASK)
+#define OBJ_IS_FWD(obj) (OBJ_OPS_WORD(obj) & OBJ_MARK_MASK)
 #define OBJ_FWD_PTR(obj) ((obj_t *)(~OBJ_OPS_WORD(obj)))
 #define OBJ_SET_FWD(obj, fwd) (OBJ_OPS_WORD(obj) = ~(intptr_t)(fwd))
 
@@ -79,8 +79,8 @@ extern void set_heap_size_bytes(size_t usable_size_bytes);
 
 extern void assert_in_tospace(const obj_t *);
 
-extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t);
+extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t size_bytes);
 
-extern void verify_heap(void);		// XXX
+//extern void verify_heap(void);		// XXX
 
 #endif /* !MEM_INCLUDED */

@@ -25,7 +25,6 @@ obj_t *make_character(wchar_t value)
     obj_t *obj = mem_alloc_obj(&character_ops, sizeof (character_obj_t));
     character_obj_t *cp = (character_obj_t *)obj;
     cp->character_value = value;
-    verify_heap();
     return obj;
 }
 

@@ -74,7 +74,6 @@
 	    vec->mv_##MN##_ints[i] = 0;					\
 	for (i = 0; i < N; i++)						\
 	    vec->mv_##MN##_ptrs[i] = NIL;				\
-	verify_heap();							\
 	return obj;							\
     }									\
 									\

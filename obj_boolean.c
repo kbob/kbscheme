@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "mem.h"
+#include "roots.h"
 
 typedef struct bool_obj {
     obj_header_t bool_header;

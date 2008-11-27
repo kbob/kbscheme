@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "mem_mixvec.h"
+#include "roots.h"
 
 static mem_ops_t binding_ops;
 

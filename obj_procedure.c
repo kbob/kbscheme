@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "mem.h"
+#include "roots.h"
 
 typedef enum proc_flags {
     PF_COMPILED_C   = 1 << 0,
@@ -101,7 +102,6 @@ static obj_t *make_proc(int flags, obj_t **body, obj_t *args, obj_t *env)
     proc->proc_args = args;
     proc->proc_env = env;
     proc->proc_u.pu_body = *body;
-    verify_heap();
     POP_FUNCTION_ROOTS();
     return obj;
 }
