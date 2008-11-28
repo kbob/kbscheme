@@ -1,8 +1,6 @@
 #ifndef ROOTS_INCLUDED
 #define ROOTS_INCLUDED
 
-#include <stddef.h>
-
 #include "obj.h"
 
 #define ROOT             STATIC_ROOT

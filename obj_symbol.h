@@ -1,8 +1,6 @@
 #ifndef OBJ_SYMBOL_INCLUDED
 #define OBJ_SYMBOL_INCLUDED
 
-#include <stddef.h>
-
 #include "obj.h"
 
 extern obj_t *make_symbol(const wchar_t *name);

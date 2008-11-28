@@ -1,7 +1,6 @@
 #include "obj_character.h"
 
 #include <assert.h>
-#include <stddef.h>
 
 #include "mem.h"
 #include "mem_scalar.h"
