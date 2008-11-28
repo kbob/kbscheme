@@ -228,6 +228,12 @@ DEFINE_PROC(L"procedure?")
  * (boolean=? bool1 bool2 bool3 ...)	# procedure
  */
 
+DEFINE_PROC(L"not")
+{
+    obj_t *obj = pair_car(F_SUBJ);
+    RETURN(make_boolean(obj == make_boolean(false)));
+}
+
 /* 11.9.  Pairs and lists
  *
  * (pair? obj)				# procedure

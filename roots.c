@@ -1,7 +1,6 @@
 #include "roots.h"
 
 #include <assert.h>
-#include <stdio.h>			/* XXX */
 #include <wchar.h>
 
 static root_descriptor_t *static_roots;
@@ -24,12 +23,6 @@ void push_root(root_descriptor_t *desc)
 	thread_roots = static_roots;
     desc->rd_next = thread_roots;
     thread_roots = desc;
-    //printf("auto roots:");
-    //root_descriptor_t *p;
-    //for (p = thread_roots; p; p = p->rd_next)
-    //	printf(" %s::%ls", p->rd_func ? p->rd_func : "", p->rd_name);
-    //printf("\n");
-    //printf("\n");
 }
 
 void pop_function_roots(const char *func)

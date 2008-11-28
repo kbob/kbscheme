@@ -52,6 +52,9 @@ eval_test_case_t eval_cases[] = {
     { L"(set! v1 4)", L"()" },
     { L"v1", L"4" },
 
+    { L"(not (= 0 0))", L"#f" },
+    { L"(not (= 1 0))", L"#t" },
+    { L"(not +)", L"#f" },
     { L"(pair? (quote (1 2)))", L"#t" },
     { L"(pair? 12)", L"#f" },
     { L"(pair? ())", L"#f" },

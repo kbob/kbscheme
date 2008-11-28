@@ -1,7 +1,6 @@
 #include "mem_scalar.h"
 
 #include <assert.h>
-#include <wchar.h>			/* XXX */
 #include <string.h>
 
 size_t scalar_ptr_count_op(const obj_t *obj)
@@ -11,8 +10,6 @@ size_t scalar_ptr_count_op(const obj_t *obj)
 
 void scalar_move_op(const obj_t *src, obj_t *dst)
 {
-    //if (!wcscmp(OBJ_MEM_OPS(src)->mo_name, L"fixnum"))
-    //	printf("scalar_move_op(%p -> %p) value=%d\n", src, dst, ((int *) src)[1]);
     memcpy(dst, src, OBJ_MEM_OPS(src)->mo_size(src));
 }
 

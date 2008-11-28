@@ -5,6 +5,11 @@
 
 #include "roots.h"
 
+#define DEBUG_HEAP 0
+#if DEBUG_HEAP
+#include <stdio.h>
+#endif /* DEBUG_HEAP */
+
 #define INITIAL_HEAP_WORDS 65536
 #define INITIAL_HEAP_BYTES (INITIAL_HEAP_WORDS * sizeof (word_t))
 
@@ -43,10 +48,7 @@ static size_t aligned_size(size_t size)
     return (size + shm1) & mask;
 }
 
-#define DEBUG_HEAP 0
 #if DEBUG_HEAP
-
-    #include <stdio.h>
 
     #define IS_IN_FROMSPACE(ptr) \
 	((void *)(ptr) >= fromspace && (void *)(ptr) < fromspace_end)

@@ -2,7 +2,6 @@
 #define MEM_INCLUDED
 
 #include <stdint.h>
-#include <wchar.h>
 
 #include "obj.h"
 

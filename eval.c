@@ -6,8 +6,8 @@
 #include "proc.h"
 #include "roots.h"
 
-//#define EVAL_TRACE 1
-#ifdef EVAL_TRACE
+#define EVAL_TRACE 0
+#if EVAL_TRACE
 #include <stdio.h>			/* XXX */
 #include "print.h"			/* XXX */
 #endif
@@ -38,7 +38,7 @@ static obj_t *eval_symbol(void)
     return binding_value(binding);
 }
 
-#ifdef EVAL_TRACE
+#if EVAL_TRACE
 
 const char *block_name(C_procedure_t *block)
 {
@@ -192,7 +192,7 @@ obj_t *eval(obj_t *expr, env_t *env)
     FRAME = MAKE_CALL(b_eval, expr, env);
     while (FRAME) {
 	/* XXX mix in setjmp() and a signal flag here. */
-#ifdef EVAL_TRACE
+#if EVAL_TRACE
 	print_stack("eval");
 	printf("   F_SUBJ => ");
 	print_stdout(F_SUBJ);

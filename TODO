@@ -9,15 +9,16 @@ DONE	    It should be illegal to bind two C functions to the same symbol.
 DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
 
-DONE	nonrecursive eval
+	nonrecursive eval
  DONE	    Define C procedure API.
  DONE	    threaded model?
  DONE	    documentation
  DONE	    Clean up proc.h somehow?
 	    Implement full set of arg lists, see r6rs 11.4.2.
+	    Implement REBIND_PROC.
 	    Debug call/cc.
 
-	full mem model
+DONE	full mem model
  DONE	    define obj ops.
  DONE	    rewrite base objects.
  DONE	    rewrite frames to use objects.
@@ -38,8 +39,8 @@ DONE	nonrecursive eval
 	decentralize unit testing.
 
 	macros
-	    Implement scheme primitives for cheezy-read, eval, and print.
-	    Reimplement the main loop in Scheme.
+ DONE	    Implement scheme primitives for cheezy-read, eval, and print.
+ DONE	    Reimplement the main loop in Scheme.
 	    Have lambda rewrite proc body as described in r6rs 11.3.
 		(How does lambda push another proc onto the stack?)
 	    See r6rs-lib 12.3.

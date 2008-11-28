@@ -45,8 +45,6 @@
 #define DECLARE_ROOT_CONSTRUCTOR_(name) \
     __attribute__((constructor)) static obj_t *construct_root_##name(void)
 
-#include <stdio.h>			// XXX
-
 #define GENERAL_ROOT_(storage_class, name, init) 			\
     storage_class obj_t *name = NIL;					\
     __attribute__((constructor)) 					\

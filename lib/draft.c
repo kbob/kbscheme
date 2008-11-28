@@ -2,8 +2,6 @@
  * First draft implementations.
  */
 
-#include <stdio.h>
-
 #include "io.h"
 #include "print.h"
 #include "proc.h"
@@ -11,6 +9,8 @@
 
 static instream_t  *in;
 static outstream_t *out;
+
+/* XXX These should be in an invisible namespace. */
 
 DEFINE_PROC(L"draft-read")
 {

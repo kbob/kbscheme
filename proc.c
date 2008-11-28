@@ -1,5 +1,6 @@
 #include "proc.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <wchar.h>
 
@@ -9,7 +10,6 @@ static proc_descriptor_t *proc_descs;
 
 void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
 {
-    //printf("binding proc %ls\n", name);
     AUTO_ROOT(env, library_env(library));
     AUTO_ROOT(code, make_C_procedure(proc, NIL, env));
     obj_t *sym = make_symbol(name);
@@ -21,7 +21,6 @@ void bind_special_form(C_procedure_t *form,
 		       obj_t *library,
 		       const wchar_t *name)
 {
-    //printf("binding special form %ls\n", name);
     AUTO_ROOT(env, library_env(library));
     AUTO_ROOT(code, make_C_special_form_procedure(form, NIL, env));
     obj_t *sym = make_symbol(name);
