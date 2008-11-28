@@ -1,8 +1,6 @@
 #ifndef OBJ_CHARACTER_INCLUDED
 #define OBJ_CHARACTER_INCLUDED
 
-#include <stddef.h>
-
 #include "obj.h"
 
 extern obj_t   *make_character(wchar_t value);
