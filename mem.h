@@ -81,6 +81,4 @@ extern void assert_in_tospace(const obj_t *);
 
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t size_bytes);
 
-//extern void verify_heap(void);		// XXX
-
 #endif /* !MEM_INCLUDED */
