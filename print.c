@@ -8,106 +8,74 @@
 
 static void print_form(obj_t *, outstream_t *);
 
-static void put_string(const wchar_t *p, outstream_t *out)
+static void print_list_interior(obj_t *obj, wchar_t *sep, outstream_t *out)
 {
-    while (*p) {
-	outstream_putwc(*p, out);
-	p++;
-    }
-}
-
-static void print_fixnum(int i, int base, outstream_t *out)
-{
-    assert(0 < base && base <= 16);
-    if (i < 0) {
-	outstream_putwc(L'-', out);
-	i = -i;
-	if (i < 0) {
-	    assert(INT_MIN == -1 << 31);
-	    put_string(L"2147483648", out);
-	    return;
-	}
-    }
-    if (i >= base) {
-	print_fixnum(i / base, base, out);
-    }
-    outstream_putwc(L"0123456789abcdef"[i % base], out);
-}
-
-static void print_list_interior(obj_t *op, wchar_t *sep, outstream_t *out)
-{
-    while (!is_null(op)) {
-	put_string(sep, out);
-	print_form(pair_car(op), out);
-	op = pair_cdr(op);
-	if (!is_null(op) && !is_pair(op)) {
-	    put_string(L" . ", out);
-	    print_form(op, out);
+    while (!is_null(obj)) {
+	outstream_printf(out, sep);
+	print_form(pair_car(obj), out);
+	obj = pair_cdr(obj);
+	if (!is_null(obj) && !is_pair(obj)) {
+	    outstream_printf(out, L" . ");
+	    print_form(obj, out);
 	    break;
 	}
 	sep = L" ";
     }
 }
 
-static void print_pair(obj_t *op, outstream_t *out)
+static void print_pair(obj_t *obj, outstream_t *out)
 {
     outstream_putwc(L'(', out);
-    print_list_interior(op, L"", out);
+    print_list_interior(obj, L"", out);
     outstream_putwc(L')', out);
 }
 
-static void print_procedure(obj_t *op, outstream_t *out)
+static void print_procedure(obj_t *obj, outstream_t *out)
 {
-    if (procedure_is_special_form(op) || procedure_is_C(op)) {
-	put_string(L"#<proc-", out);
-	if (procedure_is_special_form(op))
-	    outstream_putwc(L'S', out);
-	if (procedure_is_C(op))
-	    outstream_putwc(L'C', out);
-	// outstream_putwc(L' ', out);
-	// print_fixnum((int) op, 0x10, out);
-	outstream_putwc(L'>', out);
+    if (procedure_is_special_form(obj) || procedure_is_C(obj)) {
+	outstream_printf(out, L"#<proc-%s%s>",
+			 procedure_is_special_form(obj) ? "S" : "",
+			 procedure_is_C(obj) ? "C" : "");
     } else {
-	put_string(L"(lambda ", out);
-	print_form(procedure_args(op), out);
-	print_list_interior(procedure_body(op), L" ", out);
-	put_string(L")", out);
+	outstream_printf(out, L"(lambda ");
+	print_form(procedure_args(obj), out);
+	print_list_interior(procedure_body(obj), L" ", out);
+	outstream_printf(out, L")");
     }
 }
 
-static void print_form(obj_t *op, outstream_t *out)
+static void print_form(obj_t *obj, outstream_t *out)
 {
-    if (is_null(op) || is_pair(op)) {
-	print_pair(op, out);
-    } else if (is_boolean(op)) {
-	put_string(boolean_value(op) ? L"#t" : L"#f", out);
-    } else if (is_fixnum(op)) {
-	print_fixnum(fixnum_value(op), 10, out);
-    } else if (is_character(op)) {
+    if (is_null(obj) || is_pair(obj)) {
+	print_pair(obj, out);
+    } else if (is_boolean(obj)) {
+	outstream_printf(out, boolean_value(obj) ? L"#t" : L"#f");
+    } else if (is_fixnum(obj)) {
+	outstream_printf(out, L"%d", fixnum_value(obj));
+    } else if (is_character(obj)) {
 	/* implement me */
 	assert(false && "can't print characters yet");
-    } else if (is_string(op)) {
+    } else if (is_string(obj)) {
 	/* implement me */
 	assert(false && "can't print strings yet");
-    } else if (is_symbol(op)) {
-	put_string(string_value(symbol_name(op)), out);
-    } else if (is_procedure(op)) {
-	print_procedure(op, out);
+    } else if (is_symbol(obj)) {
+	outstream_printf(out, L"%ls", string_value(symbol_name(obj)));
+    } else if (is_procedure(obj)) {
+	print_procedure(obj, out);
     } else {
-	fprintf(stderr, "object type %d\n", * (char *) op);
-	assert(false && "unknown object");
+	outstream_printf(out, L"#<%ls-%p>", object_type_name(obj), obj);
     }
 }
 
-void princ(obj_t *op, outstream_t *out)
+void princ(obj_t *obj, outstream_t *out)
 {
-     print_form(op, out);
+     print_form(obj, out);
 }
 
-void print(obj_t *op, outstream_t *out)
+void print(obj_t *obj, outstream_t *out)
 {
-    if (!is_null(op)) {
-	print_form(op, out);
+    if (!is_null(obj)) {
+	print_form(obj, out);
 	outstream_putwc(L'\n', out);
     }
 }
