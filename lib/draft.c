@@ -31,7 +31,8 @@ DEFINE_PROC(L"draft-print")
     RETURN(NIL);
 }
 
-DEFINE_PROC(L"draft-current-environment")
+DEFINE_PROC(L"draft-environment")
 {
+    RETURN(library_env(r6rs_base_library()));
     RETURN(F_ENV);
 }
