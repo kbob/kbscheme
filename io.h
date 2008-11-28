@@ -21,5 +21,6 @@ extern wint_t instream_ungetwc(wint_t, instream_t *);
 extern outstream_t *make_file_outstream(FILE *);
 extern outstream_t *make_string_outstream(wchar_t *, size_t);
 extern wint_t outstream_putwc(wchar_t, outstream_t *);
+extern int outstream_printf(outstream_t *, const wchar_t *fmt, ...);
 
 #endif /* !IO_INCLUDED */

@@ -2,53 +2,57 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <stdlib.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <stdarg.h>
+#include <stdlib.h>
 
 typedef wint_t (*in_getwc_proc_t)(instream_t *);
 typedef wint_t (*in_ungetwc_proc_t)(wint_t, instream_t *);
 typedef wint_t (*out_putwc_proc_t)(wchar_t, outstream_t *);
+typedef int    (*out_vprintf_proc_t)(outstream_t *,
+				     const wchar_t *fmt, va_list);
 
 struct instream {
-    in_getwc_proc_t   in_getwc;
-    in_ungetwc_proc_t in_ungetwc;
+    in_getwc_proc_t    in_getwc;
+    in_ungetwc_proc_t  in_ungetwc;
 };
 
 typedef struct file_instream {
-    instream_t        fi_instream;
-    FILE             *fi_file;
+    instream_t         fi_instream;
+    FILE              *fi_file;
 } file_instream_t;
 
 typedef struct readline_instream {
-    instream_t        ri_instream;
-    wchar_t          *ri_linebuf;
-    size_t            ri_pos;
-    wchar_t           ri_ungot;
-    mbstate_t         ri_ps;
+    instream_t         ri_instream;
+    wchar_t           *ri_linebuf;
+    size_t             ri_pos;
+    wchar_t            ri_ungot;
+    mbstate_t          ri_ps;
 } readline_instream_t;
 
 typedef struct string_instream {
-    instream_t        si_instream;
-    const wchar_t    *si_inbuf;
-    size_t            si_size;
-    size_t            si_pos;
+    instream_t         si_instream;
+    const wchar_t     *si_inbuf;
+    size_t             si_size;
+    size_t             si_pos;
 } string_instream_t;
 
 struct outstream {
-    out_putwc_proc_t  out_putwc;
+    out_putwc_proc_t   out_putwc;
+    out_vprintf_proc_t out_vprintf;
 };
 
 typedef struct file_outstream {
-    outstream_t       fo_outstream;
-    FILE             *fo_file;
+    outstream_t        fo_outstream;
+    FILE              *fo_file;
 } file_outstream_t;
 
 typedef struct string_outstream {
-    outstream_t       so_outstream;
-    wchar_t          *so_outbuf;
-    size_t            so_size;
-    size_t            so_pos;
+    outstream_t        so_outstream;
+    wchar_t           *so_outbuf;
+    size_t             so_size;
+    size_t             so_pos;
 } string_outstream_t;
 
 static void init_instream(instream_t *ip,
@@ -59,28 +63,31 @@ static void init_instream(instream_t *ip,
     ip->in_ungetwc = unget;
 }
 
-static void init_outstream(outstream_t *out, out_putwc_proc_t put)
+static void init_outstream(outstream_t       *out,
+			   out_putwc_proc_t   put,
+			   out_vprintf_proc_t vprintf)
 {
     out->out_putwc = put;
+    out->out_vprintf = vprintf;
 }
 
 /* file instream methods */
 
 static wint_t file_getwc(instream_t *ip)
 {
-    file_instream_t *fp = (file_instream_t *) ip;
+    file_instream_t *fp = (file_instream_t *)ip;
     return fgetwc(fp->fi_file);
 }
 
 static wint_t file_ungetwc(wint_t wc, instream_t *ip)
 {
-    file_instream_t *fp = (file_instream_t *) ip;
+    file_instream_t *fp = (file_instream_t *)ip;
     return ungetwc(wc, fp->fi_file);
 }
 
 instream_t *make_file_instream(FILE *f)
 {
-    file_instream_t *fp = (file_instream_t *) malloc(sizeof *fp);
+    file_instream_t *fp = (file_instream_t *)malloc(sizeof *fp);
     instream_t *ip = &fp->fi_instream;
     init_instream(ip, file_getwc, file_ungetwc);
     fp->fi_file = f;
@@ -91,7 +98,7 @@ instream_t *make_file_instream(FILE *f)
 
 static wint_t readline_getwc(instream_t *ip)
 {
-    readline_instream_t *rp = (readline_instream_t *) ip;
+    readline_instream_t *rp = (readline_instream_t *)ip;
     wint_t wc;
     size_t line_len;
     size_t nb;
@@ -130,7 +137,7 @@ static wint_t readline_getwc(instream_t *ip)
 
 static wint_t readline_ungetwc(wint_t wc, instream_t *ip)
 {
-    readline_instream_t *rp = (readline_instream_t *) ip;
+    readline_instream_t *rp = (readline_instream_t *)ip;
     assert(rp->ri_ungot == WEOF);
     assert(wc != WEOF);
     rp->ri_ungot = wc;
@@ -139,7 +146,7 @@ static wint_t readline_ungetwc(wint_t wc, instream_t *ip)
 
 instream_t *make_readline_instream(void)
 {
-    readline_instream_t *rp = (readline_instream_t *) malloc(sizeof *rp);
+    readline_instream_t *rp = (readline_instream_t *)malloc(sizeof *rp);
     instream_t *ip = &rp->ri_instream;
     init_instream(ip, readline_getwc, readline_ungetwc);
     rp->ri_linebuf = NULL;
@@ -152,7 +159,7 @@ instream_t *make_readline_instream(void)
 
 static wint_t string_getwc(instream_t *ip)
 {
-    string_instream_t *sp = (string_instream_t *) ip;
+    string_instream_t *sp = (string_instream_t *)ip;
     if (sp->si_pos >= sp->si_size)
 	return WEOF;
     return sp->si_inbuf[sp->si_pos++];
@@ -160,7 +167,7 @@ static wint_t string_getwc(instream_t *ip)
 
 static wint_t string_ungetwc(wint_t wc, instream_t *ip)
 {
-    string_instream_t *sp = (string_instream_t *) ip;
+    string_instream_t *sp = (string_instream_t *)ip;
     assert(sp->si_pos > 0);
     assert(wc == sp->si_inbuf[sp->si_pos - 1]);
     --sp->si_pos;
@@ -169,7 +176,7 @@ static wint_t string_ungetwc(wint_t wc, instream_t *ip)
 
 instream_t *make_string_instream(const wchar_t *str, size_t size)
 {
-    string_instream_t *sp = (string_instream_t *) malloc(sizeof *sp);
+    string_instream_t *sp = (string_instream_t *)malloc(sizeof *sp);
     instream_t *ip = &sp->si_instream;
     init_instream(ip, string_getwc, string_ungetwc);
     sp->si_inbuf = str;
@@ -182,7 +189,7 @@ instream_t *make_string_instream(const wchar_t *str, size_t size)
 
 static wint_t file_putwc(wchar_t wc, outstream_t *out)
 {
-    file_outstream_t *fp = (file_outstream_t *) out;
+    file_outstream_t *fp = (file_outstream_t *)out;
     if (fwide(fp->fo_file, 0) > 0) {
 	return fputwc(wc, fp->fo_file);
     } else {
@@ -195,11 +202,30 @@ static wint_t file_putwc(wchar_t wc, outstream_t *out)
     }
 }
 
+static int file_vprintf(outstream_t *out, const wchar_t *fmt, va_list ap)
+{
+    file_outstream_t *fp = (file_outstream_t *)out;
+    if (fwide(fp->fo_file, 0) > 0)
+	return vfwprintf(fp->fo_file, fmt, ap);
+    size_t max = 64;
+    while (1) {
+	wchar_t *buf = alloca(max * sizeof *buf);
+	int i, n = vswprintf(buf, max, fmt, ap);
+	if (n >= 0) {
+	    for (i = 0; i < n; i++)
+		if (file_putwc(buf[i], out) == WEOF)
+		    return WEOF;
+	    return n;
+	}
+	max *= 2;
+    }
+}
+
 outstream_t *make_file_outstream(FILE *f)
 {
-    file_outstream_t *fp = (file_outstream_t *) malloc(sizeof *fp);
+    file_outstream_t *fp = (file_outstream_t *)malloc(sizeof *fp);
     outstream_t *out = &fp->fo_outstream;
-    init_outstream(out, file_putwc);
+    init_outstream(out, file_putwc, file_vprintf);
     fp->fo_file = f;
     return out;
 }
@@ -208,7 +234,7 @@ outstream_t *make_file_outstream(FILE *f)
 
 static wint_t string_putwc(wchar_t wc, outstream_t *out)
 {
-    string_outstream_t *sp = (string_outstream_t *) out;
+    string_outstream_t *sp = (string_outstream_t *)out;
     if (sp->so_pos >= sp->so_size - 1)
 	return WEOF;
     sp->so_outbuf[sp->so_pos++] = wc;
@@ -216,11 +242,26 @@ static wint_t string_putwc(wchar_t wc, outstream_t *out)
     return wc;
 }
 
+static int string_vprintf(outstream_t *out, const wchar_t *fmt, va_list ap)
+{
+    string_outstream_t *sp = (string_outstream_t *)out;
+    wchar_t *s = sp->so_outbuf + sp->so_pos;
+    size_t max = sp->so_size - sp->so_pos;
+    int n = vswprintf(s, max, fmt, ap);
+    if (n >= max)
+	n = -1;
+    if (n > 0)
+	sp->so_pos += n;
+    else
+	sp->so_outbuf[sp->so_pos] = L'0';
+    return n;
+}
+
 outstream_t *make_string_outstream(wchar_t *outbuf, size_t size)
 {
-    string_outstream_t *sp = (string_outstream_t *) malloc(sizeof *sp);
+    string_outstream_t *sp = (string_outstream_t *)malloc(sizeof *sp);
     outstream_t *out = &sp->so_outstream;
-    init_outstream(out, string_putwc);
+    init_outstream(out, string_putwc, string_vprintf);
     sp->so_outbuf = outbuf;
     sp->so_pos = 0;
     sp->so_size = size;
@@ -242,4 +283,13 @@ wint_t instream_ungetwc(wint_t wc, instream_t *ip)
 wint_t outstream_putwc(wchar_t wc, outstream_t *out)
 {
     return out->out_putwc(wc, out);
+}
+
+int outstream_printf(outstream_t *out, const wchar_t *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    int n = out->out_vprintf(out, fmt, ap);
+    va_end(ap);
+    return n;
 }
