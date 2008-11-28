@@ -18,9 +18,9 @@ static word_t initial_heap[INITIAL_HEAP_WORDS];
 static void *the_heap = initial_heap;
 static size_t heap_size_bytes = INITIAL_HEAP_BYTES;
 static void *tospace = initial_heap;
+static void *tospace_end = initial_heap + INITIAL_HEAP_BYTES / 2;
 static void *next_alloc = initial_heap;
 static void *next_scan = initial_heap;
-static void *tospace_end = initial_heap + INITIAL_HEAP_BYTES / 2;
 static void *fromspace, *fromspace_end;
 static bool heap_allocation_needed;
 

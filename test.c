@@ -21,7 +21,7 @@ eval_test_case_t eval_cases[] = {
     { L"(+ 3)", L"3" },
     { L"(+ 3 4)", L"7" },
     { L"(+ (+ 1 2) (+ 3 4))", L"10" },
- /* { L"(lambda ())", L"(lambda ())" }, */
+    { L"(lambda ())", L"(lambda ())" },
  /* { L"((lambda ()))", L"()" }, */
  /* { L"((lambda (x)) 4)", L"()" }, */
     { L"((lambda (x) (+ x 3)) 4)", L"7" },

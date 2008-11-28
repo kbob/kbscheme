@@ -1,18 +1,21 @@
-Little stuff...
-DONE	Get rid of the MAKE_b_xxx_FRAME_ macros.
-DONE	Clean up and comment second half of proc.h.
-DONE	Change mem_init_op to allow NULL.
-	add procedure prototypes of some sort.
-	add macros to ref numbered args (e.g. #define ARG1 (pair_car(F_SUBJ)))
-DONE	It should be illegal to bind two C functions to the same symbol.
-DONE	Fix the makefile so subdirectories are rebuilt.
-DONE	mem_fixvec should export non-virtual element accessors.
+	Little stuff...
+DONE	    Get rid of the MAKE_b_xxx_FRAME_ macros.
+DONE	    Clean up and comment second half of proc.h.
+DONE	    Change mem_init_op to allow NULL.
+	    Add procedure prototypes of some sort.
+	    Add macros to ref numbered args.
+		(e.g. #define ARG1 (pair_car(F_SUBJ)))
+DONE	    It should be illegal to bind two C functions to the same symbol.
+DONE	    Fix the makefile so subdirectories are rebuilt.
+DONE	    mem_fixvec should export non-virtual element accessors.
 
 DONE	nonrecursive eval
- DONE	    define C procedure API.
+ DONE	    Define C procedure API.
  DONE	    threaded model?
  DONE	    documentation
- DONE	    clean up proc.h somehow?
+ DONE	    Clean up proc.h somehow?
+	    Implement full set of arg lists, see r6rs 11.4.2.
+	    Debug call/cc.
 
 	full mem model
  DONE	    define obj ops.
@@ -28,13 +31,18 @@ DONE	nonrecursive eval
 
 	GC
  DONE	    stop and copy algorithm
-	    clean up
-	    create run-time parameter to run debug code.
+ DONE	    Clean up.
+ DONE	    Create run-time parameter to run debug code.
+	    alternate algorithms!
 
 	decentralize unit testing.
 
 	macros
-	    See file:///home/kbob/r6rs/html/r6rs-lib-html/r6rs-lib-Z-H-13.html#node_sec_12.3
+	    Implement scheme primitives for cheezy-read, eval, and print.
+	    Reimplement the main loop in Scheme.
+	    Have lambda rewrite proc body as described in r6rs 11.3.
+		(How does lambda push another proc onto the stack?)
+	    See r6rs-lib 12.3.
 
 	full reader
 
