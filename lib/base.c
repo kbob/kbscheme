@@ -83,6 +83,24 @@ DEFINE_SPECIAL_FORM(L"define")
  * (define-syntax <keyword> <expression>) # syntax
  */
 
+DEFINE_BLOCK(b_define_syntax_continue)
+{
+    obj_t *proc = VALUE;
+    proc = make_special_form_procedure(procedure_body(proc),
+				       procedure_args(proc),
+				       procedure_env(proc));
+    obj_t *keyword = pair_car(F_SUBJ);
+    env_bind(F_ENV, keyword, BINDING_IMMUTABLE, proc);
+    RETURN(NIL);
+}
+
+DEFINE_SPECIAL_FORM(L"define-syntax")
+{
+    //AUTO_ROOT(keyword, pair_car(F_SUBJ));
+    AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
+    EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
+}
+
 /* 11.4.1.  Quotation
  *
  * (quote <datum>)			# syntax
