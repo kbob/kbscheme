@@ -29,3 +29,10 @@ my-numbers
                     (exit x)))
               my-numbers)
     #t))      
+
+(define plus3 ())
+(+ 3 (call/cc
+      (lambda (exit)
+	(set! plus3 exit)
+	4)))
+(plus3 5)
