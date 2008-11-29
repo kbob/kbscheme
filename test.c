@@ -21,9 +21,6 @@ eval_test_case_t eval_cases[] = {
     { L"(+ 3)", L"3" },
     { L"(+ 3 4)", L"7" },
     { L"(+ (+ 1 2) (+ 3 4))", L"10" },
-    { L"(lambda ())", L"(lambda ())" },
- /* { L"((lambda ()))", L"()" }, */
- /* { L"((lambda (x)) 4)", L"()" }, */
     { L"((lambda (x) (+ x 3)) 4)", L"7" },
     { L"((lambda (x) (+ x x)) 4)", L"8" },
     { L"((lambda (x) (+) (+ x 3)) 4)", L"7" },
@@ -42,10 +39,13 @@ eval_test_case_t eval_cases[] = {
     { L"v2", L"(lambda (x) (- x))" },
     { L"(v2 3)", L"-3" },
  /* { L"(define (v4 . x) x)", L"()" }, */
- /* { L"v4", L"()" }, */
+ /* { L"(v4)", L"()" }, */
  /* { L"(v4 3)", L"(3)" }, */
  /* Test that var can't be redefined. (need exceptions first.) */
     
+    { L"(define-syntax qot (lambda (x) x))", L"()" },
+    { L"(qot (1 2))", L"(1 2)" },
+
     { L"(quote ())", L"()" },
     { L"(quote (a b c))", L"(a b c)" },
 
