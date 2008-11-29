@@ -14,7 +14,7 @@
 
 THREAD_EXTERN_ROOT(FRAME);
 
-DECLARE_BLOCK(b_accum_operator);
+DECLARE_EXTERN_BLOCK(b_accum_operator);
 DECLARE_BLOCK(b_accum_arg);
 DECLARE_BLOCK(b_eval_sequence);
 
@@ -40,19 +40,33 @@ static obj_t *eval_symbol(void)
 
 #if EVAL_TRACE
 
-const char *block_name(C_procedure_t *block)
+const wchar_t *block_name(C_procedure_t *block)
 {
     if (block == b_eval)
-	return "b_eval";
+	return L"b_eval";
     if (block == b_accum_operator)
-	return "b_accum_operator";
+	return L"b_accum_operator";
     if (block == b_accum_arg)
-	return "b_accum_arg";
+	return L"b_accum_arg";
     if (block == b_eval_sequence)
-	return "b_eval_sequence";
+	return L"b_eval_sequence";
     if (block == NULL)
-	return "NULL";
-    return "<some-proc>";
+	return L"NULL";
+    /* XXX Move this code into bind.c. */
+    obj_t *env = library_env(r6rs_base_library());
+    obj_t *frame = pair_car(env);
+    while (frame) {
+	obj_t *binding = pair_car(frame);
+	obj_t *value = binding_value(binding);
+	if (is_procedure(value) && procedure_is_C(value)) {
+	    C_procedure_t *body = (C_procedure_t *)procedure_body(value);
+	    if (body == block)
+		return string_value(symbol_name(binding_name(binding)));
+	}
+	frame = pair_cdr(frame);
+    }
+
+    return L"<some-proc>";
 }
 
 void print_stack(const char *label)
@@ -63,11 +77,11 @@ void print_stack(const char *label)
     for (fp = FRAME; fp; fp = frame_get_parent(fp), sep = " -> ") {
 	C_procedure_t *cont = frame_get_continuation(fp);
 	obj_t *subj = frame_get_subject(fp);
-	printf("%s%s", sep, block_name(cont));
+	printf("%s%ls", sep, block_name(cont));
 	if (cont || subj) {
-	    printf("(");
+	    printf("[");
 	    princ_stdout(subj);
-	    printf(")");
+	    printf("]");
 	}
     } 
     printf("\n");
@@ -106,8 +120,12 @@ obj_t *eval_application(obj_t *proc, obj_t *args)
     PUSH_ROOT(proc);
     PUSH_ROOT(args);
     AUTO_ROOT(body, procedure_body(proc));
-    if (procedure_is_C(proc))
-	GOTO_FRAME(make_short_frame, (C_procedure_t *)body, args, F_ENV);
+    if (procedure_is_C(proc)) {
+	obj_t *env = F_ENV;
+	if (!procedure_is_special_form(proc))
+	    env = procedure_env(proc);
+	GOTO_FRAME(make_short_frame, (C_procedure_t *)body, args, env);
+    }
     AUTO_ROOT(new_env, make_env(procedure_env(proc)));
     AUTO_ROOT(formals, procedure_args(proc));
     AUTO_ROOT(actuals, args);
@@ -142,7 +160,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
     RAISE(&syntax);
 }
 
-DEFINE_BLOCK(b_accum_operator)
+DEFINE_EXTERN_BLOCK(b_accum_operator)
 {
     obj_t *proc = VALUE;
     obj_t *args = F_SUBJ;

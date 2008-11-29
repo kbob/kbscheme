@@ -20,9 +20,6 @@
     obj_t *name = (value);						\
     PUSH_ROOT(name);
 
-#define CAT__(a, b) a ## b
-#define CAT_(a, b) CAT__(a, b)
-#define GEN_IDENT(prefix) CAT_(prefix, __LINE__)
 #define PUSH_ROOT(name)							\
     root_descriptor_t GEN_IDENT(auto_root_) = {				\
 	L ## #name,							\
@@ -59,6 +56,10 @@
         record_static_root(&desc);					\
 	init;								\
     }
+
+#define GEN_IDENT(prefix) CAT_(prefix, __LINE__)
+#define CAT_(a, b) CAT__(a, b)
+#define CAT__(a, b) a ## b
 
 typedef struct root_descriptor root_descriptor_t;
 

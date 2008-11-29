@@ -143,7 +143,7 @@ DEFINE_BLOCK(b_set_continue)
     obj_t *var = F_SUBJ;
     obj_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
-    env_bind(F_ENV, var, BINDING_MUTABLE, VALUE);
+    binding_set(binding, VALUE);
     RETURN(NIL);
 }
 
@@ -337,17 +337,22 @@ DEFINE_PROC(L"null?")
  * (dynamic-wind before thunk after)	# procedure
  */
 
-#if 0
+DEFINE_BLOCK(b_continue_callcc)
+{
+    obj_t *value = pair_car(F_SUBJ);
+    FRAME = F_ENV;
+    RETURN(value);
+}
+
 DEFINE_PROC(L"call-with-current-continuation")
 {
-    obj_t *args = make_pair(FRAME, NIL);
+    obj_t *closure = make_C_procedure(b_continue_callcc, NIL, FRAME);
+    obj_t *args = make_pair(closure, NIL);
     obj_t *proc = pair_car(F_SUBJ);
-    return eval_application(FRAME, proc, args);
+    return eval_application(proc, args);
 }
-REBIND_PROC(L"call-with-current-continuation", L"call/cc");
-#endif
 
-/* XXX How can I bind call/cc to call-with-current-continuation? */
+ALIAS_NAME(NIL, L"call-with-current-continuation", NIL, L"call/cc");
 
 /* 11.16.  Iteration
  *

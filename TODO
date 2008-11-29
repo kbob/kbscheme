@@ -8,6 +8,7 @@ DONE	    Change mem_init_op to allow NULL.
 DONE	    It should be illegal to bind two C functions to the same symbol.
 DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
+	    Rename bind.{h,c} to env.{h,c}.
 
 	nonrecursive eval
  DONE	    Define C procedure API.
@@ -38,10 +39,15 @@ DONE	full mem model
 
 	decentralize unit testing.
 
+	libraries
+	    ???
+
 	macros
  DONE	    Implement scheme primitives for cheezy-read, eval, and print.
  DONE	    Reimplement the main loop in Scheme.
 	    Have lambda rewrite proc body as described in r6rs 11.3.
+		All it needs to do is verify that no definitions
+		follow expressions.
 		(How does lambda push another proc onto the stack?)
 	    See r6rs-lib 12.3.
 

@@ -7,7 +7,6 @@
 extern void princ(obj_t *, outstream_t *);
 extern void print(obj_t *, outstream_t *);
 
-#include "io.h"					/* XXX */
 #include <stdio.h>				/* XXX */
 						/* XXX */
 static inline void princ_stdout(obj_t *obj)	/* XXX */

@@ -93,7 +93,7 @@
  *			target's FRAME by its frame maker.
  *
  * GOTO_FRAME(make_frame, target, ...)
- * 			transfer to the target function.  The
+ *			transfer to the target function.  The
  *			specified frame maker is used to build the
  *			target's frame.
  *
@@ -120,47 +120,47 @@
 #define DEFINE_BLOCK        DEFINE_STATIC_BLOCK
 #define DECLARE_BLOCK       DECLARE_STATIC_BLOCK
 
-#define DEFINE_EXTERN_PROC(C_name, scheme_name) 			\
-    DEFINE_GENERAL_PROC_(NIL, 						\
-			 extern, 					\
-			 C_name, 					\
-			 scheme_name, 					\
+#define DEFINE_EXTERN_PROC(C_name, scheme_name)				\
+    DEFINE_GENERAL_PROC_(NIL,						\
+			 extern,					\
+			 C_name,					\
+			 scheme_name,					\
 			 bind_proc)
 
-#define DEFINE_STATIC_PROC(C_name, scheme_name) 			\
+#define DEFINE_STATIC_PROC(C_name, scheme_name)				\
     DEFINE_GENERAL_PROC_(NIL,						\
-			 static, 					\
-			 C_name, 					\
-			 scheme_name, 					\
+			 static,					\
+			 C_name,					\
+			 scheme_name,					\
 			 bind_proc)
 
-#define DEFINE_ANONYMOUS_PROC(scheme_name) 				\
+#define DEFINE_ANONYMOUS_PROC(scheme_name)				\
     DEFINE_GENERAL_PROC_(NIL,						\
-                         static, 					\
-                         CAT_(anonymous_, __LINE__), 			\
-                         scheme_name, 					\
+                         static,					\
+                         CAT_(anonymous_, __LINE__),			\
+                         scheme_name,					\
 			 bind_proc)
 
-#define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name) 		\
+#define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name)			\
     DEFINE_GENERAL_PROC_(NIL,						\
-			 extern, 					\
-			 C_name, 					\
-			 scheme_name, 					\
+			 extern,					\
+			 C_name,					\
+			 scheme_name,					\
 			 bind_special_form)
 
-#define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name) 		\
+#define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name)			\
     DEFINE_GENERAL_PROC_(NIL,						\
-		         static, 					\
-       			 C_name, 					\
-       			 scheme_name, 					\
-       			 bind_special_form)
+		         static,					\
+			 C_name,					\
+			 scheme_name,					\
+			 bind_special_form)
 
-#define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name) 			\
+#define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name)			\
     DEFINE_GENERAL_PROC_(NIL,						\
-                         static, 					\
-                         CAT_(anonymous_, __LINE__), 			\
-                         scheme_name, 					\
-       			 bind_special_form)
+                         static,					\
+                         CAT_(anonymous_, __LINE__),			\
+                         scheme_name,					\
+			 bind_special_form)
 
 #define DEFINE_EXTERN_BLOCK(C_name) DECLARE_PROC_(extern, C_name)
 #define DEFINE_STATIC_BLOCK(C_name) DECLARE_PROC_(static, C_name)
@@ -170,15 +170,29 @@
 #define DECLARE_PROC_(storage_class, C_name) \
     storage_class obj_t *C_name(obj_t *VALUE)
 
-#define DEFINE_GENERAL_PROC_(library, 					\
-			     storage_class, 				\
-			     C_name, 					\
-			     scheme_name, 				\
-			     binder) 					\
-    DECLARE_PROC_(storage_class, C_name); 				\
-    __attribute__((constructor)) 					\
-    static void CAT_(bind_proc_, __LINE__)(void) 			\
-    { 									\
+#define ALIAS_NAME(old_library, old_name, new_library, new_name)	\
+    __attribute__((constructor))					\
+    static void CAT_(alias_proc_, __LINE__)(void)			\
+    {									\
+	static alias_descriptor_t desc = {				\
+	    old_library,						\
+	    old_name,							\
+	    new_library,						\
+	    new_name,							\
+	    NULL							\
+	};								\
+	register_alias(&desc);						\
+    }
+
+#define DEFINE_GENERAL_PROC_(library,					\
+			     storage_class,				\
+			     C_name,					\
+			     scheme_name,				\
+			     binder)					\
+    DECLARE_PROC_(storage_class, C_name);				\
+    __attribute__((constructor))					\
+    static void CAT_(bind_proc_, __LINE__)(void)			\
+    {									\
 	static proc_descriptor_t desc = {				\
 	    library,							\
 	    C_name,							\
@@ -187,7 +201,7 @@
 	    NULL							\
 	};								\
 	register_proc(&desc);						\
-    } 									\
+    }									\
     DECLARE_PROC_(storage_class, C_name)
 
 /* concatenate into one identifier */
@@ -204,12 +218,12 @@
 #define F_LARG          (frame_get_last_arg(FRAME))
 
 /* Return the value as the result of this function. */
-#define RETURN(val) 							\
-    do { 								\
-	obj_t *val__ = (val); 						\
-	FRAME = F_PARENT; 						\
-	POP_FUNCTION_ROOTS(); 						\
-	return val__; 							\
+#define RETURN(val)							\
+    do {								\
+	obj_t *val__ = (val);						\
+	FRAME = F_PARENT;						\
+	POP_FUNCTION_ROOTS();						\
+	return val__;							\
     } while (0)
 
 /* Evaluate the expression in the environment and return the
@@ -247,20 +261,20 @@
 /* Return from this block, then call callee, then goto target.
  * Callee and target are tuples (block, arg, arg...).
  */
-#define CALL_THEN_GOTO(callee, target) 					\
-    do { 								\
-	FRAME = MAKE_GOTO target; 					\
-	FRAME = MAKE_CALL callee;	 				\
+#define CALL_THEN_GOTO(callee, target)					\
+    do {								\
+	FRAME = MAKE_GOTO target;					\
+	FRAME = MAKE_CALL callee;					\
 	POP_FUNCTION_ROOTS();						\
-	return NIL; 							\
+	return NIL;							\
     } while (0)
 
-#define CALL_THEN_GOTO_FRAME(callee, target) 				\
-    do { 								\
-	FRAME = MAKE_GOTO_FRAME target; 				\
-	FRAME = MAKE_CALL callee; 					\
+#define CALL_THEN_GOTO_FRAME(callee, target)				\
+    do {								\
+	FRAME = MAKE_GOTO_FRAME target;					\
+	FRAME = MAKE_CALL callee;					\
 	POP_FUNCTION_ROOTS();						\
-	return NIL; 							\
+	return NIL;							\
     } while (0)
 
 /* Make an activation frame whose continuation is this frame's
@@ -278,21 +292,34 @@
 
 typedef void binder_t(C_procedure_t, lib_t *, const wchar_t *name);
 typedef struct proc_descriptor proc_descriptor_t;
+typedef struct alias_descriptor alias_descriptor_t;
 
 struct proc_descriptor {
-    lib_t             *pd_library;
-    C_procedure_t     *pd_proc;
-    wchar_t           *pd_name;
-    binder_t          *pd_binder;
-    proc_descriptor_t *pd_next;
+    lib_t              *pd_library;
+    C_procedure_t      *pd_proc;
+    const wchar_t      *pd_name;
+    binder_t           *pd_binder;
+    proc_descriptor_t  *pd_next;
+};
+
+struct alias_descriptor {
+    lib_t              *ad_old_library;
+    const wchar_t      *ad_old_name;
+    lib_t              *ad_new_library;
+    const wchar_t      *ad_new_name;
+    alias_descriptor_t *ad_next;
 };
 
 extern obj_t *FRAME;
 
 DECLARE_EXTERN_BLOCK(b_eval);
+DECLARE_EXTERN_BLOCK(b_accum_operator);
+
+extern obj_t *eval_application(obj_t *proc, obj_t *args);
 
 extern void register_proc(proc_descriptor_t *desc);
 extern void register_procs(void);
+extern void register_alias(alias_descriptor_t *);
 
 extern void bind_proc(C_procedure_t, lib_t *library, const wchar_t *name);
 extern void bind_special_form(C_procedure_t,

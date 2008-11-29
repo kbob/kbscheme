@@ -7,6 +7,7 @@
 #include "roots.h"
 
 static proc_descriptor_t *proc_descs;
+static alias_descriptor_t *alias_descs;
 
 void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
 {
@@ -44,6 +45,12 @@ void register_proc(proc_descriptor_t *desc)
     proc_descs = desc;
 }
 
+void register_alias(alias_descriptor_t *desc)
+{
+    desc->ad_next = alias_descs;
+    alias_descs = desc;
+}
+
 void register_procs(void)
 {
     while (proc_descs) {
@@ -54,4 +61,23 @@ void register_procs(void)
 	(*desc->pd_binder)(desc->pd_proc, library, desc->pd_name);
 	proc_descs = desc->pd_next;
     }
+    AUTO_ROOT(value, NIL);
+    AUTO_ROOT(new_env, NIL);
+    while (alias_descs) {
+	alias_descriptor_t *desc = alias_descs;
+	lib_t *old_library = desc->ad_old_library;
+	if (!old_library)
+	    old_library = r6rs_base_library();
+	env_t *old_env = library_env(old_library);
+	obj_t *binding = env_lookup(old_env, make_symbol(desc->ad_old_name));
+	value = binding_value(binding);
+	lib_t *new_library = desc->ad_new_library;
+	if (!new_library)
+	    new_library = r6rs_base_library();
+	new_env = library_env(new_library);
+	obj_t *new_symbol = make_symbol(desc->ad_new_name);
+	env_bind(new_env, new_symbol, BINDING_IMMUTABLE, value);
+	alias_descs = desc->ad_next;
+    }
+    POP_FUNCTION_ROOTS();
 }

@@ -386,3 +386,47 @@ Third alternative.  May be independent of the first two.
 Make FRAME a thread-global variable.
 Then blocks just return a value.
 Each thread's FRAME is a root.
+
+----------------------------------
+11/28/2008
+
+I'm up against the problem that a lot of primitives need to be
+implemented.  Some of them seem to be best implemented as macros.
+E.g., let in terms of lambda and letrec (from r6rs Appendix B).
+
+    (define-syntax let
+      (syntax-rules ()
+        ((let ((name val) ...) body1 body2 ...)
+         ((lambda (name ...) body1 body2 ...)
+          val ...))
+        ((let tag ((name val) ...) body1 body2 ...)
+         ((letrec ((tag (lambda (name ...)
+                          body1 body2 ...)))
+            tag)
+          val ...))))
+
+Note that only "named let" uses letrec, so you can define let in terms
+of letrec and letrec in terms of let.
+
+From the Scheme FAQ:
+
+    (define-syntax letrec
+	(syntax-rules ()
+	  ((_ ((var init) ...) . body)
+           (let ()
+             (define var init)
+	     ...
+	     (let () . body)
+
+But many primitives can be implemented as simple procedures.  They
+don't need macros.
+
+Trivial example: list.
+
+	(define (list . args) args)
+
+So I'm thinking I should start on a system of loading libraries from
+source files at startup.  That means defining a search path and a way
+to control loading.  Or maybe the C code should just have a read-file
+primitive and a mechanism for reading a file into a namespace.  Then
+I could implement the import mechanism in Scheme.

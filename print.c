@@ -2,7 +2,9 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <types.h>
+
+#include "obj_binding.h"
+#include "types.h"
 
 /* XXX Reimplement this in Scheme. */
 
@@ -44,6 +46,13 @@ static void print_procedure(obj_t *obj, outstream_t *out)
     }
 }
 
+static void print_binding(obj_t *obj, outstream_t *out)
+{
+    print_form(binding_name(obj), out);
+    outstream_putwc(binding_is_mutable(obj) ? L':' : L'!', out);
+    print_form(binding_value(obj), out);
+}
+
 static void print_form(obj_t *obj, outstream_t *out)
 {
     if (is_null(obj) || is_pair(obj)) {
@@ -62,6 +71,8 @@ static void print_form(obj_t *obj, outstream_t *out)
 	outstream_printf(out, L"%ls", string_value(symbol_name(obj)));
     } else if (is_procedure(obj)) {
 	print_procedure(obj, out);
+    } else if (is_binding(obj)) {
+	print_binding(obj, out);
     } else {
 	outstream_printf(out, L"#<%ls-%p>", object_type_name(obj), obj);
     }
