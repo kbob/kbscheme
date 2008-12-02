@@ -6,8 +6,8 @@
 #define ROOT             STATIC_ROOT
 #define ROOT_CONSTRUCTOR STATIC_ROOT_CONSTRUCTOR
 
-#define EXTERN_ROOT(name) GENERAL_ROOT_(, name, )
-#define STATIC_ROOT(name) GENERAL_ROOT_(static, name, )
+#define EXTERN_ROOT(name) GENERAL_ROOT_(, name, NULL)
+#define STATIC_ROOT(name) GENERAL_ROOT_(static, name, NULL)
 
 #define EXTERN_ROOT_CONSTRUCTOR(name) GENERAL_ROOT_CONSTRUCTOR_(, name)
 #define STATIC_ROOT_CONSTRUCTOR(name) GENERAL_ROOT_CONSTRUCTOR_(static, name)
@@ -25,6 +25,7 @@
 	L ## #name,							\
 	__func__,							\
 	&name,								\
+	NULL,								\
 	NULL								\
     };									\
     push_root(&GEN_IDENT(auto_root_));
@@ -36,11 +37,11 @@
 
 #define GENERAL_ROOT_CONSTRUCTOR_(storage_class, name)			\
     DECLARE_ROOT_CONSTRUCTOR_(name);					\
-    GENERAL_ROOT_(storage_class, name, name = construct_root_##name())	\
+    GENERAL_ROOT_(storage_class, name, init_root_##name)		\
     DECLARE_ROOT_CONSTRUCTOR_(name)
     
 #define DECLARE_ROOT_CONSTRUCTOR_(name) \
-    __attribute__((constructor)) static obj_t *construct_root_##name(void)
+    static obj_t *init_root_##name(void)
 
 #define GENERAL_ROOT_(storage_class, name, init) 			\
     storage_class obj_t *name = NIL;					\
@@ -51,10 +52,10 @@
             L ## #name,							\
 	    NULL,							\
 	    &name,							\
+	    (init),							\
             NULL							\
         };								\
         record_static_root(&desc);					\
-	init;								\
     }
 
 #define GEN_IDENT(prefix) CAT_(prefix, __LINE__)
@@ -62,11 +63,13 @@
 #define CAT__(a, b) a ## b
 
 typedef struct root_descriptor root_descriptor_t;
+typedef obj_t *root_constructor_t(void);
 
 struct root_descriptor {
     const wchar_t      *rd_name;
     const char         *rd_func;
     obj_t             **rd_root;
+    root_constructor_t *rd_init;
     root_descriptor_t  *rd_next;
 };
 
@@ -75,5 +78,6 @@ extern void push_root(root_descriptor_t *);
 extern void pop_root(const wchar_t *);
 extern void pop_function_roots(const char *func_name);
 extern root_descriptor_t *get_thread_roots(void);
+extern void init_roots(void);
 
 #endif /* !ROOTS_INCLUDED */

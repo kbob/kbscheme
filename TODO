@@ -9,7 +9,7 @@ DONE	    It should be illegal to bind two C functions to the same symbol.
 DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
 	    Rename bind.{h,c} to env.{h,c}.
-	    Construct roots, init heap after main() is called.
+DONE	    Construct roots, init heap after main() is called.
 
 	nonrecursive eval
  DONE	    Define C procedure API.
@@ -38,6 +38,8 @@ DONE	full mem model
  DONE	    Create run-time parameter to run debug code.
 	    alternate algorithms!
 
+	full reader
+
 	decentralize unit testing.
 
 	libraries
@@ -51,7 +53,5 @@ DONE	full mem model
 		follow expressions.
 		(How does lambda push another proc onto the stack?)
 	    See r6rs-lib 12.3.
-
-	full reader
 
 	make readline better.

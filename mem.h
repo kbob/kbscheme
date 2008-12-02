@@ -74,7 +74,11 @@ struct mem_ops {
     mem_end_marker_t      mo_end_marker;
 };
 
+/* set_heap_size_bytes must be called  before init_heap. */
 extern void set_heap_size_bytes(size_t usable_size_bytes);
+
+/* init_heap must be called before mem_alloc_obj. */
+extern void init_heap(void);
 
 extern void assert_in_tospace(const obj_t *);
 

@@ -5,6 +5,7 @@
 #include "io.h"
 #include "eval.h"
 #include "lib.h"
+#include "mem.h"
 #include "print.h"
 #include "proc.h"
 #include "read.h"
@@ -14,6 +15,8 @@
 
 int main(int argc, char *argv[])
 {
+    init_heap();
+    init_roots();
     register_procs();
     if (argc == 2 && !strcmp(argv[1], "-t"))
 	self_test();

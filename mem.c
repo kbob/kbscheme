@@ -1,6 +1,7 @@
 #include "mem.h"
 
 #include <assert.h>
+#include <stdlib.h>
 #include <unistd.h>
 
 #include "roots.h"
@@ -18,16 +19,14 @@ typedef struct word {
     intptr_t word_word;
 } word_t;
 
-static word_t initial_heap[INITIAL_HEAP_WORDS];
-
-static void *the_heap = initial_heap;
+static void *the_heap;
 static size_t heap_size_bytes = INITIAL_HEAP_BYTES;
-static void *tospace = initial_heap;
-static void *tospace_end = initial_heap + INITIAL_HEAP_BYTES / 2;
-static void *next_alloc = initial_heap;
-static void *next_scan = initial_heap;
+static void *tospace;
+static void *tospace_end;
+static void *next_alloc;
+static void *next_scan;
 static void *fromspace, *fromspace_end;
-static bool heap_allocation_needed;
+static bool heap_is_initialized;
 
 static bool is_in_tospace(const obj_t *obj)
 {
@@ -146,19 +145,12 @@ static void flip()
 {
     fromspace = tospace;
     fromspace_end = tospace_end;
-    if (heap_allocation_needed) {
-	the_heap = sbrk(heap_size_bytes);
-	tospace = the_heap;
-	tospace_end = tospace + heap_size_bytes / 2;
-	heap_allocation_needed = false;
+    if (tospace == the_heap) {
+	tospace = the_heap + heap_size_bytes / 2;
+	tospace_end = the_heap + heap_size_bytes;
     } else {
-	if (tospace == the_heap) {
-	    tospace = the_heap + heap_size_bytes / 2;
-	    tospace_end = the_heap + heap_size_bytes;
-	} else {
-	    tospace = the_heap;
-	    tospace_end = the_heap + heap_size_bytes / 2;
-	}
+	tospace = the_heap;
+	tospace_end = the_heap + heap_size_bytes / 2;
     }
     next_alloc = next_scan = tospace;
     if (debug_heap) {
@@ -168,7 +160,7 @@ static void flip()
     }
 }
 
-obj_t *move_obj(obj_t *obj)
+static obj_t *move_obj(obj_t *obj)
 {
     if (is_null(obj) || is_in_tospace(obj))
 	return obj;
@@ -216,16 +208,29 @@ static void copy_heap()
     }
 }
 
-extern void set_heap_size_bytes(size_t size_bytes)
+void set_heap_size_bytes(size_t size_bytes)
 {
+    assert(!heap_is_initialized);
     if (heap_size_bytes != size_bytes) {
 	heap_size_bytes = size_bytes;
-	heap_allocation_needed = true;
     }	
 }
 
-extern obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size_bytes)
+void init_heap(void)
 {
+    assert(!heap_is_initialized);
+    the_heap = malloc(heap_size_bytes);
+    tospace = the_heap;
+    tospace_end = the_heap + heap_size_bytes / 2;
+    next_alloc = the_heap;
+    next_scan = the_heap;
+    
+    heap_is_initialized = true;
+}
+
+obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size_bytes)
+{
+    assert(heap_is_initialized);
     verify_heap();
     remember_ops(ops);
     size_t alloc_size = aligned_size(size_bytes);
@@ -242,7 +247,8 @@ extern obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size_bytes)
     return (obj_t *)p;
 }
 
-extern void assert_in_tospace(const obj_t *obj)
+void assert_in_tospace(const obj_t *obj)
 {
+    assert(heap_is_initialized);
     assert(is_null(obj) || is_in_tospace(obj));
 }

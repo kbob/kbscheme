@@ -40,6 +40,17 @@ void pop_root(const wchar_t *name)
     thread_roots = thread_roots->rd_next;
 }
 
+void init_roots(void)
+{
+    root_descriptor_t *p = static_roots;
+    while (p) {
+	if (p->rd_init) {
+	    *p->rd_root = p->rd_init();
+	}
+	p = p->rd_next;
+    }
+}
+
 root_descriptor_t *get_thread_roots(void)
 {
     if (thread_roots)
