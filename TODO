@@ -9,6 +9,7 @@ DONE	    It should be illegal to bind two C functions to the same symbol.
 DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
 	    Rename bind.{h,c} to env.{h,c}.
+	    Construct roots, init heap after main() is called.
 
 	nonrecursive eval
  DONE	    Define C procedure API.
@@ -16,8 +17,8 @@ DONE	    mem_fixvec should export non-virtual element accessors.
  DONE	    documentation
  DONE	    Clean up proc.h somehow?
 	    Implement full set of arg lists, see r6rs 11.4.2.
-	    Implement REBIND_PROC.
-	    Debug call/cc.
+ DONE	    Implement REBIND_PROC.
+ DONE	    Debug call/cc.
 
 DONE	full mem model
  DONE	    define obj ops.

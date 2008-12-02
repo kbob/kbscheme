@@ -1,5 +1,7 @@
 # -*-makefile-*-
 
+     MAKEFLAGS += -j
+
 # Will we build static or dynamic libraries?
 
  libtype ?= dynamic
