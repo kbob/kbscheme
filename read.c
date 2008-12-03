@@ -58,7 +58,7 @@ static token_t scan(instream_t *ip)
 	return make_token(TOK_FIXNUM, make_fixnum(ival));
     }
     if (iswgraph(wc)) {
-	size_t len = 2, pos = 0;
+	size_t len = 16, pos = 0;
 	wchar_t *buf = alloca(len * sizeof *buf);
 	instream_ungetwc(wc, ip);
 	while ((wc = instream_getwc(ip)) != WEOF && is_symchar(wc)) {

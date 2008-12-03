@@ -12,7 +12,7 @@ scheme_cfiles := main.c bind.c eval.c io.c lib.c obj.c print.c proc.c \
                  obj_binding.c
 scheme_yfiles := yread.y
   scheme_libs := librnrs
-scheme_ldlibs := -Wl,--no-whole-archive -lreadline
+scheme_ldlibs := -Wl,--no-whole-archive -lreadline -lunicode
 
      CPPFLAGS := -D_GNU_SOURCE -I.
        CFLAGS := -g -Wall -Werror

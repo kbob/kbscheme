@@ -20,7 +20,7 @@ DEFINE_PROC(L"draft-read")
 	if (!in)
 	    in = make_readline_instream();
     }
-    RETURN(micro_read(in));
+    RETURN(yyread(in));
 }
 
 DEFINE_PROC(L"draft-print")

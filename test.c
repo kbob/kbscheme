@@ -72,7 +72,7 @@ const size_t eval_case_count = sizeof eval_cases / sizeof eval_cases[0];
 static obj_t *read_string(const wchar_t *str)
 {
     instream_t *ip = make_string_instream(str, wcslen(str));
-    return micro_read(ip);
+    return yyread(ip);
 }
 
 static void test_eval()

@@ -10,5 +10,6 @@
 
 /* minimal reader just good enough to parse a real reader */
 extern obj_t *micro_read(instream_t *);
+extern obj_t *yyread(instream_t *);
 
 #endif /* !READ_INCLUDED */

@@ -476,4 +476,3 @@ Have a datum-sequence nonterminal which is made of data and
 datum-comments.  The actions discard the commented data.  Or have a
 parallel set of productions for commented data which don't build
 anything.  (I like the latter...)
-

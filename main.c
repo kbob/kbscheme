@@ -27,7 +27,7 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 	instream_t *in = make_file_instream(fin);
-	obj_t *repl = micro_read(in);
+	obj_t *repl = yyread(in);
 	eval(repl, library_env(r6rs_base_library()));
 	printf("\n");
     }
