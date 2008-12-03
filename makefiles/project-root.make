@@ -70,6 +70,7 @@ clean:
 	rm -f $(patsubst ./%,%,$(PROGRAMS))
 	rm -f $(patsubst ./%,%,$(LIBS))
 	rm -f $(patsubst ./%,%,$(TEST_PROGRAMS))
+	rm -f $(patsubst ./%,%,$(YFILES:.y=.c))
 	@echo '# junk = $(junk)'
 	@$(foreach d, $(DIRS), \
             echo 'rm -f [junk in $(subst ./,,$d)]'; \
@@ -83,3 +84,4 @@ $(TEST_SCRIPTS): $(PROGRAMS)
 	@$(CC) -M -MP -MT '$*.o $@' -MF $@ $(CPPFLAGS) $< || rm -f "$@"
 
 -include $(join $(dir $(CFILES)), $(patsubst %.c, .%.d, $(notdir $(CFILES))))
+-include $(join $(dir $(YFILES)), $(patsubst %.y, .%.d, $(notdir $(YFILES))))

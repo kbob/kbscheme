@@ -3,15 +3,19 @@
 # Template for a program.
 define program_template
 
- # Verify that foo_cfiles and foo_libs are nonrecursive.
+ # Verify that foo_cfiles, foo_yfiles, and foo_libs are nonrecursive.
  $$(eval $$(call assert_simple, $(1)_cfiles))
+ $$(eval $$(call assert_simple, $(1)_yfiles))
  $$(eval $$(call assert_simple, $(1)_libs))
 
    $(2)_cfiles := $$($(1)_cfiles:%=$d%)
+   $(2)_yfiles := $$($(1)_yfiles:%=$d%)
    $(2)_ofiles := $$($(2)_cfiles:.c=.o)
+   $(2)_ofiles += $$($(2)_yfiles:.y=.o)
      $(2)_libs := $$($(1)_libs:=.$(libext))
    $(2)_ldlibs := $$($(1)_ldlibs)
         CFILES += $$($(2)_cfiles)
+        YFILES += $$($(2)_yfiles)
 
  # foo's link rule
  $(2): $$($(2)_ofiles) $$($(2)_libs)
@@ -26,10 +30,14 @@ define lib_template
 
  # Verify that libfoo_cfiles is nonrecursive.
  $$(eval $$(call assert_simple, $(1)_cfiles))
+ $$(eval $$(call assert_simple, $(1)_yfiles))
 
    $(2)_cfiles := $$($(1)_cfiles:%=$d%)
+   $(2)_yfiles := $$($(1)_yfiles:%=$d%)
    $(2)_ofiles := $$($(2)_cfiles:%.c=%.o)
+   $(2)_ofiles += $$($(2)_yfiles:%.y=%.o)
         CFILES += $$($(2)_cfiles)
+        YFILES += $$($(2)_yfiles)
 
  vpath $(1).$$(libext) $$(dir $2)
 
@@ -56,16 +64,20 @@ define test_template
 
  # Verify that testfoo_cfiles and testfoo_libs are nonrecursive.
  $$(eval $$(call assert_simple, $(1)_cfiles))
+ $$(eval $$(call assert_simple, $(1)_yfiles))
  $$(eval $$(call assert_simple, $(1)_libs))
  $$(eval $$(call assert_simple, $(1)_CPPFLAGS))
 
    $(2)_cfiles := $$($(1)_cfiles:%=$d%)
+   $(2)_yfiles := $$($(1)_yfiles:%=$d%)
    $(2)_ofiles := $$($(2)_cfiles:.c=.o)
+   $(2)_ofiles += $$($(2)_yfiles:.y=.o)
      $(2)_libs := $$($(1)_libs:=.$(libext))
  $(2)_CPPFLAGS := $$($(1)_CPPFLAGS)
         CFILES += $$($(2)_cfiles)
+        YFILES += $$($(2)_yfiles)
 
- $(2):	$$($(2)_cfiles) $$($(2)_libs)
+ $(2):	$$($(2)_ofiles) $$($(2)_libs)
 	$$(strip $$(LINK.c) $$($(2)_CPPFLAGS) \
 			    $$(call munge_prereqs, $$^) \
 	                    $$($(2)_ldlibs) $$(LDLIBS) -o $$@)
