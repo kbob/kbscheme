@@ -430,3 +430,50 @@ source files at startup.  That means defining a search path and a way
 to control loading.  Or maybe the C code should just have a read-file
 primitive and a mechanism for reading a file into a namespace.  Then
 I could implement the import mechanism in Scheme.
+
+----------------------------------
+12/2/2008
+
+Finishing the reader.
+
+Things the scanner can return:
+       begin-datum-comment: #;
+       identifier (symbol)
+       booleans: #t, #f       
+       character
+       string	
+       number (fixnum w/ sign)
+       ( ) [ ] .
+       begin-vector: #(
+       begin-bytevector: #vu8(
+       quote: '
+       quasiquote: `
+       unquote: ,	   
+       unquote-splicing: ,@
+       syntax: #'
+       quasisyntax: #`
+       unsyntax: #,
+       unsyntax-splicing: #,@
+
+Things not to implement yet: many character formats,
+non-decimal-fixnum numbers, vectors, bytevectors.
+
+Grammar:
+
+    program ::= datum*
+
+    datum ::= lexeme | compound
+
+    lexeme ::= boolean | character | string | number
+
+    compound ::= ( datum* ) | [ datum* ] | abbrev datum
+		 (or vector or bytevector)
+
+How to handle comment?
+    comment ::= ... | #; interlexeme-space datum
+
+Have a datum-sequence nonterminal which is made of data and
+datum-comments.  The actions discard the commented data.  Or have a
+parallel set of productions for commented data which don't build
+anything.  (I like the latter...)
+
