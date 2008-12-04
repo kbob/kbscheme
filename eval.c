@@ -2,7 +2,7 @@
 
 #include <assert.h>
 
-#include "bind.h"
+#include "env.h"
 #include "proc.h"
 #include "roots.h"
 
@@ -52,7 +52,7 @@ const wchar_t *block_name(C_procedure_t *block)
 	return L"b_eval_sequence";
     if (block == NULL)
 	return L"NULL";
-    /* XXX Move this code into bind.c. */
+    /* XXX Move this code into env.c. */
     obj_t *env = library_env(r6rs_base_library());
     obj_t *frame = pair_car(env);
     while (frame) {

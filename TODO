@@ -8,7 +8,7 @@ DONE	    Change mem_init_op to allow NULL.
 DONE	    It should be illegal to bind two C functions to the same symbol.
 DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
-	    Rename bind.{h,c} to env.{h,c}.
+DONE	    Rename bind.{h,c} to env.{h,c}.
 DONE	    Construct roots, init heap after main() is called.
 
 	nonrecursive eval

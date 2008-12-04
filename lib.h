@@ -1,7 +1,7 @@
 #ifndef LIB_INCLUDED
 #define LIB_INCLUDED
 
-#include "bind.h"
+#include "env.h"
 #include "obj.h"
 
 typedef obj_t lib_t;

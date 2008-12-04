@@ -72,7 +72,7 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	    FILE *fin = fopen("mu-expand.scm", "r");
 	    assert(fin);
 	    instream_t *ins = make_file_instream(fin);
-	    obj_t *form = micro_read(ins);
+	    obj_t *form = yyread(ins);
 	    assert(pair_car(form) == make_symbol(L"lambda"));
 	    obj_t *formals = pair_car(pair_cdr(form));
 	    obj_t *body = pair_cdr(pair_cdr(form));
