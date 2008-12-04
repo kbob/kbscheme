@@ -83,5 +83,17 @@ $(TEST_SCRIPTS): $(PROGRAMS)
 	@rm -f "$@"
 	@$(CC) -M -MP -MT '$*.o $@' -MF $@ $(CPPFLAGS) $< || rm -f "$@"
 
+.%.d %/.%.d: %.y
+	@rm -f $@
+	@$(YACC.y) -o $*.c $<
+	@$(CC) -M -MP -MT '$*.o $@' $(CPPFLAGS) $*.c | sed 's/$*.c/$</' > $@ \
+		|| rm -f $@
+	@rm -f $*.c
+
+%.o: %.y
+	$(YACC.y) -o $(<:.y=.c) $< && \
+	$(COMPILE.c) $(OUTPUT_OPTION) $(<:.y=.c); \
+	rm -f $(<:.y=.c)
+
 -include $(join $(dir $(CFILES)), $(patsubst %.c, .%.d, $(notdir $(CFILES))))
 -include $(join $(dir $(YFILES)), $(patsubst %.y, .%.d, $(notdir $(YFILES))))
