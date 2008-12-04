@@ -1,17 +1,12 @@
 %{
     #include <assert.h>
-    #include <ctype.h>
-    #include <stdio.h>
     #include <stdlib.h>
     #include <string.h>
     #include <unicode.h>
-    #include <wchar.h>
     #include <wctype.h>
 
     #include "io.h"
     #include "obj.h"
-    #include "print.h"
-    #include "read.h"
     #include "roots.h"
     #include "types.h"
 
@@ -117,7 +112,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    continue;
 	if (wc == L';') {
 	    while ((wc = instream_getwc(in)) != WEOF &&
-		   wcschr(L"\r\n\x0085\x2028\x2029", wc))
+		   !wcschr(L"\r\n\x0085\x2028\x2029", wc))
 		continue;
 	    continue;
 	}
