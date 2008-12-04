@@ -1,6 +1,7 @@
 #ifndef ROOTS_INCLUDED
 #define ROOTS_INCLUDED
 
+#include "concat.h"
 #include "obj.h"
 
 #define ROOT             STATIC_ROOT
@@ -59,8 +60,6 @@
     }
 
 #define GEN_IDENT(prefix) CAT_(prefix, __LINE__)
-#define CAT_(a, b) CAT__(a, b)
-#define CAT__(a, b) a ## b
 
 typedef struct root_descriptor root_descriptor_t;
 typedef obj_t *root_constructor_t(void);

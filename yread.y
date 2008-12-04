@@ -1,4 +1,6 @@
 %{
+    #include "read.h"
+
     #include <assert.h>
     #include <stdlib.h>
     #include <string.h>
@@ -15,15 +17,15 @@
     #define YYSTYPE optr_t
 
     static int yylex(YYSTYPE *, instream_t *);
-    static void yyerror (instream_t *, obj_t **, char const *s);
+    static void yyerror (instream_t *, obj_t **, bool *, char const *s);
     static obj_t *make_list(obj_t *car, obj_t *cadr);
-
 %}
 
 %pure-parser
 %parse-param {instream_t *in}
 %parse-param {obj_t **opp}
-%lex-param {instream_t *in}
+%parse-param {bool *reached_eof}
+%lex-param   {instream_t *in}
 %error-verbose
 
 %token EXACT_NUMBER SIMPLE ABBREV COMMENT BEGIN_VECTOR BEGIN_BYTEVECTOR
@@ -31,8 +33,8 @@
 %%
 
 program  : comment program
-         | datum			{ *opp = $1; YYACCEPT; }
-         | /* empty */			{ *opp = make_symbol(L"exit"); }
+         | datum			{ *opp = $1; YYACCEPT;    }
+         | /* empty */			{ *reached_eof = true;    }
          ;
 
 datum    : simple
@@ -257,15 +259,16 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 }
 
 static void
-yyerror (instream_t *in, obj_t **opp, char const *s)
+yyerror (instream_t *in, obj_t **opp, bool *reached_eof, char const *s)
 {
     fprintf (stderr, "%s\n", s);
 }
 
-obj_t *yyread(instream_t *in)
+bool read_stream(instream_t *in, obj_t **obj_out)
 {
-    obj_t *optr;
-    int r = yyparse(in, &optr);
+    bool reached_eof = false;
+    *obj_out = NIL;
+    int r = yyparse(in, obj_out, &reached_eof);
     assert(r == 0);
-    return optr;
+    return !reached_eof;
 }

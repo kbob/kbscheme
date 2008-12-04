@@ -83,9 +83,15 @@ void princ(obj_t *obj, outstream_t *out)
      print_form(obj, out);
 }
 
+static bool is_unspecified(obj_t *obj)
+{
+    return is_symbol(obj) &&
+	!wcscmp(string_value(symbol_name(obj)), UNSPECIFIED_NAME);
+}
+
 void print(obj_t *obj, outstream_t *out)
 {
-    if (!is_null(obj)) {
+    if (!is_unspecified(obj)) {
 	print_form(obj, out);
 	outstream_putwc(L'\n', out);
     }

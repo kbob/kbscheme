@@ -16,11 +16,14 @@ static outstream_t *out;
 
 DEFINE_PROC(L"draft-read")
 {
+    AUTO_ROOT(obj, NIL);
     /* with lock */ {
 	if (!in)
 	    in = make_readline_instream();
+	if (!read_stream(in, &obj))
+	    obj = make_symbol(L"exit");
     }
-    RETURN(yyread(in));
+    RETURN(obj);
 }
 
 DEFINE_PROC(L"draft-print")
@@ -72,7 +75,9 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	    FILE *fin = fopen("mu-expand.scm", "r");
 	    assert(fin);
 	    instream_t *ins = make_file_instream(fin);
-	    obj_t *form = yyread(ins);
+	    obj_t *form;
+	    bool ok = read_stream(ins, &form);
+	    assert(ok);
 	    assert(pair_car(form) == make_symbol(L"lambda"));
 	    obj_t *formals = pair_car(pair_cdr(form));
 	    obj_t *body = pair_cdr(pair_cdr(form));

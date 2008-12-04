@@ -5,6 +5,7 @@
 #include "env.h"
 #include "proc.h"
 #include "roots.h"
+#include "test.h"
 
 #define EVAL_TRACE 0
 #if EVAL_TRACE
@@ -26,6 +27,13 @@ static bool is_self_evaluating(obj_t *expr)
 	    is_character(expr) ||
 	    is_string(expr));
 }
+
+TEST_EVAL(L"()", L"()");
+TEST_EVAL(L"#t", L"#t");
+TEST_EVAL(L"#f", L"#f");
+TEST_EVAL(L"123", L"123");
+//TEST_EVAL(L"\\A", L"\\A");
+//TEST_EVAL(L"\"ABC\"", L"\"ABC\"");
 
 static bool is_application(obj_t *expr)
 {

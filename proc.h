@@ -1,6 +1,7 @@
 #ifndef PROC_INCLUDED
 #define PROC_INCLUDED
 
+#include "concat.h"
 #include "lib.h"
 #include "obj_frame.h"
 #include "roots.h"
@@ -203,10 +204,6 @@
 	register_proc(&desc);						\
     }									\
     DECLARE_PROC_(storage_class, C_name)
-
-/* concatenate into one identifier */
-#define CAT_(a, b) CAT__(a, b)
-#define CAT__(a, b) a ## b
 
 /* FRAME member accessors */
 #define F_PARENT        (frame_get_parent(FRAME))

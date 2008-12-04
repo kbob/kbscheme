@@ -8,8 +8,6 @@
 #include "io.h"
 #include "obj.h"
 
-/* minimal reader just good enough to parse a real reader */
-extern obj_t *micro_read(instream_t *);
-extern obj_t *yyread(instream_t *);
+bool read_stream(instream_t *in, obj_t **obj_out);
 
 #endif /* !READ_INCLUDED */

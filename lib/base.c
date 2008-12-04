@@ -1,6 +1,7 @@
 #include <assert.h>
 
 #include "proc.h"
+#include "test.h"
 
 /* 11.1.1.  Base types
  *
@@ -55,7 +56,7 @@ DEFINE_BLOCK(b_define_continue)
 {
     obj_t *var = pair_car(F_SUBJ);
     env_bind(F_ENV, var, BINDING_MUTABLE, VALUE);
-    RETURN(NIL);
+    RETURN(UNSPECIFIED);
 }
 
 DEFINE_SPECIAL_FORM(L"define")
@@ -68,15 +69,31 @@ DEFINE_SPECIAL_FORM(L"define")
 	var = pair_car(var);
 	value = make_procedure(rest, formals, F_ENV);
     } else if (is_null(rest)) {
-	value = NIL;
+	value = UNSPECIFIED;
     } else {
 	assert(is_null(pair_cdr(rest)));
 	AUTO_ROOT(exp, pair_car(rest));
 	EVAL_THEN_GOTO(exp, F_ENV, b_define_continue, F_SUBJ, F_ENV);
     }
     env_bind(F_ENV, var, BINDING_MUTABLE, value);
-    RETURN(NIL);
+    RETURN(UNSPECIFIED);
 }
+
+TEST_EVAL(L"(define v0 3) v0",             L"3");
+TEST_EVAL(L"(define v1) v1",               UNSPECIFIED_REPR);
+TEST_EVAL(L"(define (v2 x) (- x)) v2",     L"(lambda (x) (- x))");
+TEST_EVAL(L"(define (v3 x) (- x)) (v3 3)", L"-3");
+TEST_EVAL(L"(define (v4 . x) x) v4",       L"(lambda x x)");
+TEST_EVAL(L"(define v5 1)",                UNSPECIFIED_REPR);
+TEST_EVAL(L"(define v6)",                  UNSPECIFIED_REPR);
+/* XXX Test that var can't be redefined. (need exceptions first.) */
+
+/* from r6rs */
+TEST_EVAL(L"(define add3\n"
+          L"(lambda (x) (+ x 3)))\n"
+          L"(add3 3)",                     L"6");
+TEST_EVAL(L"(define first car)\n"
+          L"(first '(1 2))",               L"1");
 
 /* 11.2.2.  Syntax definitions
  *
@@ -91,7 +108,7 @@ DEFINE_BLOCK(b_define_syntax_continue)
 				       procedure_env(proc));
     obj_t *keyword = pair_car(F_SUBJ);
     env_bind(F_ENV, keyword, BINDING_IMMUTABLE, proc);
-    RETURN(NIL);
+    RETURN(UNSPECIFIED);
 }
 
 DEFINE_SPECIAL_FORM(L"define-syntax")
@@ -100,6 +117,9 @@ DEFINE_SPECIAL_FORM(L"define-syntax")
     AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
 }
+
+TEST_EVAL(L"(define-syntax qot (lambda (x) x))", UNSPECIFIED_REPR);
+TEST_EVAL(L"(qot (1 2))", L"(1 2)");
 
 /* 11.4.1.  Quotation
  *
@@ -112,6 +132,24 @@ DEFINE_SPECIAL_FORM(L"quote")
     RETURN(pair_car(F_SUBJ));
 }
 
+TEST_EVAL(L"(quote ())",                  L"()");
+TEST_EVAL(L"(quote (a b c))",             L"(a b c)");
+
+/* from r6rs */
+TEST_EVAL(L"(quote a)",                   L"a");
+//TEST_EVAL(L"(quote #(a b c))",            L"#(a b c)");
+TEST_EVAL(L"(quote (+ 1 2))",             L"(+ 1 2)");
+
+//TEST_EVAL(L"'\"abc\"",                    L"\"abc\"");
+TEST_EVAL(L"'145932",                     L"145932");
+TEST_EVAL(L"'a",                          L"a");
+//TEST_EVAL(L"'#(a b c)",                   L"#(a b c)");
+TEST_EVAL(L"'()",                         L"()");
+TEST_EVAL(L"'(+ 1 2)",                    L"(+ 1 2)");
+TEST_EVAL(L"'(quote a)",                  L"(quote a)");
+TEST_EVAL(L"''a",                         L"(quote a)");
+
+
 /* 11.4.2.  Procedures
  *
  * (lambda <formals> <body>)		# syntax
@@ -123,6 +161,32 @@ DEFINE_SPECIAL_FORM(L"lambda")
     obj_t *body = pair_cdr(F_SUBJ);
     RETURN(make_procedure(body, params, F_ENV));
 }
+
+TEST_EVAL(L"((lambda (x) (+ x 3)) 4)",     L"7");
+TEST_EVAL(L"((lambda (x) (+ x x)) 4)",     L"8");
+TEST_EVAL(L"((lambda (x) (+) (+ x 3)) 4)", L"7");
+TEST_EVAL(L"((lambda (x) (+ x 3) (+)) 4)", L"0");
+
+/* from r6rs */
+TEST_EVAL(L"(lambda (x) (+ x x))",         L"(lambda (x) (+ x x))");
+TEST_EVAL(L"((lambda (x) (+ x x)) 4)",     L"8");
+TEST_EVAL(L"((lambda (x)\n"
+	  L"   (define (p y)\n"
+	  L"     (+ y 1))\n"
+	  L"   (+ (p x) x))\n"
+	  L" 5)",                          L"11");
+TEST_EVAL(L"(define reverse-subtract\n"
+	  L"  (lambda (x y) (- y x)))\n"
+	  L"(reverse-subtract 7 10)",      L"3");
+//TEST_EVAL(L"(define add4\n"
+//	  L"  (let ((x 4))\n"
+//	  L"    (lambda (y) (+ x y))))\n"
+//	  L"(add4 6)",                     L"10");
+//
+
+TEST_EVAL(L"((lambda x x) 3 4 5 6)",       L"(3 4 5 6)");
+TEST_EVAL(L"((lambda (x y . z) x)\n"
+          L" 3 4 5 6)",                    L"(5 6)");
 
 /* 11.4.3.  Conditionals
  *
@@ -139,7 +203,7 @@ DEFINE_BLOCK(b_continue_if)
     }
     obj_t *cddr = pair_cdr(F_SUBJ);
     if (is_null(cddr))
-	RETURN(cddr);
+	RETURN(UNSPECIFIED);
     obj_t *alternate = pair_car(cddr);
     TAIL_EVAL(alternate);
 }
@@ -150,6 +214,11 @@ DEFINE_SPECIAL_FORM(L"if")
     AUTO_ROOT(subj_cdr, pair_cdr(F_SUBJ));
     EVAL_THEN_GOTO(test, F_ENV, b_continue_if, subj_cdr, F_ENV);
 }
+
+TEST_EVAL(L"(if (= 0 0) 1 2)", L"1");
+TEST_EVAL(L"(if (= 0 1) 1 2)", L"2");
+TEST_EVAL(L"(if (= 0 0) 1)",   L"1");
+TEST_EVAL(L"(if (= 0 1) 1)",   UNSPECIFIED_REPR);
 
 /* 11.4.4.  Assignments
  *
@@ -162,7 +231,7 @@ DEFINE_BLOCK(b_set_continue)
     obj_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
     binding_set(binding, VALUE);
-    RETURN(NIL);
+    RETURN(UNSPECIFIED);
 }
 
 DEFINE_SPECIAL_FORM(L"set!")
@@ -171,6 +240,9 @@ DEFINE_SPECIAL_FORM(L"set!")
     AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
     EVAL_THEN_GOTO(exp, F_ENV, b_set_continue, var, F_ENV);
 }
+
+TEST_EVAL(L"(define v1 ()) (set! v1 4) v1", L"4");
+TEST_EVAL(L"(define v2 ()) (set! v2 4)",    UNSPECIFIED_REPR);
 
 /* 11.4.5.  Derived conditionals
  *
@@ -252,6 +324,10 @@ DEFINE_PROC(L"not")
     RETURN(make_boolean(obj == make_boolean(false)));
 }
 
+TEST_EVAL(L"(not (= 0 0))", L"#f");
+TEST_EVAL(L"(not (= 1 0))", L"#t");
+TEST_EVAL(L"(not +)", L"#f");
+
 /* 11.9.  Pairs and lists
  *
  * (pair? obj)				# procedure
@@ -295,26 +371,42 @@ DEFINE_PROC(L"pair?")
     RETURN(make_boolean(is_pair(pair_car(F_SUBJ))));
 }
 
+TEST_EVAL(L"(pair? (quote (1 2)))", L"#t");
+TEST_EVAL(L"(pair? 12)", L"#f");
+TEST_EVAL(L"(pair? ())", L"#f");
+
 DEFINE_PROC(L"cons")
 {
     RETURN(make_pair(pair_car(F_SUBJ),
 		     pair_car(pair_cdr(F_SUBJ))));
 }
 
+TEST_EVAL(L"(cons 1 2)", L"(1 . 2)");
+TEST_EVAL(L"(cons '(1 2) '(3 4))", L"((1 2) 3 4)");
+TEST_EVAL(L"(cons 1 ())", L"(1)");
+
 DEFINE_PROC(L"car")
 {
     RETURN(pair_car(pair_car(F_SUBJ)));
 }
+
+TEST_EVAL(L"(car (quote (1 2)))", L"1");
 
 DEFINE_PROC(L"cdr")
 {
     RETURN(pair_cdr(pair_car(F_SUBJ)));
 }
 
+TEST_EVAL(L"(cdr (quote (1 2)))", L"(2)");
+
 DEFINE_PROC(L"null?")
 {
     RETURN(make_boolean(is_null(pair_car(F_SUBJ))));
 }
+
+TEST_EVAL(L"(null? ())", L"#t");
+TEST_EVAL(L"(null? +)", L"#f");
+TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
 /* 11.10.  Symbols
  *

@@ -10,6 +10,7 @@ DONE	    Fix the makefile so subdirectories are rebuilt.
 DONE	    mem_fixvec should export non-virtual element accessors.
 DONE	    Rename bind.{h,c} to env.{h,c}.
 DONE	    Construct roots, init heap after main() is called.
+DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
 
 	nonrecursive eval
  DONE	    Define C procedure API.
@@ -19,6 +20,8 @@ DONE	    Construct roots, init heap after main() is called.
 	    Implement full set of arg lists, see r6rs 11.4.2.
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
+	    Add lots of test cases.
+	    Add test cases from r6rs chapter 11.
 
 DONE	full mem model
  DONE	    define obj ops.
@@ -43,6 +46,7 @@ DONE	full mem model
 
 	full reader
 	    Write test suite.
+ DONE	    Rename yyread to a better name.
 	    Protect against gc.
 	    Recognize characters.
 	    Recognize strings.
@@ -58,7 +62,7 @@ DONE	full mem model
 	    Rewrite for readability.
 	    
 
-	decentralize unit testing.
+DONE	decentralize unit testing.
 
 	libraries
 	    ???
