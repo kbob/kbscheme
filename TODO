@@ -20,8 +20,7 @@ DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
  DONE	    Implement full set of arg lists, see r6rs 11.4.2.
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
-	    Add lots of test cases.
-	    Add test cases from r6rs chapter 11.
+ DONE	    Add test cases from r6rs chapter 11.
 
 DONE	full mem model
  DONE	    define obj ops.

@@ -158,7 +158,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	      return BEGIN_VECTOR;    
 
 	    //case L'v':
-	    //  verify "#(vu8" and return BEGIN_BYTEARRAY;
+	    //  verify "#vu8(" and return BEGIN_BYTEARRAY;
 
 	    case L'!':
 		while ((wc = instream_getwc(in)) != WEOF && is_symchar(wc))
@@ -172,7 +172,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		    int state = 0;
 		    while (state != 2) {
 			wc = instream_getwc(in);
-			if (wc == EOF)
+			if (wc == WEOF)
 			    assert(0 && "unterminated block comment");
 			if (wc == L'|')
 			    state = 1;

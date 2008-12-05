@@ -12,11 +12,6 @@
  *    null?
  */
 
-DEFINE_PROC(L"boolean?")
-{
-    RETURN(make_boolean(is_boolean(pair_car(F_SUBJ))));
-}
-
 DEFINE_PROC(L"symbol?")
 {
     RETURN(make_boolean(is_symbol(pair_car(F_SUBJ))));
@@ -215,10 +210,18 @@ DEFINE_SPECIAL_FORM(L"if")
     EVAL_THEN_GOTO(test, F_ENV, b_continue_if, subj_cdr, F_ENV);
 }
 
-TEST_EVAL(L"(if (= 0 0) 1 2)", L"1");
-TEST_EVAL(L"(if (= 0 1) 1 2)", L"2");
-TEST_EVAL(L"(if (= 0 0) 1)",   L"1");
-TEST_EVAL(L"(if (= 0 1) 1)",   UNSPECIFIED_REPR);
+TEST_EVAL(L"(if (= 0 0) 1 2)",          L"1");
+TEST_EVAL(L"(if (= 0 1) 1 2)",          L"2");
+TEST_EVAL(L"(if (= 0 0) 1)",            L"1");
+TEST_EVAL(L"(if (= 0 1) 1)",            UNSPECIFIED_REPR);
+
+/* from r6rs */
+TEST_EVAL(L"(if (> 3 2) 'yes 'no)",     L"yes");
+TEST_EVAL(L"(if (> 2 3) 'yes 'no)",     L"no");
+TEST_EVAL(L"(if (> 3 2)\n"
+          L"    (- 3 2)\n"
+          L"    (+ 3 2))",              L"1");
+TEST_EVAL(L"(if #f #f)",                UNSPECIFIED_REPR);
 
 /* 11.4.4.  Assignments
  *
@@ -244,6 +247,12 @@ DEFINE_SPECIAL_FORM(L"set!")
 TEST_EVAL(L"(define v1 ()) (set! v1 4) v1", L"4");
 TEST_EVAL(L"(define v2 ()) (set! v2 4)",    UNSPECIFIED_REPR);
 
+/* from r6rs */
+//TEST_EVAL(L"(let ((x 2))\n"
+//          L"  (+ x 1)\n"
+//          L"  (set! x 4)\n"
+//          L"  (+ x 1))",        L"5");
+          
 /* 11.4.5.  Derived conditionals
  *
  * (cond <cond clause1> <cond clause2> ...)         # syntax
@@ -294,6 +303,14 @@ DEFINE_PROC(L"eq?")
     RETURN(make_boolean(obj1 == obj2));
 }
 
+/* from r6rs */
+TEST_EVAL(L"(eq? 'a 'a)",               L"#t");
+//TEST_EVAL(L"(eq? (list 'a) (list 'a))", L"#f");
+TEST_EVAL(L"(eq? '() '())",             L"#t");
+TEST_EVAL(L"(eq? car car)",             L"#t");
+//TEST_EVAL(L"(let ((x '(a)))\n"
+//          L"  (eq? x x))",              L"#t");
+
 /* 11.6.  Procedure predicate
  *
  * (procedure? obj)
@@ -303,6 +320,12 @@ DEFINE_PROC(L"procedure?")
 {
     RETURN(make_boolean(is_procedure(pair_car(F_SUBJ))));
 }
+
+/* from r6rs */
+TEST_EVAL(L"(procedure? car)",                   L"#t");
+TEST_EVAL(L"(procedure? 'car)",                  L"#f");
+TEST_EVAL(L"(procedure? (lambda (x) (* x x)))",  L"#t");
+TEST_EVAL(L"(procedure? '(lambda (x) (* x x)))", L"#f");
 
 /* 11.7.  Arithmetic
  *
@@ -324,9 +347,28 @@ DEFINE_PROC(L"not")
     RETURN(make_boolean(obj == make_boolean(false)));
 }
 
-TEST_EVAL(L"(not (= 0 0))", L"#f");
-TEST_EVAL(L"(not (= 1 0))", L"#t");
-TEST_EVAL(L"(not +)", L"#f");
+TEST_EVAL(L"(not (= 0 0))",     L"#f");
+TEST_EVAL(L"(not (= 1 0))",     L"#t");
+TEST_EVAL(L"(not +)",           L"#f");
+
+/* from r6rs */
+TEST_EVAL(L"(not #t)",          L"#f");
+TEST_EVAL(L"(not 3)",           L"#f");
+//TEST_EVAL(L"(not (list 3))",    L"f");
+TEST_EVAL(L"(not #f)",          L"#t");
+TEST_EVAL(L"(not '())",         L"#f");
+//TEST_EVAL(L"(not (list))",      L"#f");
+TEST_EVAL(L"(not 'nil)",        L"#f");
+
+DEFINE_PROC(L"boolean?")
+{
+    RETURN(make_boolean(is_boolean(pair_car(F_SUBJ))));
+}
+
+/* from r6rs */
+TEST_EVAL(L"(boolean? #f)",     L"#t");
+TEST_EVAL(L"(boolean? 0)",      L"#f");
+TEST_EVAL(L"(boolean? '())",    L"#f");
 
 /* 11.9.  Pairs and lists
  *
@@ -372,8 +414,14 @@ DEFINE_PROC(L"pair?")
 }
 
 TEST_EVAL(L"(pair? (quote (1 2)))", L"#t");
-TEST_EVAL(L"(pair? 12)", L"#f");
-TEST_EVAL(L"(pair? ())", L"#f");
+TEST_EVAL(L"(pair? 12)",            L"#f");
+TEST_EVAL(L"(pair? ())",            L"#f");
+
+/* from r6rs */
+TEST_EVAL(L"(pair? '(a . b))",      L"#t");
+TEST_EVAL(L"(pair? '(a b c))",      L"#t");
+TEST_EVAL(L"(pair? '())",           L"#f");
+//TEST_EVAL(L"(pair? '#(a b))",       L"#f");
 
 DEFINE_PROC(L"cons")
 {
@@ -381,16 +429,29 @@ DEFINE_PROC(L"cons")
 		     pair_car(pair_cdr(F_SUBJ))));
 }
 
-TEST_EVAL(L"(cons 1 2)", L"(1 . 2)");
+TEST_EVAL(L"(cons 1 2)",           L"(1 . 2)");
 TEST_EVAL(L"(cons '(1 2) '(3 4))", L"((1 2) 3 4)");
-TEST_EVAL(L"(cons 1 ())", L"(1)");
+TEST_EVAL(L"(cons 1 ())",          L"(1)");
+
+/* from r6rs */
+TEST_EVAL(L"(cons 'a '())",        L"(a)");
+TEST_EVAL(L"(cons '(a) '(b c d))", L"((a) b c d)");
+//TEST_EVAL(L"(cons \"a\" '(b c))",  L"(\"a\" b c)");
+TEST_EVAL(L"(cons 'a 3)",          L"(a . 3)");
+TEST_EVAL(L"(cons '(a b) 'c)",     L"((a b) . c)");
 
 DEFINE_PROC(L"car")
 {
     RETURN(pair_car(pair_car(F_SUBJ)));
 }
 
-TEST_EVAL(L"(car (quote (1 2)))", L"1");
+TEST_EVAL(L"(car (quote (1 2)))",  L"1");
+
+/* from r6rs */
+TEST_EVAL(L"(car '(a b c))",       L"a");
+TEST_EVAL(L"(car '((a) b c d))",   L"(a)");
+TEST_EVAL(L"(car '(1 . 2))",       L"1");
+//TEST_EVAL(L"(car '())",            L"&exception");
 
 DEFINE_PROC(L"cdr")
 {
@@ -398,6 +459,11 @@ DEFINE_PROC(L"cdr")
 }
 
 TEST_EVAL(L"(cdr (quote (1 2)))", L"(2)");
+
+/* from r6rs */
+TEST_EVAL(L"(cdr '((a) b c d))",   L"(b c d)");
+TEST_EVAL(L"(cdr '(1 . 2))",       L"2");
+//TEST_EVAL(L"(cdr '())",            L"&exception");
 
 DEFINE_PROC(L"null?")
 {
@@ -463,6 +529,32 @@ DEFINE_PROC(L"call-with-current-continuation")
 }
 
 ALIAS_NAME(NIL, L"call-with-current-continuation", NIL, L"call/cc");
+
+//TEST_EVAL(L"(call-with-current-continuation\n"
+//          L"  (lambda (exit)\n"
+//          L"    (for-each (lambda (x)\n"
+//          L"                (if (negative? x)\n"
+//          L"                    (exit x)))\n"
+//          L"              '(54 0 37 -3 245 19))\n"
+//          L"    #t))", L"-3");
+
+//TEST_EVAL(L"(define list-length\n"
+//          L"  (lambda (obj)\n"
+//          L"    (call-with-current-continuation\n"
+//          L"      (lambda (return)\n"
+//          L"        (letrec ((r\n"
+//          L"                  (lambda (obj)\n"
+//          L"                    (cond ((null? obj) 0)\n"
+//          L"                          ((pair? obj)\n"
+//          L"                           (+ (r (cdr obj)) 1))\n"
+//          L"                          (else (return #f))))))\n"
+//          L"          (r obj))))))\n"
+//          L"(list-length '(1 2 3 4))", L"4");
+
+//TEST_EVAL(L"(list-length '(a b . c))", L"#f");
+
+TEST_EVAL(L"(call-with-current-continuation procedure?)", L"#t");
+
 
 /* 11.16.  Iteration
  *

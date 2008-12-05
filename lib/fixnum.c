@@ -3,6 +3,8 @@
 #include "proc.h"
 #include "test.h"
 
+//IMPLEMENT_LIBRARY(L"(rnrs arithmetic fixnums (6))");
+
 DEFINE_PROC(L"fixnum?")
 {
     assert(is_null(pair_cdr(F_SUBJ)));
@@ -98,10 +100,10 @@ DEFINE_PROC(L"+")
     RETURN(make_fixnum(sum));
 }
 
-TEST_EVAL(L"+", L"#<proc-C>");
-TEST_EVAL(L"(+)", L"0");
-TEST_EVAL(L"(+ 3)", L"3");
-TEST_EVAL(L"(+ 3 4)", L"7");
+TEST_EVAL(L"+",                   L"#<proc-C>");
+TEST_EVAL(L"(+)",                 L"0");
+TEST_EVAL(L"(+ 3)",               L"3");
+TEST_EVAL(L"(+ 3 4)",             L"7");
 TEST_EVAL(L"(+ (+ 1 2) (+ 3 4))", L"10");
 
 DEFINE_PROC(L"-")
