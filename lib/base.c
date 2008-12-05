@@ -185,7 +185,7 @@ TEST_EVAL(L"(define reverse-subtract\n"
 //
 
 TEST_EVAL(L"((lambda x x) 3 4 5 6)",       L"(3 4 5 6)");
-TEST_EVAL(L"((lambda (x y . z) x)\n"
+TEST_EVAL(L"((lambda (x y . z) z)\n"
           L" 3 4 5 6)",                    L"(5 6)");
 
 /* 11.4.3.  Conditionals

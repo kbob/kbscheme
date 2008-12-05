@@ -123,6 +123,7 @@ static void print_env(obj_t *env)
 
 #endif /* EVAL_TRACE */
 
+/* XXX This function is misnamed. */
 obj_t *eval_application(obj_t *proc, obj_t *args)
 {
     PUSH_ROOT(proc);
@@ -137,19 +138,23 @@ obj_t *eval_application(obj_t *proc, obj_t *args)
     AUTO_ROOT(new_env, make_env(procedure_env(proc)));
     AUTO_ROOT(formals, procedure_args(proc));
     AUTO_ROOT(actuals, args);
-    AUTO_ROOT(rest, NIL);		/* XXX use this. */
-    while (!is_null(formals) || ! is_null(actuals)) {
+    while (!is_null(formals) || !is_null(actuals)) {
 	if (is_null(formals))
 	    RAISE("too many args");
-	if (!is_pair(formals)) {
-	    rest = actuals;
+	obj_t *formal, *actual;
+	if (is_pair(formals)) {
+	    if (is_null(actuals))
+		RAISE("not enough args");
+	    formal  = pair_car(formals);
+	    formals = pair_cdr(formals);
+	    actual  = pair_car(actuals);
+	    actuals = pair_cdr(actuals);
+	} else {
+	    formal  = formals;
+	    actual  = actuals;
+	    formals = actuals = NIL;
 	}
-	if (is_null(actuals))
-	    RAISE("not enough args");
-	env_bind(new_env,
-		 pair_car(formals), BINDING_MUTABLE, pair_car(actuals));
-	formals = pair_cdr(formals);
-	actuals = pair_cdr(actuals);
+	env_bind(new_env, formal, BINDING_MUTABLE, actual);
     }
     GOTO(b_eval_sequence, body, new_env);
 }

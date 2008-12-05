@@ -17,7 +17,7 @@ DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
  DONE	    threaded model?
  DONE	    documentation
  DONE	    Clean up proc.h somehow?
-	    Implement full set of arg lists, see r6rs 11.4.2.
+ DONE	    Implement full set of arg lists, see r6rs 11.4.2.
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
 	    Add lots of test cases.
