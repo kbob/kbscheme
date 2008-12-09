@@ -10,6 +10,7 @@
     #include "io.h"
     #include "obj.h"
     #include "roots.h"
+    #include "test.h"
     #include "types.h"
 
     typedef obj_t *optr_t;
@@ -75,34 +76,47 @@ static obj_t *make_list(obj_t *car, obj_t *cadr)
     return list;
 }
 
-static inline bool is_symchar(wchar_t wc)
+static inline bool is_ident_initial(wchar_t wc)
 {
-    switch (unicode_type(wc)) {
+    /* Ruthless elision of braces is fun! */
+    if (wc < 128)
+	return iswalpha(wc) || wcschr(L"!$%&*/:<=>?^_~", wc);
+    else
+	switch (unicode_type(wc))
+	case UNICODE_PRIVATE_USE:
+	case UNICODE_LOWERCASE_LETTER:
+	case UNICODE_MODIFIER_LETTER:
+	case UNICODE_OTHER_LETTER:
+	case UNICODE_TITLECASE_LETTER:
+	case UNICODE_UPPERCASE_LETTER:
+	case UNICODE_COMBINING_MARK:
+	case UNICODE_ENCLOSING_MARK:
+	case UNICODE_NON_SPACING_MARK:
+	case UNICODE_DECIMAL_NUMBER:
+	case UNICODE_LETTER_NUMBER:
+	case UNICODE_OTHER_NUMBER:
+	case UNICODE_CONNECT_PUNCTUATION:
+	case UNICODE_DASH_PUNCTUATION:
+	case UNICODE_OTHER_PUNCTUATION:
+	case UNICODE_CURRENCY_SYMBOL:
+	case UNICODE_MODIFIER_SYMBOL:
+	case UNICODE_MATH_SYMBOL:
+	case UNICODE_OTHER_SYMBOL:
+	    return true;
+    return false;
+}
 
-    case UNICODE_PRIVATE_USE:
-    case UNICODE_LOWERCASE_LETTER:
-    case UNICODE_MODIFIER_LETTER:
-    case UNICODE_OTHER_LETTER:
-    case UNICODE_TITLECASE_LETTER:
-    case UNICODE_UPPERCASE_LETTER:
+static inline bool is_ident_subsequent(wchar_t wc)
+{
+    if (is_ident_initial(wc) || iswdigit(wc) || wcschr(L"+-.@", wc))
+	return true;
+    switch (unicode_type(wc)) {
+    case UNICODE_DECIMAL_NUMBER:
     case UNICODE_COMBINING_MARK:
     case UNICODE_ENCLOSING_MARK:
-    case UNICODE_NON_SPACING_MARK:
-    case UNICODE_DECIMAL_NUMBER:
-    case UNICODE_LETTER_NUMBER:
-    case UNICODE_OTHER_NUMBER:
-    case UNICODE_CONNECT_PUNCTUATION:
-    case UNICODE_DASH_PUNCTUATION:
-    case UNICODE_OTHER_PUNCTUATION:
-    case UNICODE_CURRENCY_SYMBOL:
-    case UNICODE_MODIFIER_SYMBOL:
-    case UNICODE_MATH_SYMBOL:
-    case UNICODE_OTHER_SYMBOL:
 	return true;
-
-    default:
-	return false;
     }
+    return false;
 }
 
 static int yylex(YYSTYPE *lvalp, instream_t *in)
@@ -161,8 +175,10 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    //  verify "#vu8(" and return BEGIN_BYTEARRAY;
 
 	    case L'!':
-		while ((wc = instream_getwc(in)) != WEOF && is_symchar(wc))
-		    continue;
+		if ((wc = instream_getwc(in)) != WEOF && is_ident_initial(wc))
+		    while ((wc = instream_getwc(in)) != WEOF &&
+			   is_ident_subsequent(wc))
+			continue;
 		continue;
 
 	    case L'|':
@@ -232,11 +248,12 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    }
 	}
 
-	if (is_symchar(wc)) {
+	if (is_ident_initial(wc)) {
 	    size_t len = 16, pos = 0;
 	    wchar_t *buf = alloca(len * sizeof *buf);
 	    instream_ungetwc(wc, in);
-	    while ((wc = instream_getwc(in)) != WEOF && is_symchar(wc)) {
+	    while ((wc = instream_getwc(in)) != WEOF &&
+		   is_ident_subsequent(wc)) {
 		if (pos >= len - 1) {
 		    int nbytes = (len *= 2) * sizeof *buf;
 		    wchar_t *tmp = alloca(nbytes);
@@ -272,3 +289,31 @@ bool read_stream(instream_t *in, obj_t **obj_out)
     assert(r == 0);
     return !reached_eof;
 }
+
+/* spaces */
+TEST_READ(L"(a b)",          L"(a b)");
+TEST_READ(L"(a\tb)",         L"(a b)");
+TEST_READ(L"(a\fb)",         L"(a b)");
+TEST_READ(L"(a;comment\nb)", L"(a b)");
+
+/* numbers */
+TEST_READ(L"0",              L"0");
+TEST_EVAL(L"(number? 0)",    L"#t");
+TEST_READ(L"+12", L"12");
+TEST_EVAL(L"(number? +12)",  L"#t");
+TEST_READ(L"-23", L"-23");
+TEST_EVAL(L"(number? -23)",  L"#t");
+//TEST_READ(L"#i0", L"0");
+//TEST_READ(L"#I0", L"0");
+//TEST_READ(L"#e0", L"0");
+//TEST_READ(L"#E0", L"0");
+//TEST_READ(L"#b101", L"5");
+//TEST_READ(L"#o77", L"63");
+//TEST_READ(L"#e#b101", L"5");
+//TEST_READ(L"0.1", L"0.1");
+//TEST_READ(L"#e0.1", L"1/10");
+
+/* lists */
+TEST_READ(L"(a b)", L"(a b)");
+TEST_READ(L"[a b]", L"(a b)");
+//TEST_READ(L"#(a b)", L"#(a b)");

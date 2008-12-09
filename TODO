@@ -54,8 +54,8 @@ DONE	full mem model
 	    Verify "#!r6rs".
 	    Accept "#!/usr/bin/env cat".
 	    Recognize nested #| ... |# comments.
-	    Improve char classes for identifiers.
-	    Recognize peculiar identifiers.
+ DONE	    Improve char classes for identifiers.
+ 	    Recognize peculiar identifiers.
 	    Recognize hex escapes in identifiers.
 	    Recognize all numbers.	
 	    Rewrite for readability.
