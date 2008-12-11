@@ -91,9 +91,11 @@ $(TEST_SCRIPTS): $(PROGRAMS)
 	@rm -f $*.c
 
 %.o: %.y
-	$(YACC.y) -o $(<:.y=.c) $< && \
-	$(COMPILE.c) $(OUTPUT_OPTION) $(<:.y=.c); \
-	rm -f $(<:.y=.c)
+	$(YACC.y) -o $*.c $<
+	$(COMPILE.c) $(OUTPUT_OPTION) $*.c || { rm -f $*.c; false; }
+	rm $*.c
+
+.DELETE_ON_ERROR:
 
 -include $(join $(dir $(CFILES)), $(patsubst %.c, .%.d, $(notdir $(CFILES))))
 -include $(join $(dir $(YFILES)), $(patsubst %.y, .%.d, $(notdir $(YFILES))))
