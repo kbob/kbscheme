@@ -13,9 +13,6 @@
 typedef int (*test_driver_t)(const test_case_t *);
 static test_case_t *test_cases;
 
-TEST_READ(L"123", L"123");
-TEST_READ(L"123", L"123");
-
 static char *phase_name(test_phase_t phase)
 {
     switch (phase) {
@@ -29,6 +26,7 @@ static char *phase_name(test_phase_t phase)
 static int read_driver(const test_case_t *tc)
 {
     int err_count = 0;
+    //printf("%s:%d read %ls\n", tc->tc_file, tc->tc_lineno, tc->tc_input);
     instream_t *in = make_string_instream(tc->tc_input, wcslen(tc->tc_input));
     obj_t *obj;
     bool ok = read_stream(in, &obj);
@@ -87,8 +85,8 @@ static void test_all(test_phase_t phase, test_driver_t driver)
 	    err_count += (*driver)(tc);
 	}
     if (err_count) {
-	fprintf(stderr, "%d errors in phase %s.  FAIL.\n",
-		err_count, phase_name(phase));
+	fprintf(stderr, "%d error%s in phase %s.  FAIL.\n",
+		err_count, &"s"[err_count == 1], phase_name(phase));
 	exit(1);
     } else
 	printf("  %3d %s tests passed.\n", test_count, phase_name(phase));

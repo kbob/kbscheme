@@ -10,7 +10,7 @@
 
 #define DEFINE_TEST_CASE_(phase, input, expected)			\
 __attribute__((constructor))						\
-static void CAT_(register_test_, __LINE__)(void)			\
+static void CAT_(register_##phase##_test_, __LINE__)(void)		\
 {									\
     static test_case_t tc = {						\
 	phase,								\

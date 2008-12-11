@@ -53,7 +53,7 @@ DONE	full mem model
 	    Recognize bytevectors.
 	    Verify "#!r6rs".
 	    Accept "#!/usr/bin/env cat".
-	    Recognize nested #| ... |# comments.
+ DONE	    Recognize nested #| ... |# comments.
  DONE	    Improve char classes for identifiers.
  	    Recognize peculiar identifiers.
 	    Recognize hex escapes in identifiers.

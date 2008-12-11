@@ -76,6 +76,22 @@ static obj_t *make_list(obj_t *car, obj_t *cadr)
     return list;
 }
 
+static inline bool is_whitespace(wchar_t wc)
+{
+    switch (unicode_type(wc)) {
+    case UNICODE_LINE_SEPARATOR:
+    case UNICODE_SPACE_SEPARATOR:
+    case UNICODE_PARAGRAPH_SEPARATOR:
+	return true;
+    }
+    return (bool)wcschr(L"\t\n\v\f\r\x85", wc);
+}
+
+static inline bool is_line_ending(wchar_t wc)
+{
+    return (bool)wcschr(L"\r\n\x0085\x2028\x2029", wc);
+}
+
 static inline bool is_ident_initial(wchar_t wc)
 {
     /* Ruthless elision of braces is fun! */
@@ -124,11 +140,10 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
     wint_t wc;
 
     while ((wc = instream_getwc(in)) != WEOF) {
-	if (iswspace(wc))
+	if (is_whitespace(wc))
 	    continue;
 	if (wc == L';') {
-	    while ((wc = instream_getwc(in)) != WEOF &&
-		   !wcschr(L"\r\n\x0085\x2028\x2029", wc))
+	    while ((wc = instream_getwc(in)) != WEOF && !is_line_ending(wc))
 		continue;
 	    continue;
 	}
@@ -185,15 +200,22 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		/* scan until another | followed by # are found,
 		   or EOF, which is an error. */
 		{
-		    int state = 0;
-		    while (state != 2) {
+		    int state = 0, depth = 1;
+		    while (depth) {
 			wc = instream_getwc(in);
 			if (wc == WEOF)
 			    assert(0 && "unterminated block comment");
-			if (wc == L'|')
+			if (wc == L'|' && state == 0)
 			    state = 1;
-			else if (state == 1)
-			    state = (wc == L'#') ? 2 : 0;
+			else if (wc == L'|' && state == 2) {
+			    state = 0;
+			    depth++;
+			} else if (wc == L'#' && state == 0)
+			    state = 2;
+			else if (wc == L'#' && state == 1) {
+			    state = 0;
+			    --depth;
+			}
 		    }
 		}
 		continue;
@@ -261,7 +283,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		    memmove(tmp, buf, nbytes);
 		    buf = tmp;
 		}
-		buf[pos++] = btowc(wc);
+		buf[pos++] = wc;
 	    }
 	    buf[pos] = L'\0';
 	    if (wc != WEOF)
@@ -291,29 +313,111 @@ bool read_stream(instream_t *in, obj_t **obj_out)
 }
 
 /* spaces */
-TEST_READ(L"(a b)",          L"(a b)");
-TEST_READ(L"(a\tb)",         L"(a b)");
-TEST_READ(L"(a\fb)",         L"(a b)");
-TEST_READ(L"(a;comment\nb)", L"(a b)");
+TEST_READ(L"(a b)",                     L"(a b)");
+TEST_READ(L"(a\tb)",                    L"(a b)");
+TEST_READ(L"(a\vb)",                    L"(a b)");
+TEST_READ(L"(a\fb)",                    L"(a b)");
+TEST_READ(L"(a\rb)",                    L"(a b)");
+TEST_READ(L"(a\x0085"L"b)",             L"(a b)");
+TEST_READ(L"(a\x2028"L"b)",             L"(a b)");
+TEST_READ(L"(a\x2029"L"b)",             L"(a b)");
+TEST_READ(L"(a\x00a0"L"b)",             L"(a b)");
+
+/* comments */
+TEST_READ(L"(a;comment\nb)",            L"(a b)");
+TEST_READ(L"(a;comment\rb)",            L"(a b)");
+TEST_READ(L"(a;comment\r\nb)",          L"(a b)");
+TEST_READ(L"(a;comment\x0085"L"b)",     L"(a b)");
+TEST_READ(L"(a;comment\r\x0085"L"b)",   L"(a b)");
+TEST_READ(L"(a;comment\r\nb)",          L"(a b)");
+TEST_READ(L"(a;comment\x2028"L"b)",     L"(a b)");
+TEST_READ(L"(a#||#b)",                  L"(a b)");
+TEST_READ(L"(a#|comment|#b)",           L"(a b)");
+TEST_READ(L"(a#|||#b)",                 L"(a b)");
+TEST_READ(L"(a#|#||#|#b)",              L"(a b)");
+TEST_READ(L"(a#|#|comment|#|#b)",       L"(a b)");
+TEST_READ(L"(a#|#||#comment|#b)",       L"(a b)");
+TEST_READ(L"(a#;()b)",                  L"(a b)");
+TEST_READ(L"(a#;(comment)b)",           L"(a b)");
+TEST_READ(L"(a#;(\n)b)",                L"(a b)");
+TEST_READ(L"(a#;\t()b)",                L"(a b)");
+TEST_READ(L"(a#;((c)(d))b)",            L"(a b)");
+
+#define TEST_IDENT(name)						\
+    TEST_READ(L ## #name, L ## #name);					\
+    TEST_EVAL(L"(symbol? '" L ## #name L")", L"#t");
+
+/* identifiers */
+TEST_IDENT(a);
+TEST_IDENT(A);
+TEST_IDENT(!);
+TEST_IDENT($);
+TEST_IDENT(%);
+TEST_IDENT(&);
+TEST_IDENT(*);
+TEST_IDENT(/);
+TEST_IDENT(:);
+TEST_IDENT(<);
+TEST_IDENT(=);
+TEST_IDENT(>);
+TEST_IDENT(?);
+TEST_IDENT(^);
+TEST_IDENT(_);
+TEST_IDENT(~);
+TEST_IDENT(\x0102);			/* category Ll */
+TEST_IDENT(\x0101);			/* category Lu */
+TEST_IDENT(\x01c5);			/* category Lt */
+TEST_IDENT(\x02b0);			/* category Lm */
+TEST_IDENT(\x01bb);			/* category Lo */
+TEST_IDENT(\x0300);			/* category Mn */
+TEST_IDENT(\x2163);			/* category Nl */
+TEST_IDENT(\x00bc);			/* category No */
+TEST_IDENT(\x301c);			/* category Pd */
+TEST_IDENT(\x2040);			/* category Pc */
+TEST_IDENT(\x055e);			/* category Po */
+TEST_IDENT(\x0e3f);			/* category Sc */
+TEST_IDENT(\x208a);			/* category Sm */
+TEST_IDENT(\x02c2);			/* category Sk */
+TEST_IDENT(\x0482);			/* category So */
+TEST_IDENT(\xe000);			/* category Co */
+/* XXX test all the subsequent categories too. */
+//TEST_IDENT(\\x61);
+TEST_IDENT(+);
+TEST_IDENT(-);
+//TEST_IDENT(...);
+//TEST_IDENT(->abc);
 
 /* numbers */
-TEST_READ(L"0",              L"0");
-TEST_EVAL(L"(number? 0)",    L"#t");
-TEST_READ(L"+12", L"12");
-TEST_EVAL(L"(number? +12)",  L"#t");
-TEST_READ(L"-23", L"-23");
-TEST_EVAL(L"(number? -23)",  L"#t");
-//TEST_READ(L"#i0", L"0");
-//TEST_READ(L"#I0", L"0");
-//TEST_READ(L"#e0", L"0");
-//TEST_READ(L"#E0", L"0");
-//TEST_READ(L"#b101", L"5");
-//TEST_READ(L"#o77", L"63");
-//TEST_READ(L"#e#b101", L"5");
-//TEST_READ(L"0.1", L"0.1");
-//TEST_READ(L"#e0.1", L"1/10");
+
+#define TEST_NUMBER(input, expected)					\
+    TEST_READ(L ## #input, L ## #expected);					\
+    TEST_EVAL(L"(number? " L ## #expected L")", L"#t");
+TEST_NUMBER(0,     0);
+TEST_NUMBER(+12,  12);
+TEST_NUMBER(-23, -23);
+//TEST_NUMBER(#i0,   0);
+//TEST_NUMBER(#I0,   0);
+//TEST_NUMBER(#e0,   0);
+//TEST_NUMBER(#E0,   0);
+//TEST_NUMBER(#b101, 5);
+//TEST_NUMBER(#i0,   0);
+//TEST_NUMBER(#i0,   0);
+//TEST_NUMBER(#i0,   0);
+//TEST_NUMBER(#i0,   0);
+//TEST_READ(L"#i0",                       L"0");
+//TEST_READ(L"#I0",                       L"0");
+//TEST_READ(L"#e0",                       L"0");
+//TEST_READ(L"#E0",                       L"0");
+//TEST_READ(L"#b101",                     L"5");
+//TEST_READ(L"#o77",                      L"63");
+//TEST_READ(L"#e#b101",                   L"5");
+//TEST_READ(L"0.1",                       L"0.1");
+//TEST_READ(L"#e0.1",                     L"1/10");
 
 /* lists */
-TEST_READ(L"(a b)", L"(a b)");
-TEST_READ(L"[a b]", L"(a b)");
-//TEST_READ(L"#(a b)", L"#(a b)");
+TEST_READ(L"(a b)",                     L"(a b)");
+TEST_EVAL(L"(pair? '(a b))",            L"#t");
+TEST_READ(L"[a b]",                     L"(a b)");
+TEST_EVAL(L"(pair? '[a b])",            L"#t");
+//TEST_READ(L"#(a b)",                    L"#(a b)");
+//TEST_READ(L"#vu8(a b)",                 L"#vu8(a b)");
