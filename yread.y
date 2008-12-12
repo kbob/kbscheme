@@ -97,6 +97,13 @@ static inline bool is_digit(wchar_t wc)
     return L'0' <= wc && wc <= L'9';
 }
 
+static inline bool is_xdigit(wchar_t wc)
+{
+    if (is_digit(wc))
+	return true;
+    return (L'a' <= wc && wc <= L'f') || (L'A' <= wc && wc <= L'F');
+}
+
 static inline bool is_ident_initial(wchar_t wc)
 {
     /* Ruthless elision of braces is fun! */
@@ -140,6 +147,26 @@ static inline bool is_ident_subsequent(wchar_t wc)
     return false;
 }
 
+static int digit_value(wchar_t wc)
+{
+    if (L'0' <= wc && wc <= L'9')
+	return wc - L'0';
+    if (L'a'<= wc && wc <= L'f')
+	return wc - L'a' + 0xa;
+    assert(L'A'<= wc && wc <= L'F');
+    return wc - L'A' + 0xA;
+}
+
+static wchar_t inline_hex_escape(instream_t *in)
+{
+    int xval = 0;
+    wchar_t wc;
+    while ((wc = instream_getwc(in)) != WEOF && is_xdigit(wc))
+	xval = 0x10 * xval + digit_value(wc);
+    assert(wc == L';');
+    return (wchar_t)xval;
+}
+
 static int scan_number(int sign, YYSTYPE *lvalp, instream_t *in)
 {
     wchar_t wc;
@@ -159,7 +186,20 @@ static int scan_ident(const wchar_t *prefix, YYSTYPE *lvalp, instream_t *in)
     assert(pos < len);
     wchar_t *buf = alloca(len * sizeof *buf);
     wcscpy(buf, prefix); 
-    while ((wc = instream_getwc(in)) != WEOF && is_ident_subsequent(wc)) {
+    while (true) {
+	wc = instream_getwc(in);
+	if (wc == WEOF)
+	    break;
+	if (wc == L'\\') {
+	    wc = instream_getwc(in);
+	    if (wc == L'x' || wc == L'X') {
+		wc = inline_hex_escape(in);
+	    } else if (wc != WEOF) {
+		instream_ungetwc(wc, in);
+		break;
+	    }
+	} else if (!is_ident_subsequent(wc))
+	    break;
 	if (pos >= len - 1) {
 	    int nbytes = (len *= 2) * sizeof *buf;
 	    wchar_t *tmp = alloca(nbytes);
@@ -220,7 +260,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	}
 	if (wc == L',') {
 	    wc = instream_getwc(in);
-	    if (wc == '@') {
+	    if (wc == L'@') {
 		*lvalp = make_symbol(L"unquote-splicing");
 		return ABBREV;
 	    }
@@ -293,7 +333,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 
 	    case L',':
 		wc = instream_getwc(in);
-		if (wc == '@') {
+		if (wc == L'@') {
 		    *lvalp = make_symbol(L"unsyntax-splicing");
 		    return ABBREV;
 		}
@@ -304,7 +344,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    default:
 		/* fall through and fail */
 		instream_ungetwc(wc, in);
-		wc = '#';
+		wc = L'#';
 	    }
 	}
 	if (wc == L'-') {
@@ -347,7 +387,16 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    instream_ungetwc(wc, in);
 	    return scan_number(+1, lvalp, in);
 	}
-
+	if (wc == L'\\') {
+	    wc = instream_getwc(in);
+	    if (wc == L'x' || wc == L'X') {
+		wchar_t prefix[2] = { inline_hex_escape(in), L'\0' };
+		return scan_ident(prefix, lvalp, in);
+	    } else if (wc != WEOF)
+		instream_ungetwc(wc, in);
+	    wc = L'\\';
+	    /* fall through into purgatory */
+	}
 	if (is_ident_initial(wc)) {
 	    instream_ungetwc(wc, in);
 	    return scan_ident(L"", lvalp, in);
@@ -469,7 +518,21 @@ TEST_IDENT(...);
 TEST_IDENT(->);
 TEST_IDENT(->abc);
 TEST_READ(L"(->)",			L"(->)");
-//TEST_IDENT(\\x61);
+TEST_READ(L"\\x61;",			L"a");
+TEST_READ(L"\\X61;\\X3BB;",		L"a\x3bb");
+
+/*from r6rs section 4.2.4 */
+TEST_IDENT(lambda);
+TEST_IDENT(q);
+TEST_IDENT(soup);
+TEST_IDENT(list->vector);
+TEST_IDENT(+);
+TEST_IDENT(V17a);
+TEST_IDENT(<=);
+TEST_IDENT(a34kTMNs);
+TEST_IDENT(->-);
+TEST_IDENT(the-word-recursion-has-many-meanings);
+TEST_READ(L"\\x3BB;",			L"\x3bb");
 
 /* numbers */
 

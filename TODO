@@ -56,7 +56,7 @@ DONE	full mem model
  DONE	    Recognize nested #| ... |# comments.
  DONE	    Improve char classes for identifiers.
  DONE 	    Recognize peculiar identifiers.
-	    Recognize hex escapes in identifiers.
+ DONE	    Recognize hex escapes in identifiers.
 	    Recognize all numbers.	
 	    Rewrite for readability.
 	    
