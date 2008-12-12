@@ -51,7 +51,7 @@ static int eval_driver(const test_case_t *tc)
     /* XXX give each test a fresh environment. */
 
     int err_count = 0;
-    //printf("eval %ls\n", tc->tc_input);
+    //printf("%s:%d eval %ls\n", tc->tc_file, tc->tc_lineno, tc->tc_input);
     instream_t *in = make_string_instream(tc->tc_input, wcslen(tc->tc_input));
     AUTO_ROOT(expr, NIL);
     AUTO_ROOT(value, NIL);
