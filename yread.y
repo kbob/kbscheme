@@ -92,6 +92,11 @@ static inline bool is_line_ending(wchar_t wc)
     return (bool)wcschr(L"\r\n\x0085\x2028\x2029", wc);
 }
 
+static inline bool is_digit(wchar_t wc)
+{
+    return L'0' <= wc && wc <= L'9';
+}
+
 static inline bool is_ident_initial(wchar_t wc)
 {
     /* Ruthless elision of braces is fun! */
@@ -124,7 +129,7 @@ static inline bool is_ident_initial(wchar_t wc)
 
 static inline bool is_ident_subsequent(wchar_t wc)
 {
-    if (is_ident_initial(wc) || iswdigit(wc) || wcschr(L"+-.@", wc))
+    if (is_ident_initial(wc) || wcschr(L"+-.@", wc))
 	return true;
     switch (unicode_type(wc)) {
     case UNICODE_DECIMAL_NUMBER:
@@ -133,6 +138,42 @@ static inline bool is_ident_subsequent(wchar_t wc)
 	return true;
     }
     return false;
+}
+
+static int scan_number(int sign, YYSTYPE *lvalp, instream_t *in)
+{
+    wchar_t wc;
+    int ival = 0;
+    while ((wc = instream_getwc(in)) != WEOF && is_digit(wc))
+	ival = 10 * ival + (wc & 0xF);
+    if (wc != WEOF)
+	instream_ungetwc(wc, in);
+    *lvalp = make_fixnum(sign * ival);
+    return EXACT_NUMBER;
+}
+
+static int scan_ident(const wchar_t *prefix, YYSTYPE *lvalp, instream_t *in)
+{
+    wchar_t wc;
+    size_t len = 16, pos = wcslen(prefix);
+    assert(pos < len);
+    wchar_t *buf = alloca(len * sizeof *buf);
+    wcscpy(buf, prefix); 
+    while ((wc = instream_getwc(in)) != WEOF && is_ident_subsequent(wc)) {
+	if (pos >= len - 1) {
+	    int nbytes = (len *= 2) * sizeof *buf;
+	    wchar_t *tmp = alloca(nbytes);
+	    assert(tmp);
+	    memmove(tmp, buf, nbytes);
+	    buf = tmp;
+	}
+	buf[pos++] = wc;
+    }
+    buf[pos] = L'\0';
+    if (wc != WEOF)
+	instream_ungetwc(wc, in);
+    *lvalp = make_symbol(buf);
+    return SIMPLE;
 }
 
 static int yylex(YYSTYPE *lvalp, instream_t *in)
@@ -147,8 +188,27 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		continue;
 	    continue;
 	}
-	if (wcschr(L"()[].", wc)) {
+	if (wcschr(L"()[]", wc)) {
 	    return wctob(wc);
+	}
+	if (wc == L'.') {
+	    /* . is a token.
+             * ... is an identifier.
+             * Anything else is an error. */
+	    int n = 1;
+	    while ((wc = instream_getwc(in)) == L'.')
+		n++;
+	    if (wc != WEOF)
+		instream_ungetwc(wc, in);
+	    if (!is_ident_subsequent(wc)) {
+		if (n == 1)
+		    return wctob('.');
+		if (n == 3) {
+		    *lvalp = make_symbol(L"...");
+		    return SIMPLE;
+		}
+	    }
+	    /* fall through to ignominy. */
 	}
 	if (wc == L'\'') {
 	    *lvalp = make_symbol(L"quote");
@@ -247,49 +307,50 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		wc = '#';
 	    }
 	}
-	if (wc == L'+' || wc == L'-' || iswdigit(wc)) {
-	    int sign = +1;
-	    if (wc == L'-')
-		sign = -1;
-	    else if (wc != L'+')
-		instream_ungetwc(wc, in);
-	    int ival = 0;
-	    bool ok = false;
-	    while ((wc = instream_getwc(in)) != WEOF && iswdigit(wc)) {
-		ok = true;
-		ival = 10 * ival + (wc & 0xF);
-	    }
+	if (wc == L'-') {
+	    /*
+	     * - is an identifier.
+	     * -> is an identifier.
+	     * ->foo is an identifier.
+	     * -1, -.1 -#b1 are numbers.
+	     * Anything else is an error.
+	     */
+	    wc = instream_getwc(in);
 	    if (wc != WEOF)
 		instream_ungetwc(wc, in);
-	    if (ok) {
-		*lvalp = make_fixnum(sign * ival);
-		return EXACT_NUMBER;
-	    } else {
-		*lvalp = make_symbol(sign < 0 ? L"-" : L"+");
+	    if (wc == WEOF || !is_ident_subsequent(wc)) {
+		*lvalp = make_symbol(L"-");
 		return SIMPLE;
 	    }
+	    if (wc == L'.' || is_digit(wc))
+		return scan_number(-1, lvalp, in);
+	    if (wc == L'>')
+		return scan_ident(L"-", lvalp, in);
+	}
+	if (wc == L'+') {
+	    wc = instream_getwc(in);
+	    if (wc == EOF) {
+		*lvalp = make_symbol(L"+");
+		return SIMPLE;
+	    }
+	    if (!is_ident_subsequent(wc)) {
+		instream_ungetwc(wc, in);
+		*lvalp = make_symbol(L"+");
+		return SIMPLE;
+	    }
+	    if (is_digit(wc)) {
+		instream_ungetwc(wc, in);
+		return scan_number(+1, lvalp, in);
+	    }
+	}
+	if (is_digit(wc)) {
+	    instream_ungetwc(wc, in);
+	    return scan_number(+1, lvalp, in);
 	}
 
 	if (is_ident_initial(wc)) {
-	    size_t len = 16, pos = 0;
-	    wchar_t *buf = alloca(len * sizeof *buf);
 	    instream_ungetwc(wc, in);
-	    while ((wc = instream_getwc(in)) != WEOF &&
-		   is_ident_subsequent(wc)) {
-		if (pos >= len - 1) {
-		    int nbytes = (len *= 2) * sizeof *buf;
-		    wchar_t *tmp = alloca(nbytes);
-		    assert(tmp);
-		    memmove(tmp, buf, nbytes);
-		    buf = tmp;
-		}
-		buf[pos++] = wc;
-	    }
-	    buf[pos] = L'\0';
-	    if (wc != WEOF)
-		instream_ungetwc(wc, in);
-	    *lvalp = make_symbol(buf);
-	    return SIMPLE;
+	    return scan_ident(L"", lvalp, in);
 	}
 	fprintf(stderr, "unexpected char L'\\x%08x' = %d\n", wc, wc);
 	assert(0);
@@ -380,12 +441,35 @@ TEST_IDENT(\x208a);			/* category Sm */
 TEST_IDENT(\x02c2);			/* category Sk */
 TEST_IDENT(\x0482);			/* category So */
 TEST_IDENT(\xe000);			/* category Co */
-/* XXX test all the subsequent categories too. */
-//TEST_IDENT(\\x61);
+TEST_IDENT(aaA!$%&*/:<=>?^_~);
+TEST_IDENT(abc\x0102);			/* category Ll */
+TEST_IDENT(abc\x0101);			/* category Lu */
+TEST_IDENT(abc\x01c5);			/* category Lt */
+TEST_IDENT(abc\x02b0);			/* category Lm */
+TEST_IDENT(abc\x01bb);			/* category Lo */
+TEST_IDENT(abc\x0300);			/* category Mn */
+TEST_IDENT(abc\x2163);			/* category Nl */
+TEST_IDENT(abc\x00bc);			/* category No */
+TEST_IDENT(abc\x301c);			/* category Pd */
+TEST_IDENT(abc\x2040);			/* category Pc */
+TEST_IDENT(abc\x055e);			/* category Po */
+TEST_IDENT(abc\x0e3f);			/* category Sc */
+TEST_IDENT(abc\x208a);			/* category Sm */
+TEST_IDENT(abc\x02c2);			/* category Sk */
+TEST_IDENT(abc\x0482);			/* category So */
+TEST_IDENT(abc\xe000);			/* category Co */
+TEST_IDENT(a123);
+TEST_IDENT(abc\x0660);			/* category Nd */
+TEST_IDENT(abc\x0903);			/* category Mc */
+TEST_IDENT(abc\x20dd);			/* category Me */
+TEST_IDENT(a+-.@);
 TEST_IDENT(+);
 TEST_IDENT(-);
-//TEST_IDENT(...);
-//TEST_IDENT(->abc);
+TEST_IDENT(...);
+TEST_IDENT(->);
+TEST_IDENT(->abc);
+TEST_READ(L"(->)",			L"(->)");
+//TEST_IDENT(\\x61);
 
 /* numbers */
 
