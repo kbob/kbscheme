@@ -9,8 +9,8 @@
 
 #define EVAL_TRACE 0
 #if EVAL_TRACE
-#include <stdio.h>			/* XXX */
-#include "print.h"			/* XXX */
+    #include <stdio.h>
+    #include "print.h"
 #endif
 
 THREAD_EXTERN_ROOT(FRAME);
@@ -48,78 +48,78 @@ static obj_t *eval_symbol(void)
 
 #if EVAL_TRACE
 
-const wchar_t *block_name(C_procedure_t *block)
-{
-    if (block == b_eval)
-	return L"b_eval";
-    if (block == b_accum_operator)
-	return L"b_accum_operator";
-    if (block == b_accum_arg)
-	return L"b_accum_arg";
-    if (block == b_eval_sequence)
-	return L"b_eval_sequence";
-    if (block == NULL)
-	return L"NULL";
-    /* XXX Move this code into env.c. */
-    obj_t *env = library_env(r6rs_base_library());
-    obj_t *frame = pair_car(env);
-    while (frame) {
-	obj_t *binding = pair_car(frame);
-	obj_t *value = binding_value(binding);
-	if (is_procedure(value) && procedure_is_C(value)) {
-	    C_procedure_t *body = (C_procedure_t *)procedure_body(value);
-	    if (body == block)
-		return string_value(symbol_name(binding_name(binding)));
-	}
-	frame = pair_cdr(frame);
-    }
-
-    return L"<some-proc>";
-}
-
-void print_stack(const char *label)
-{
-    printf("%s: stack = ", label);
-    const char *sep = "";
-    obj_t *fp;
-    for (fp = FRAME; fp; fp = frame_get_parent(fp), sep = " -> ") {
-	C_procedure_t *cont = frame_get_continuation(fp);
-	obj_t *subj = frame_get_subject(fp);
-	printf("%s%ls", sep, block_name(cont));
-	if (cont || subj) {
-	    printf("[");
-	    princ_stdout(subj);
-	    printf("]");
-	}
-    } 
-    printf("\n");
-}
-
-static void print_env(obj_t *env)
-{
-    const char *sep = "";
-    while (env) {
-	printf("%s", sep);
-	if (pair_cdr(env)) {
-	    obj_t *f = pair_car(env);
-	    printf("[");
-	    sep = "";
-	    while (f) {
-		obj_t *binding = pair_car(f);
-		printf("%s", sep);
-		princ_stdout(binding_name(binding));
-		printf(": ");
-		princ_stdout(binding_value(binding));
-		f = pair_cdr(f);
-		sep = ", ";
+    const wchar_t *block_name(C_procedure_t *block)
+    {
+	if (block == b_eval)
+	    return L"b_eval";
+	if (block == b_accum_operator)
+	    return L"b_accum_operator";
+	if (block == b_accum_arg)
+	    return L"b_accum_arg";
+	if (block == b_eval_sequence)
+	    return L"b_eval_sequence";
+	if (block == NULL)
+	    return L"NULL";
+	/* XXX Move this code into env.c. */
+	obj_t *env = library_env(r6rs_base_library());
+	obj_t *frame = pair_car(env);
+	while (frame) {
+	    obj_t *binding = pair_car(frame);
+	    obj_t *value = binding_value(binding);
+	    if (is_procedure(value) && procedure_is_C(value)) {
+		C_procedure_t *body = (C_procedure_t *)procedure_body(value);
+		if (body == block)
+		    return string_value(symbol_name(binding_name(binding)));
 	    }
-	    printf("]");
-	} else
-	    printf("[builtins]\n");
-	env = pair_cdr(env);
-	sep = " -> ";
+	    frame = pair_cdr(frame);
+	}
+
+	return L"<some-proc>";
     }
-}
+
+    void print_stack(const char *label)
+    {
+	printf("%s: stack = ", label);
+	const char *sep = "";
+	obj_t *fp;
+	for (fp = FRAME; fp; fp = frame_get_parent(fp), sep = " -> ") {
+	    C_procedure_t *cont = frame_get_continuation(fp);
+	    obj_t *subj = frame_get_subject(fp);
+	    printf("%s%ls", sep, block_name(cont));
+	    if (cont || subj) {
+		printf("[");
+		princ_stdout(subj);
+		printf("]");
+	    }
+	} 
+	printf("\n");
+    }
+
+    static void print_env(obj_t *env)
+    {
+	const char *sep = "";
+	while (env) {
+	    printf("%s", sep);
+	    if (pair_cdr(env)) {
+		obj_t *f = pair_car(env);
+		printf("[");
+		sep = "";
+		while (f) {
+		    obj_t *binding = pair_car(f);
+		    printf("%s", sep);
+		    princ_stdout(binding_name(binding));
+		    printf(": ");
+		    princ_stdout(binding_value(binding));
+		    f = pair_cdr(f);
+		    sep = ", ";
+		}
+		printf("]");
+	    } else
+		printf("[builtins]\n");
+	    env = pair_cdr(env);
+	    sep = " -> ";
+	}
+    }
 
 #endif /* EVAL_TRACE */
 

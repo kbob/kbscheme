@@ -392,9 +392,9 @@ TEST_IDENT(-);
 #define TEST_NUMBER(input, expected)					\
     TEST_READ(L ## #input, L ## #expected);					\
     TEST_EVAL(L"(number? " L ## #expected L")", L"#t");
-TEST_NUMBER(0,     0);
-TEST_NUMBER(+12,  12);
-TEST_NUMBER(-23, -23);
+TEST_NUMBER(0,       0);
+TEST_NUMBER(+12,    12);
+TEST_NUMBER(-23,   -23);
 //TEST_NUMBER(#i0,   0);
 //TEST_NUMBER(#I0,   0);
 //TEST_NUMBER(#e0,   0);
