@@ -55,7 +55,7 @@ DONE	full mem model
 	    Accept "#!/usr/bin/env cat".
  DONE	    Recognize nested #| ... |# comments.
  DONE	    Improve char classes for identifiers.
- 	    Recognize peculiar identifiers.
+ DONE 	    Recognize peculiar identifiers.
 	    Recognize hex escapes in identifiers.
 	    Recognize all numbers.	
 	    Rewrite for readability.
