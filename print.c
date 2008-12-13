@@ -53,6 +53,19 @@ static void print_binding(obj_t *obj, outstream_t *out)
     print_form(binding_value(obj), out);
 }
 
+static void print_vector(obj_t *obj, outstream_t *out)
+{
+    size_t i, size = vector_len(obj);
+    const wchar_t *sep = L"";
+    outstream_printf(out, L"#(");
+    for (i = 0; i < size; i++) {
+	outstream_printf(out, sep);
+	print_form(vector_ref(obj, i), out);
+	sep = L" ";
+    }    
+    outstream_printf(out, L")");
+}
+
 static void print_form(obj_t *obj, outstream_t *out)
 {
     if (is_null(obj) || is_pair(obj)) {
@@ -73,6 +86,8 @@ static void print_form(obj_t *obj, outstream_t *out)
 	print_procedure(obj, out);
     } else if (is_binding(obj)) {
 	print_binding(obj, out);
+    } else if (is_vector(obj)) {
+	print_vector(obj, out);
     } else {
 	outstream_printf(out, L"#<%ls-%p>", object_type_name(obj), obj);
     }

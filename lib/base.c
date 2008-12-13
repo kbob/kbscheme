@@ -22,12 +22,6 @@ DEFINE_PROC(L"char?")
     RETURN(make_boolean(is_character(pair_car(F_SUBJ))));
 }
 
-DEFINE_PROC(L"vector?")
-{
-    /* RETURN(make_boolean(is_vector(pair_car(F_SUBJ)))); */
-    RETURN(make_boolean(false));
-}
-
 DEFINE_PROC(L"number?")
 {
     /* RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
@@ -74,13 +68,13 @@ DEFINE_SPECIAL_FORM(L"define")
     RETURN(UNSPECIFIED);
 }
 
-TEST_EVAL(L"(define v0 3) v0",             L"3");
-TEST_EVAL(L"(define v1) v1",               UNSPECIFIED_REPR);
-TEST_EVAL(L"(define (v2 x) (- x)) v2",     L"(lambda (x) (- x))");
-TEST_EVAL(L"(define (v3 x) (- x)) (v3 3)", L"-3");
-TEST_EVAL(L"(define (v4 . x) x) v4",       L"(lambda x x)");
-TEST_EVAL(L"(define v5 1)",                UNSPECIFIED_REPR);
-TEST_EVAL(L"(define v6)",                  UNSPECIFIED_REPR);
+TEST_EVAL(L"(define v0 3) v0",			L"3");
+TEST_EVAL(L"(define v1) v1",			UNSPECIFIED_REPR);
+TEST_EVAL(L"(define (v2 x) (- x)) v2",		L"(lambda (x) (- x))");
+TEST_EVAL(L"(define (v3 x) (- x)) (v3 3)",	L"-3");
+TEST_EVAL(L"(define (v4 . x) x) v4",		L"(lambda x x)");
+TEST_EVAL(L"(define v5 1)",			UNSPECIFIED_REPR);
+TEST_EVAL(L"(define v6)",			UNSPECIFIED_REPR);
 /* XXX Test that var can't be redefined. (need exceptions first.) */
 
 /* from r6rs */
@@ -127,22 +121,22 @@ DEFINE_SPECIAL_FORM(L"quote")
     RETURN(pair_car(F_SUBJ));
 }
 
-TEST_EVAL(L"(quote ())",                  L"()");
-TEST_EVAL(L"(quote (a b c))",             L"(a b c)");
+TEST_EVAL(L"(quote ())",		L"()");
+TEST_EVAL(L"(quote (a b c))",		L"(a b c)");
 
 /* from r6rs */
-TEST_EVAL(L"(quote a)",                   L"a");
-//TEST_EVAL(L"(quote #(a b c))",            L"#(a b c)");
-TEST_EVAL(L"(quote (+ 1 2))",             L"(+ 1 2)");
+TEST_EVAL(L"(quote a)",			L"a");
+TEST_EVAL(L"(quote #(a b c))",		L"#(a b c)");
+TEST_EVAL(L"(quote (+ 1 2))",		L"(+ 1 2)");
 
-//TEST_EVAL(L"'\"abc\"",                    L"\"abc\"");
-TEST_EVAL(L"'145932",                     L"145932");
-TEST_EVAL(L"'a",                          L"a");
-//TEST_EVAL(L"'#(a b c)",                   L"#(a b c)");
-TEST_EVAL(L"'()",                         L"()");
-TEST_EVAL(L"'(+ 1 2)",                    L"(+ 1 2)");
-TEST_EVAL(L"'(quote a)",                  L"(quote a)");
-TEST_EVAL(L"''a",                         L"(quote a)");
+//TEST_EVAL(L"'\"abc\"",		L"\"abc\"");
+TEST_EVAL(L"'145932",			L"145932");
+TEST_EVAL(L"'a",			L"a");
+TEST_EVAL(L"'#(a b c)",			L"#(a b c)");
+TEST_EVAL(L"'()",			L"()");
+TEST_EVAL(L"'(+ 1 2)",			L"(+ 1 2)");
+TEST_EVAL(L"'(quote a)",		L"(quote a)");
+TEST_EVAL(L"''a",			L"(quote a)");
 
 
 /* 11.4.2.  Procedures
@@ -157,31 +151,31 @@ DEFINE_SPECIAL_FORM(L"lambda")
     RETURN(make_procedure(body, params, F_ENV));
 }
 
-TEST_EVAL(L"((lambda (x) (+ x 3)) 4)",     L"7");
-TEST_EVAL(L"((lambda (x) (+ x x)) 4)",     L"8");
-TEST_EVAL(L"((lambda (x) (+) (+ x 3)) 4)", L"7");
-TEST_EVAL(L"((lambda (x) (+ x 3) (+)) 4)", L"0");
+TEST_EVAL(L"((lambda (x) (+ x 3)) 4)",		L"7");
+TEST_EVAL(L"((lambda (x) (+ x x)) 4)",		L"8");
+TEST_EVAL(L"((lambda (x) (+) (+ x 3)) 4)",	L"7");
+TEST_EVAL(L"((lambda (x) (+ x 3) (+)) 4)",	L"0");
 
 /* from r6rs */
-TEST_EVAL(L"(lambda (x) (+ x x))",         L"(lambda (x) (+ x x))");
-TEST_EVAL(L"((lambda (x) (+ x x)) 4)",     L"8");
+TEST_EVAL(L"(lambda (x) (+ x x))",		L"(lambda (x) (+ x x))");
+TEST_EVAL(L"((lambda (x) (+ x x)) 4)",		L"8");
 TEST_EVAL(L"((lambda (x)\n"
 	  L"   (define (p y)\n"
 	  L"     (+ y 1))\n"
 	  L"   (+ (p x) x))\n"
-	  L" 5)",                          L"11");
+	  L" 5)",				L"11");
 TEST_EVAL(L"(define reverse-subtract\n"
 	  L"  (lambda (x y) (- y x)))\n"
-	  L"(reverse-subtract 7 10)",      L"3");
+	  L"(reverse-subtract 7 10)",		L"3");
 //TEST_EVAL(L"(define add4\n"
 //	  L"  (let ((x 4))\n"
 //	  L"    (lambda (y) (+ x y))))\n"
-//	  L"(add4 6)",                     L"10");
+//	  L"(add4 6)",				L"10");
 //
 
-TEST_EVAL(L"((lambda x x) 3 4 5 6)",       L"(3 4 5 6)");
+TEST_EVAL(L"((lambda x x) 3 4 5 6)",		L"(3 4 5 6)");
 TEST_EVAL(L"((lambda (x y . z) z)\n"
-          L" 3 4 5 6)",                    L"(5 6)");
+          L" 3 4 5 6)",				L"(5 6)");
 
 /* 11.4.3.  Conditionals
  *
@@ -210,18 +204,18 @@ DEFINE_SPECIAL_FORM(L"if")
     EVAL_THEN_GOTO(test, F_ENV, b_continue_if, subj_cdr, F_ENV);
 }
 
-TEST_EVAL(L"(if (= 0 0) 1 2)",          L"1");
-TEST_EVAL(L"(if (= 0 1) 1 2)",          L"2");
-TEST_EVAL(L"(if (= 0 0) 1)",            L"1");
-TEST_EVAL(L"(if (= 0 1) 1)",            UNSPECIFIED_REPR);
+TEST_EVAL(L"(if (= 0 0) 1 2)",		L"1");
+TEST_EVAL(L"(if (= 0 1) 1 2)",		L"2");
+TEST_EVAL(L"(if (= 0 0) 1)",		L"1");
+TEST_EVAL(L"(if (= 0 1) 1)",		UNSPECIFIED_REPR);
 
 /* from r6rs */
-TEST_EVAL(L"(if (> 3 2) 'yes 'no)",     L"yes");
-TEST_EVAL(L"(if (> 2 3) 'yes 'no)",     L"no");
+TEST_EVAL(L"(if (> 3 2) 'yes 'no)",	L"yes");
+TEST_EVAL(L"(if (> 2 3) 'yes 'no)",	L"no");
 TEST_EVAL(L"(if (> 3 2)\n"
           L"    (- 3 2)\n"
-          L"    (+ 3 2))",              L"1");
-TEST_EVAL(L"(if #f #f)",                UNSPECIFIED_REPR);
+          L"    (+ 3 2))",		L"1");
+TEST_EVAL(L"(if #f #f)",		UNSPECIFIED_REPR);
 
 /* 11.4.4.  Assignments
  *
@@ -491,8 +485,84 @@ TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
 /* 11.13.  Vectors
  *
- * ...
+ * (make-vector k)			# procedure
+ * (make-vector k fill)			# procedure
+ *
+ * (vector? obj)			# procedure
+ *
+ * (vector obj ...)			# procedure
+ *
+ * (vector-length vector)		# procedure
+ *
+ * (vector-ref vector k)		# procedure
+ *
+ * (vector-set! vector k obj)		# procedure
+ *
+ * (vector->list vector)		# procedure
+ * (list->vector list)			# procedure
+ * (vector-fill! vector fill)		# procedure
+ * (vector-map proc vector1 vector2 ...) # procedure
+ *
+ * (vector-for-each proc vector1 vector2 ...) # procedure
  */
+
+DEFINE_PROC(L"make-vector")
+{
+    size_t k = fixnum_value(pair_car(F_SUBJ));
+    obj_t *fill = NIL;
+    if (pair_cdr(F_SUBJ))
+	fill = pair_car(pair_cdr(F_SUBJ));
+    RETURN(make_vector(k, fill));
+}
+
+TEST_EVAL(L"(make-vector 3)",	L"#(() () ())");
+TEST_EVAL(L"(make-vector 3 4)",	L"#(4 4 4)");
+
+DEFINE_PROC(L"vector?")
+{
+    RETURN(make_boolean(is_vector(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(vector? '(3 4))",	L"#f");
+TEST_EVAL(L"(vector? '())",	L"#f");
+TEST_EVAL(L"(vector? '#(3))",	L"#t");
+
+DEFINE_PROC(L"vector-length")
+{
+    RETURN(make_fixnum(vector_len(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(vector-length '#(a b c))", L"3");
+
+DEFINE_PROC(L"vector-ref")
+{
+    obj_t *vec = pair_car(F_SUBJ);
+    size_t index = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    RETURN(vector_ref(vec, index));
+}
+
+TEST_EVAL(L"(vector-ref '#(0 1 2) 1)",	L"1");
+
+DEFINE_PROC(L"vector-set!")
+{
+    obj_t *vec = pair_car(F_SUBJ);
+    size_t index = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    obj_t *elem = pair_car(pair_cdr(pair_cdr(F_SUBJ)));
+    vector_set(vec, index, elem);
+    RETURN(UNSPECIFIED);
+}
+
+TEST_EVAL(L"(define a '#(1 2 3))\n"
+          L"(vector-set! a 1 'x)\n"
+	  L"a",				L"#(1 x 3)");
+
+/* from r6rs */
+//TEST_EVAL(L"'#(0 (2 2 2 2) \"Anna\")",	L"#(0 (2 2 2 2) \"Anna\")");
+//TEST_EVAL(L"(vector 'a 'b 'c)",		L"#(a b c)");
+//TEST_EVAL(L"(list ((vec (vector 0 '(2 2 2 2) \"Anna\")))\n"
+//	  L"  (vector-set! vec 1 '(\"Sue\" \"Sue\"))\n"
+//	  L"  vec)",			L"#(0 (\"Sue\" \"Sue\") \"Anna\")");
+//TEST_EVAL(L"(vector-set! '#(0 1 2) 1 "doe")\n", L"&assertion");
 
 /* 11.14.  Errors and violations
  *

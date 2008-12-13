@@ -13,7 +13,7 @@ typedef struct string_obj {
 
 static mem_ops_t string_ops;
 
-static size_t len_to_bytes(size_t len)
+static inline size_t len_to_bytes(size_t len)
 {
     return sizeof (string_obj_t) + len * sizeof (wchar_t);
 }

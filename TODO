@@ -33,7 +33,7 @@ DONE	full mem model
  DONE	    rewrite frame as mixvec.
  DONE	    must remove value from frame - not thread safe.
  DONE	    drop mem_init_op and mem_free_op.
-	    Implement vectors.
+ DONE	    Implement vectors.
 	    Implement bytevectors.
 	    Implement other numeric types.
 
@@ -44,12 +44,12 @@ DONE	full mem model
 	    alternate algorithms!
 
 	full reader
-	    Write test suite.
+ DONE	    Write test suite.
  DONE	    Rename yyread to a better name.
 	    Protect against gc.
 	    Recognize characters.
 	    Recognize strings.
-	    Recognize vectors.
+ DONE	    Recognize vectors.
 	    Recognize bytevectors.
 	    Verify "#!r6rs".
 	    Accept "#!/usr/bin/env cat".

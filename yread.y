@@ -20,6 +20,7 @@
     static int yylex(YYSTYPE *, instream_t *);
     static void yyerror (instream_t *, obj_t **, bool *, char const *s);
     static obj_t *make_list(obj_t *car, obj_t *cadr);
+    static obj_t *build_vector(obj_t *list);
 %}
 
 %pure-parser
@@ -48,9 +49,9 @@ simple   : EXACT_NUMBER
 
 compound : '(' sequence ')'		{ $$ = $2;                }
          | '[' sequence ']'		{ $$ = $2;                }
-      /* | BEGIN_VECTOR sequence ')'    { $$ = make_vector($2);   } */
-      /* | BEGIN_BYTEVECTOR bytes ')'   { $$ = make bytevec($2);  } */
-         | ABBREV datum                 { $$ = make_list($1, $2); }
+         | BEGIN_VECTOR elements ')'	{ $$ = build_vector($2);  }
+         | BEGIN_BYTEVECTOR bytes ')'	{ /*$$ = make bytevec($2);*/ }
+         | ABBREV datum			{ $$ = make_list($1, $2); }
          ;
 
 sequence : datum sequence		{ $$ = make_pair($1, $2); }
@@ -59,9 +60,13 @@ sequence : datum sequence		{ $$ = make_pair($1, $2); }
          | /* empty */			{ $$ = NIL;               }
          ;
 
-//bytes    : bytes EXACT_NUMBER
-//         | /* empty */
-//         ;
+elements : datum elements		{ $$ = make_pair($1, $2); }
+         | /* empty */			{ $$ = NIL;               }
+         ;
+
+bytes    : bytes EXACT_NUMBER
+         | /* empty */
+         ;
 
 comment  : COMMENT datum
          ;
@@ -74,6 +79,23 @@ static obj_t *make_list(obj_t *car, obj_t *cadr)
     obj_t *list = make_pair(car, make_pair(cadr, NIL));
     POP_ROOT(car);
     return list;
+}
+
+static obj_t *build_vector(obj_t *list)
+{
+    PUSH_ROOT(list);
+    obj_t *p = list;
+    size_t i, size = 0;
+    do
+	size++;
+    while ((p = pair_cdr(p)));
+    AUTO_ROOT(vec, make_vector(size, NIL));
+    for (i = 0, p = list; i < size; i++) {
+	vector_set(vec, i, pair_car(p));
+	p = pair_cdr(p);
+    }
+    POP_FUNCTION_ROOTS();
+    return vec;
 }
 
 static inline bool is_whitespace(wchar_t wc)
@@ -562,9 +584,11 @@ TEST_NUMBER(-23,   -23);
 //TEST_READ(L"#e0.1",                     L"1/10");
 
 /* lists */
-TEST_READ(L"(a b)",                     L"(a b)");
-TEST_EVAL(L"(pair? '(a b))",            L"#t");
-TEST_READ(L"[a b]",                     L"(a b)");
-TEST_EVAL(L"(pair? '[a b])",            L"#t");
-//TEST_READ(L"#(a b)",                    L"#(a b)");
-//TEST_READ(L"#vu8(a b)",                 L"#vu8(a b)");
+TEST_READ(L"(a b)",			L"(a b)");
+TEST_EVAL(L"(pair? '(a b))",		L"#t");
+TEST_READ(L"[a b]",			L"(a b)");
+TEST_EVAL(L"(pair? '[a b])",		L"#t");
+TEST_READ(L"#(a b)",			L"#(a b)");
+TEST_READ(L"#(a (b c))",		L"#(a (b c))");
+TEST_READ(L"#(a #(b c))",		L"#(a #(b c))");
+//TEST_READ(L"#vu8(a b)",		L"#vu8(a b)");

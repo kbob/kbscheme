@@ -24,7 +24,7 @@
  									\
     static void fv##N##_move_op(const obj_t *src, obj_t *dst) 		\
     { 									\
-	*(fixvec##N##_t *)dst = *(const fixvec##N##_t*)src;		\
+	*(fixvec##N##_t *)dst = *(const fixvec##N##_t *)src;		\
     } 									\
  									\
     static void fv##N##_move_callback_op(const obj_t *src, 		\
@@ -69,19 +69,19 @@
 	{ } 								\
     };									\
 									\
-obj_t *fixvec##N##_get_ptr(obj_t *obj, size_t index)			\
-{									\
-    assert_in_tospace(obj);						\
-    assert(index < N);							\
-    return ((fixvec##N##_t *)obj)->fv##N##_ptrs[index];			\
-}									\
+    obj_t *fixvec##N##_get_ptr(obj_t *obj, size_t index)		\
+    {									\
+	assert_in_tospace(obj);						\
+	assert(index < N);						\
+	return ((fixvec##N##_t *)obj)->fv##N##_ptrs[index];		\
+    }									\
 									\
-void fixvec##N##_set_ptr(obj_t *obj, size_t index, obj_t *ptr)		\
-{									\
-    assert_in_tospace(obj);						\
-    assert(index < N);							\
-    ((fixvec##N##_t *)obj)->fv##N##_ptrs[index] = ptr;			\
-}
+    void fixvec##N##_set_ptr(obj_t *obj, size_t index, obj_t *ptr)	\
+    {									\
+	assert_in_tospace(obj);						\
+	assert(index < N);						\
+	((fixvec##N##_t *)obj)->fv##N##_ptrs[index] = ptr;		\
+    }
 
 DEFINE_FIXVEC_TYPE(1)
 DEFINE_FIXVEC_TYPE(2)
