@@ -21,6 +21,7 @@ DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
  DONE	    Add test cases from r6rs chapter 11.
+	    Speed up TAIL_EVAL by reusing frame?
 
 DONE	full mem model
  DONE	    define obj ops.
@@ -52,7 +53,7 @@ DONE	full mem model
  DONE	    Recognize vectors.
 	    Recognize bytevectors.
 	    Verify "#!r6rs".
-	    Accept "#!/usr/bin/env cat".
+	    Accept "#!/path/to/scheme".
  DONE	    Recognize nested #| ... |# comments.
  DONE	    Improve char classes for identifiers.
  DONE 	    Recognize peculiar identifiers.
