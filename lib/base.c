@@ -107,8 +107,8 @@ DEFINE_SPECIAL_FORM(L"define-syntax")
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
 }
 
-TEST_EVAL(L"(define-syntax qot (lambda (x) x))", UNSPECIFIED_REPR);
-TEST_EVAL(L"(qot (1 2))", L"(1 2)");
+TEST_EVAL(L"(define-syntax qot (lambda (x) x))\n"
+	  L"(qot (1 2))",		L"(1 2)");
 
 /* 11.4.1.  Quotation
  *
