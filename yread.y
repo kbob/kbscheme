@@ -19,8 +19,9 @@
 
     static int yylex(YYSTYPE *, instream_t *);
     static void yyerror (instream_t *, obj_t **, bool *, char const *s);
-    static obj_t *make_list(obj_t *car, obj_t *cadr);
+    static obj_t *make_abbr(obj_t *car, obj_t *cadr);
     static obj_t *build_vector(obj_t *list);
+    static obj_t *build_bytevec(obj_t *list);
 %}
 
 %pure-parser
@@ -50,8 +51,8 @@ simple   : EXACT_NUMBER
 compound : '(' sequence ')'		{ $$ = $2;                }
          | '[' sequence ']'		{ $$ = $2;                }
          | BEGIN_VECTOR elements ')'	{ $$ = build_vector($2);  }
-         | BEGIN_BYTEVECTOR bytes ')'	{ /*$$ = make bytevec($2);*/ }
-         | ABBREV datum			{ $$ = make_list($1, $2); }
+         | BEGIN_BYTEVECTOR bytes ')'	{ $$ = build_bytevec($2); }
+         | ABBREV datum			{ $$ = make_abbr($1, $2); }
          ;
 
 sequence : datum sequence		{ $$ = make_pair($1, $2); }
@@ -61,11 +62,13 @@ sequence : datum sequence		{ $$ = make_pair($1, $2); }
          ;
 
 elements : datum elements		{ $$ = make_pair($1, $2); }
+         | comment elements		{ $$ = $2;                }  
          | /* empty */			{ $$ = NIL;               }
          ;
 
-bytes    : bytes EXACT_NUMBER
-         | /* empty */
+bytes    : EXACT_NUMBER bytes		{ $$ = make_pair($1, $2); }
+         | comment bytes		{ $$ = $2;                }
+         | /* empty */			{ $$ = NIL;               }
          ;
 
 comment  : COMMENT datum
@@ -73,7 +76,7 @@ comment  : COMMENT datum
 
 %%
 
-static obj_t *make_list(obj_t *car, obj_t *cadr)
+static obj_t *make_abbr(obj_t *car, obj_t *cadr)
 {
     PUSH_ROOT(car);
     obj_t *list = make_pair(car, make_pair(cadr, NIL));
@@ -96,6 +99,11 @@ static obj_t *build_vector(obj_t *list)
     }
     POP_FUNCTION_ROOTS();
     return vec;
+}
+
+static obj_t *build_bytevec(obj_t *list)
+{
+    assert(false && "XXX implement bytevectors");
 }
 
 static inline bool is_whitespace(wchar_t wc)
@@ -364,7 +372,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		return ABBREV;
 
 	    default:
-		/* fall through and fail */
+		/* fall through to failure. */
 		instream_ungetwc(wc, in);
 		wc = L'#';
 	    }
@@ -450,10 +458,12 @@ TEST_READ(L"(a\tb)",                    L"(a b)");
 TEST_READ(L"(a\vb)",                    L"(a b)");
 TEST_READ(L"(a\fb)",                    L"(a b)");
 TEST_READ(L"(a\rb)",                    L"(a b)");
-TEST_READ(L"(a\x0085"L"b)",             L"(a b)");
-TEST_READ(L"(a\x2028"L"b)",             L"(a b)");
-TEST_READ(L"(a\x2029"L"b)",             L"(a b)");
-TEST_READ(L"(a\x00a0"L"b)",             L"(a b)");
+TEST_READ(L"(a\x0085"L"b)",             L"(a b)"); /* <next line> */
+TEST_READ(L"(a\x2028"L"b)",             L"(a b)"); /* <line separator> */
+TEST_READ(L"(a\x2029"L"b)",             L"(a b)"); /* paragraph separator> */
+TEST_READ(L"(a\x00a0"L"b)",             L"(a b)"); /* category Zs */
+TEST_READ(L"(a\x2028"L"b)",             L"(a b)"); /* category Zl */
+TEST_READ(L"(a\x2029"L"b)",             L"(a b)"); /* category Zp */
 
 /* comments */
 TEST_READ(L"(a;comment\nb)",            L"(a b)");
@@ -585,6 +595,7 @@ TEST_NUMBER(-23,   -23);
 
 /* lists */
 TEST_READ(L"(a b)",			L"(a b)");
+TEST_READ(L"#; asdf ghjk",		L"ghjk");
 TEST_EVAL(L"(pair? '(a b))",		L"#t");
 TEST_READ(L"[a b]",			L"(a b)");
 TEST_EVAL(L"(pair? '[a b])",		L"#t");
