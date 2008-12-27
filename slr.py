@@ -6,6 +6,7 @@ import itertools
 import pprint
 import re
 
+
 grammar = (
     'p=xp',
     'p=d',
@@ -280,7 +281,7 @@ def XXXclose(item_set):
                         new_item = rule.replace('=', '=.')
                         items.append(new_item)
                         closure.add(new_item)
-    print 'closure(%s) => %s' % (ItemSet(item_set), closure)
+    # print 'closure(%s) => %s' % (ItemSet(item_set), closure)
     return closure
 
 def close(set):
@@ -336,33 +337,33 @@ def advance(item_set):
     return new_set
 
 
-# XXX old version
-def transition_table(grammar):
-    def find_state(state):
-        try:
-            return states.index(state)
-        except ValueError:
-            row = len(states)
-            states.append(state)
-            rows.append(row)
-            tt.append({})
-            return row
-    item_0 = grammar[0].replace('=', '=.')
-    states = [close(set((item_0,)))]
-    tt = [{}]
-    rows = [0]
-    while rows:
-        row = rows.pop(0)
-        next_states = advance(states[row])
-        d = {}
-        # for sym, state in next_states.iteritems():
-        for sym in sorted(next_states, key=lambda s: next_states[s]):
-            state = next_states[sym]
-            # print 'sym', sym
-            # print 'state', state
-            next_row = find_state(state)
-            tt[row][sym] = next_row
-    return states, tt
+# # XXX old version
+# def transition_table(grammar):
+#     def find_state(state):
+#         try:
+#             return states.index(state)
+#         except ValueError:
+#             row = len(states)
+#             states.append(state)
+#             rows.append(row)
+#             tt.append({})
+#             return row
+#     item_0 = grammar[0].replace('=', '=.')
+#     states = [close(set((item_0,)))]
+#     tt = [{}]
+#     rows = [0]
+#     while rows:
+#         row = rows.pop(0)
+#         next_states = advance(states[row])
+#         d = {}
+#         # for sym, state in next_states.iteritems():
+#         for sym in sorted(next_states, key=lambda s: next_states[s]):
+#             state = next_states[sym]
+#             # print 'sym', sym
+#             # print 'state', state
+#             next_row = find_state(state)
+#             tt[row][sym] = next_row
+#     return states, tt
 
 
 def transition_table(grammar):
@@ -422,21 +423,38 @@ def goto_table(tt):
     return [nonterminal_columns(row) for row in tt]
 
 
+def pretty_print_states(states):
+    for i, s in enumerate(states):
+        print 'set %d' % i
+        print re.compile(r'^', re.M).sub('    ', repr(ItemSet(s)))
+        print
+
+
+def pretty_print_transitions(tt):
+    def format_row(row):
+        return ' '.join('%2s' % row.get(s, '-') for s in symlist)
+
+    symlist = sorted(symbols)
+    print 'transitions'
+    print '          %s' % '  '.join(symlist)
+    print
+    for i, row in enumerate(tt):
+        print '    %2d   %s' % (i, format_row(row))
+    print
+
 nonterminals = set(r[0] for r in grammar)
 # print 'nonterminals', nonterminals
 terminals = set(ch for g in grammar for ch in g[2:] if ch not in nonterminals)
 symbols = nonterminals | terminals | set('$')
 
 states, tt = transition_table(grammar)
-print '%d states' % len(states)
-for i, s in enumerate(states):
-    print 'set %d\n%s\n' % (i, re.compile(r'^', re.M).sub('    ', repr(s)))
-print '%d transitions' % len(tt)
+pretty_print_states(states)
+# print 'transitions'; pprint.pprint(tt)
+pretty_print_transitions(tt)
 actions = action_table(states, tt)
 # print 'actions'; pprint.pprint(actions)
 goto = goto_table(tt)
 # print 'goto ', ; pprint.pprint(goto)
-
 
 def read(input):
     parse(list(input))

@@ -9,43 +9,49 @@
  *
  * Also define three functions.
  *
- * alloc_foo() allocates the next available element and returns its index.
- * next_foo() allocates the next available element and returns its address.
- * verify_size_foo() checks that all elements of foo are allocated.
+ * alloc_foo(n) allocates the next n available elements and returns its index.
+ * next_foo(n) allocates the next n available elements and returns its address.
  *
  * Also defines the variable foo_size which holds the current number
  * of elements allocated.
  */
 
+#ifdef NDEBUG
+  #define IF_ASSERTIONS(x)
+#else
+  #define IF_ASSERTIONS(x) x
+#endif
+
 #define SIZED_ARRAY(type, var, size)					\
     static type var[(size)];						\
     static size_t var##_size = 0;					\
 									\
-    static size_t alloc_##var(void) {					\
-	if (var##_size >= (size)) {					\
-	    fprintf(stderr, __FILE__ ":%d: fatal: "			\
-			    "array `" #var "' too small.\n",		\
-			    __LINE__);					\
-	    abort();							\
-	}								\
-	return var##_size++;						\
-    }									\
-									\
-    type *next_##var()							\
+    static size_t alloc_##var(size_t n)					\
     {									\
-        return &var[alloc_##var()];					\
+	size_t index = var##_size;					\
+	var##_size += n;						\
+	assert(var##_size <= (size));					\
+	return index;							\
     }									\
 									\
-    __attribute__((destructor))						\
-    static void verify_size_##var(void) {				\
-	if (var##_size != (size)) {					\
-	    fprintf(stderr, __FILE__ ":%d: warning: "			\
-			    "array `" #var "' allocated %d, "		\
-			     "used %zd %s.\n",				\
-			     __LINE__, (size), var##_size,		\
-			     var##_size == 1 ? "entry" : "entries");	\
+    type *next_##var(size_t n)						\
+    {									\
+        return &var[alloc_##var(n)];					\
+    }									\
+									\
+    IF_ASSERTIONS(							\
+	__attribute__((destructor))					\
+	static void verify_size_##var(void)				\
+	{								\
+	    if (var##_size != (size)) {					\
+		fprintf(stderr, __FILE__ ":%d: warning: "		\
+				"array `" #var "' allocated %d, "	\
+				 "used %zd %s.\n",			\
+				 __LINE__, (size), var##_size,		\
+				 var##_size == 1 ? "entry" : "entries");\
+	    }								\
 	}								\
-    }
+    )
 
 typedef unsigned char uint8_t;
 
@@ -63,10 +69,12 @@ typedef enum action {
 } action_t;
 
 typedef enum char_type {
-    CT_NONE,
-    CT_TERMINAL,
-    CT_NONTERMINAL,
-    CT_MARKER
+    CT_NONE = 0,
+    CT_TERMINAL = 0x40,
+    CT_NONTERMINAL = 0x80,
+    CT_MARKER = 0xC0,
+    CTMASK = 0xC0,
+    SYMMASK = ~(CTMASK)
 } char_type_t;
 
 typedef uint8_t bitset_word_t;
@@ -88,11 +96,9 @@ typedef struct item {
 
 typedef bitset_t item_set_t;
 
-typedef struct transition {
-    item_set_t  t_src;
-    char        t_symbol;
-    item_set_t  t_dest;
-} transition_t;
+typedef size_t transition_t;
+#define NULL_TRANSITION (~(size_t)0)
+#define TRANSITION(set, sym) transitions[(set) * symbols_size + (sym)]
 
 typedef struct actionX {
 } actionX_t;
@@ -145,8 +151,8 @@ comment  : COMMENT datum
 #endif
 
 /*
- * The following initializer declares the same grammar with some
- * loss of readability.
+ * The following initializer declares the same grammar as the YACC
+ * code above with some loss of readability.
  *
  * Here's the substitution table.
  *
@@ -211,19 +217,20 @@ static const production_t grammar[] = {
 };
 static const size_t grammar_size = sizeof grammar / sizeof *grammar;
 
-static char charmap[256];
+static uint8_t charmap[256];
 static const size_t charmap_size = sizeof charmap / sizeof *charmap;
 
+SIZED_ARRAY(char,          symbols,      21);
 SIZED_ARRAY(item_t,        items,        63);
 SIZED_ARRAY(bitset_word_t, bitsets,     312);
 SIZED_ARRAY(item_set_t,    item_sets,    39);
-SIZED_ARRAY(transition_t,  transitions, 164);
+SIZED_ARRAY(transition_t,  transitions, 39 * 21);
 SIZED_ARRAY(action_t,      actions,     100);
 SIZED_ARRAY(goto_t,        gotos,       100);
 
 static inline bool char_is_nonterminal(char c)
 {
-    return charmap[(uint8_t)c] == CT_NONTERMINAL;
+    return (charmap[(uint8_t)c] & CTMASK) == CT_NONTERMINAL;
 }
 
 static inline void bitset_clr_all(bitset_t set, size_t size)
@@ -266,10 +273,7 @@ static inline bool bitset_next_set(size_t *bitp,
 
 static inline bitset_t bitset_alloc(size_t size)
 {
-    size_t i, alloc_size = BITSET_WORDS(size);
-    bitset_t set = next_bitsets();
-    for (i = 1; i < alloc_size; i++)
-	alloc_bitsets();
+    bitset_t set = next_bitsets(BITSET_WORDS(size));
     bitset_clr_all(set, size);
     return set;
 }
@@ -294,10 +298,10 @@ static inline void bitset_copy(bitset_t dest, const_bitset_t src, size_t size)
 
 static void init_symbols(void)
 {
-    size_t i;
+    size_t i, j;
     const char *p;
 
-    for (i = 0; i < sizeof charmap / sizeof charmap[0]; i++)
+    for (i = 0; i < charmap_size; i++)
 	charmap[i] = CT_NONE;
     for (i = 0; i < grammar_size; i++)
 	charmap[(uint8_t)grammar[i].p_lhs] = CT_NONTERMINAL;
@@ -305,8 +309,14 @@ static void init_symbols(void)
 	for (p = grammar[i].p_rhs; *p; p++)
 	    if (!charmap[(uint8_t)*p])
 		charmap[(uint8_t)*p] = CT_TERMINAL;
-    assert(!charmap['$']);
+    assert(charmap['$'] == CT_NONE);
     charmap['$'] = CT_MARKER;
+    for (i = j = 0; i < charmap_size; i++)
+	if (charmap[i] != CT_NONE) {
+	    charmap[i] |= j++;
+	    *next_symbols(1) = (char)i;
+	}
+    assert(!(symbols_size & CTMASK));
 }
 
 #if 0
@@ -391,7 +401,7 @@ static void init_items(void)
 
     for (i = 0; i < grammar_size; i++)
 	for (j = 0, p = grammar[i].p_rhs; ; j++, p++) {
-	    item_t *item = next_items();
+	    item_t *item = next_items(1);
 	    item->i_prod = i;
 	    item->i_pos  = j;
 	    if (!*p)
@@ -433,27 +443,32 @@ static bool symbol_follows_item_set(char symbol, item_set_t set)
 static item_set_t alloc_item_set(void)
 {
     /* XXX move this function higher in the file. */
-    item_set_t *setp = next_item_sets();
+    item_set_t *setp = next_item_sets(1);
     *setp = bitset_alloc(items_size);
     return *setp;
 }
 
 static void init_item_sets(void)
 {
+    size_t i, j, k;
     item_set_t set_0 = alloc_item_set();
     bitset_set_bit(0, set_0);
     close_item_set(set_0);
-    size_t i, j;
+    (void)alloc_transitions(symbols_size);
+    for (k = 0; k < symbols_size; k++)
+	TRANSITION(0, k) = NULL_TRANSITION;
     for (i = 0; i < item_sets_size; i++) {
 	item_set_t set = item_sets[i];
+	/* XXX iterate symbols instead */
 	for (j = 0; j < charmap_size; j++) {
 	    if (charmap[j] != CT_NONE) {
 		char symbol = (char)j;
 		//printf("symbol %c\n", (char)j);
+		size_t sym_index = charmap[j] & SYMMASK;
 		bitset_word_t nset[BITSET_WORDS(items_size)];
 		bitset_clr_all(nset, items_size);
 		bool nset_is_empty = true;
-		size_t k = items_size;
+		k = items_size;
 		while (bitset_next_set(&k, set, items_size)) {
 		    item_t *item = &items[k];
 		    if (grammar[item->i_prod].p_rhs[item->i_pos] == symbol) {
@@ -466,41 +481,23 @@ static void init_item_sets(void)
 		    continue;
 		}
 		close_item_set(nset);
-		bool nset_is_new = true;
-		item_set_t nitems;
-		for (k = 0; k < item_sets_size; k++) {
-		    if (bitsets_equal(item_sets[k], nset, items_size)) {
-			nset_is_new = false;
-			nitems = item_sets[k];
-			break;
-		    }
+		transition_t dest = NULL_TRANSITION;
+		for (k = 0; k < item_sets_size; k++)
+		    if (bitsets_equal(item_sets[k], nset, items_size))
+			dest = k;
+		if (dest == NULL_TRANSITION) {
+		    dest = item_sets_size;
+		    item_set_t dest_set = alloc_item_set();
+		    bitset_copy(dest_set, nset, items_size);
+		    (void)alloc_transitions(symbols_size);
+		    for (k = 0; k < symbols_size; k++)
+			TRANSITION(dest, k) = NULL_TRANSITION;
 		}
-		if (nset_is_new) {
-		    nitems = alloc_item_set();
-		    bitset_copy(nitems, nset, items_size);
-		}
-		transition_t *trans = next_transitions();
-		trans->t_src    = set;
-		trans->t_symbol = symbol;
-		trans->t_dest   = nitems;
-		//break;
+		TRANSITION(i, sym_index) = dest;
 	    }
 	}
-	//break;
     }
-    /*
-    for set in item_sets:
-	for symbol in symbols:
-	    if symbol_follows_item_set(symbol, set):
-		nset = {}
-                for item in set:
-		    if grammar[item.i_prod].p_rhs[item.i_pos] == symbol:
-			nset |= {item + 1}
-		close_item_set(nset)
-		if nset not in item_sets:
-		    item_sets.append(nset)
-		    transitions.append((set, symbol, nset))
-     */
+    assert(transitions_size == item_sets_size * symbols_size);
     for (i = 0; i < item_sets_size; i++) {
 	item_set_t set = item_sets[i];
 	printf("set %zd\n", i);
@@ -521,6 +518,23 @@ static void init_item_sets(void)
 	}
 	printf("\n");
     }
+    printf("transitions\n");
+    printf("    %2s  ", "");
+    for (j = 0; j < symbols_size; j++)
+	printf("  %c", symbols[j]);
+    printf("\n\n");
+    for (i = 0; i < item_sets_size; i++) {
+	printf("    %2d  ", i);
+	for (j = 0; j < symbols_size; j++) {
+	    transition_t t = TRANSITION(i, j);
+	    if (t == NULL_TRANSITION)
+		printf("  -");
+	    else
+		printf(" %2d", t);
+	}
+	printf("\n");
+    }
+    printf("\n");
 }
 
 static void init_actions(void)
