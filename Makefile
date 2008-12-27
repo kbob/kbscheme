@@ -3,7 +3,7 @@
  test_scripts := selftest.sh
 
 scheme_cfiles := main.c env.c eval.c io.c lib.c obj.c print.c proc.c \
-                 roots.c test.c \
+                 read.c roots.c test.c \
                  \
                  mem.c mem_scalar.c mem_fixvec.c mem_mixvec.c \
                  \
