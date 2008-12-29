@@ -32,7 +32,20 @@ grammar = (
     'b=',
     'x=Cd',
     )
-grammar = ('Z=p',) + grammar
+grammar = ('a=p',) + grammar
+
+
+follow = {                          # XXX hand-constructed follow set.
+    'a': '$',
+    'p': 'NS([VBAC$',
+    'd': 'NS([VBAC])D$',
+    's': 'NS([VBAC])D$',
+    'c': 'NS([VBAC])D$',
+    'i': 'NS([VBAC])D',
+    'e': 'NS([VBAC)',
+    'b': 'NC)',
+    'x': '$NS([VBAC)D',
+    }
 
 
 tokmap = {
@@ -157,45 +170,61 @@ def yylex(input):
         return '$'
         
 
+class EOF(object):
+
+    class __metaclass__(type):
+        def __repr__(self):
+            return 'EOF'
+
+
+class Syntax(Exception):
+
+    def __repr__(self):
+        return '&syntax'
+
+
 def parse(input):
 
-    def act(production):
+    def affect(production):
         global yypval
-        action = red_map.get(production, '$$ = $1')
-        # print 'action %r' % action
+        effect = red_map.get(production, '$$ = $1')
+        # print 'effect %r' % effect
         ix = len(vstack) + drop
-        if action == '$$ = Nil':
+        if effect == '$$ = Nil':
             value = nil
-        elif action == '$$ = $1':
+        elif effect == '$$ = $1':
             value = vstack[ix]
-        elif action == '$$ = $2':
+        elif effect == '$$ = $2':
             value = vstack[ix + 1]
-        elif action == '$$ = Vector($2)':
+        elif effect == '$$ = Vector($2)':
             value = Vector(vstack[ix + 1])
-        elif action == '$$ = ByteVector($2)':
+        elif effect == '$$ = ByteVector($2)':
             value = ByteVector(vstack[ix + 1])
-        elif action == '$$ = abbrev($1, $2)':
+        elif effect == '$$ = abbrev($1, $2)':
             value = cons(vstack[ix], cons(vstack[ix + 1], nil))
-        elif action == '$$ = Cons($1, $2)':
+        elif effect == '$$ = Cons($1, $2)':
             value = cons(vstack[ix], vstack[ix + 1])
-        elif action == '$$ = Cons($1, $3)':
+        elif effect == '$$ = Cons($1, $3)':
             value = cons(vstack[ix], vstack[ix + 2])
-        elif action == 'ACCEPT':
+        elif effect == 'ACCEPT':
             yypval = vstack[-1]
             return 'ACCEPT'
-        elif action == 'EOF':
-            yypval = 'EOF'
-            return 'EOF'
+        elif effect == 'EOF':
+            yypval = EOF
+            return EOF
         else:
-            assert False, 'unknown action "%s"' % action
+            assert False, 'unknown effect "%s"' % effect
         return value
             
     stack = [0]
     vstack = []
     token = yylex(input)
     while True:
-        action = actions[stack[-1]][token]
+        action = actions[stack[-1]].get(token)
+        if not action:
+            raise Syntax()
         v, k = action[0], int(action[1:])
+        # print 'token=%r action=%r stack=%r' % (token, action, stack)
         if v == 's':
             vstack.append(yylval)
             NS = goto[stack[-1]][token]
@@ -203,11 +232,14 @@ def parse(input):
             token = yylex(input)
         elif v == 'r':
             drop = 2 - len(grammar[k])
-            value = act(grammar[k])
+            value = affect(grammar[k])
             if value == 'ACCEPT':
                 return
-            elif value == 'EOF':
+            elif value == EOF:
                 return
+            # print len(stack), len(vstack), drop
+            assert -drop < len(stack)
+            assert -drop <= len(vstack)
             if drop < 0:
                 stack = stack[:drop]
                 vstack = vstack[:drop]
@@ -265,27 +297,8 @@ class ItemSet(set):
         return itertools.ifilter(filter, enumerate(all_items()))
 
 
-def XXXclose(item_set):
-    closure = ItemSet(item_set)
-    next_syms = set()
-    items = list(item_set)
-    while items:
-        item = items.pop()
-        m = re.search(r'\.(.)', item)
-        if m:
-            sym = m.group(1)
-            if sym in nonterminals and sym not in next_syms:
-                next_syms.add(sym)
-                for rule in grammar:
-                    if rule.startswith(sym):
-                        new_item = rule.replace('=', '=.')
-                        items.append(new_item)
-                        closure.add(new_item)
-    # print 'closure(%s) => %s' % (ItemSet(item_set), closure)
-    return closure
-
 def close(set):
-    print 'close [%s]' % ItemSet(set)
+    # print 'close [%s]' % ItemSet(set)
     def item_number(n):
         for i, item in enumerate(all_items()):
             if i == n:
@@ -311,59 +324,30 @@ def close(set):
                             set.add(item2)
                             unprocessed[j] = True
                             done = False
-    print 'close returns [%s]' % ItemSet(set)
+    # print 'close returns [%s]' % ItemSet(set)
     #print
     return set
 
 
-def iskey(item):
-    for i, it in enumerate(all_items()):
-        if item == it:
-            return i
-    raise Exception
-
-def advance(item_set):
-    new_set = collections.defaultdict(set)
-    for item in sorted(item_set, key=iskey):
-        m = re.search(r'\.(.)', item)
-        if not m:
-            continue
-        sym = m.group(1)
-        new_item = re.sub(r'\.(.)', r'\1.', item)
-        new_set[sym].add(new_item)
-    for sym in sorted(new_set):
-        new_set[sym] = close(new_set[sym])
-    # print 'advance(%s) => %s\n' % (item_set, new_set)
-    return new_set
-
-
-# # XXX old version
-# def transition_table(grammar):
-#     def find_state(state):
-#         try:
-#             return states.index(state)
-#         except ValueError:
-#             row = len(states)
-#             states.append(state)
-#             rows.append(row)
-#             tt.append({})
-#             return row
-#     item_0 = grammar[0].replace('=', '=.')
-#     states = [close(set((item_0,)))]
-#     tt = [{}]
-#     rows = [0]
-#     while rows:
-#         row = rows.pop(0)
-#         next_states = advance(states[row])
-#         d = {}
-#         # for sym, state in next_states.iteritems():
-#         for sym in sorted(next_states, key=lambda s: next_states[s]):
-#             state = next_states[sym]
-#             # print 'sym', sym
-#             # print 'state', state
-#             next_row = find_state(state)
-#             tt[row][sym] = next_row
-#     return states, tt
+# def iskey(item):
+#     for i, it in enumerate(all_items()):
+#         if item == it:
+#             return i
+#     raise Exception()
+# 
+# def advance(item_set):
+#     new_set = collections.defaultdict(set)
+#     for item in sorted(item_set, key=iskey):
+#         m = re.search(r'\.(.)', item)
+#         if not m:
+#             continue
+#         sym = m.group(1)
+#         new_item = re.sub(r'\.(.)', r'\1.', item)
+#         new_set[sym].add(new_item)
+#     for sym in sorted(new_set):
+#         new_set[sym] = close(new_set[sym])
+#     # print 'advance(%s) => %s\n' % (item_set, new_set)
+#     return new_set
 
 
 def transition_table(grammar):
@@ -401,16 +385,20 @@ def action_table(states, tt):
             if item.endswith('.'):
                 m = lgrammar.index(item[:-1])
                 if m:
-                    yield 'r%d' % m
+                    yield 'r%d' % m, item[0]
     def actions(state, row):
         a = terminal_columns(row)
         if accept_item in state:
             a['$'] = 'a0'
-        for reduction in reduce_states(state):
-            for sym in terminals | set('$'):
-                if sym not in a:
+        assert len(list(reduce_states(state))) <= 1
+        for reduction, nonterm in reduce_states(state):
+            # assert not a, 'Conflict'
+            for sym in tplus:
+                if sym not in a and sym in follow[nonterm]:
+                    # assert not a[sym], 'Conflict'
                     a[sym] = reduction
         return a
+    tplus = terminals | set('$')
     accept_item = grammar[0] + '.'
     lgrammar = list(grammar)
     return [actions(state, row) for state, row in zip(states, tt)]
@@ -449,7 +437,6 @@ symbols = nonterminals | terminals | set('$')
 
 states, tt = transition_table(grammar)
 pretty_print_states(states)
-# print 'transitions'; pprint.pprint(tt)
 pretty_print_transitions(tt)
 actions = action_table(states, tt)
 # print 'actions'; pprint.pprint(actions)
@@ -457,12 +444,14 @@ goto = goto_table(tt)
 # print 'goto ', ; pprint.pprint(goto)
 
 def read(input):
-    parse(list(input))
-    return yypval
-
+    try:
+        parse(list(input))
+        return yypval
+    except Syntax, ex:
+        return ex
 
 tvs = [
-    ['',           "'EOF'"],
+    ['',           "EOF"],
     ['a',          'a'],
     ['1',          '1'],
     ['()',         '()'],
@@ -483,13 +472,26 @@ tvs = [
     ["'(ab)",      '(quote (a b))'],
     ["(a'bc)",     '(a (quote b) c)'],
     ["'''a",       '(quote (quote (quote a)))'],
-    [';a',         "'EOF'"],
+    [';a',         "EOF"],
     [';ab',        'b'],
     ['(;a)',       '()'],
     ['(a;b)',      '(a)'],
     ['(a;bc)',     '(a c)'],
     [';(a(b))(c)', '(c)'],
-    [';(a(b))',    "'EOF'"],
+    [';(a(b))',    "EOF"],
+    [')',          '&syntax'],
+    ["'",          '&syntax'],
+    ['(',          '&syntax'],
+    ['(a',         '&syntax'],
+    ['( . )',      '&syntax'],
+    ['(a . )',     '&syntax'],
+    ['( . a)',     '&syntax'],
+    ['[)',         '&syntax'],
+    ['(]',         '&syntax'],
+    ['V]',         '&syntax'],
+    ['B]',         '&syntax'],
+    ['Ba)',        '&syntax'],
+    ["';a",        '&syntax']
     ]
 
 for input, expected in tvs:
