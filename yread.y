@@ -62,7 +62,7 @@ sequence : datum sequence		{ $$ = make_pair($1, $2); }
          ;
 
 elements : datum elements		{ $$ = make_pair($1, $2); }
-         | comment elements		{ $$ = $2;                }  
+         | comment elements		{ $$ = $2;                }
          | /* empty */			{ $$ = NIL;               }
          ;
 
@@ -215,7 +215,7 @@ static int scan_ident(const wchar_t *prefix, YYSTYPE *lvalp, instream_t *in)
     size_t len = 16, pos = wcslen(prefix);
     assert(pos < len);
     wchar_t *buf = alloca(len * sizeof *buf);
-    wcscpy(buf, prefix); 
+    wcscpy(buf, prefix);
     while (true) {
 	wc = instream_getwc(in);
 	if (wc == WEOF)
@@ -314,7 +314,7 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		return SIMPLE;
 
 	    case L'(':
-	      return BEGIN_VECTOR;    
+	      return BEGIN_VECTOR;
 
 	    //case L'v':
 	    //  verify "#vu8(" and return BEGIN_BYTEARRAY;
