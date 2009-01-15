@@ -87,7 +87,7 @@ static wint_t file_ungetwc(wint_t wc, instream_t *ip)
 
 instream_t *make_file_instream(FILE *f)
 {
-    file_instream_t *fp = (file_instream_t *)malloc(sizeof *fp);
+    file_instream_t *fp = malloc(sizeof *fp);
     instream_t *ip = &fp->fi_instream;
     init_instream(ip, file_getwc, file_ungetwc);
     fp->fi_file = f;
@@ -146,7 +146,7 @@ static wint_t readline_ungetwc(wint_t wc, instream_t *ip)
 
 instream_t *make_readline_instream(void)
 {
-    readline_instream_t *rp = (readline_instream_t *)malloc(sizeof *rp);
+    readline_instream_t *rp = malloc(sizeof *rp);
     instream_t *ip = &rp->ri_instream;
     init_instream(ip, readline_getwc, readline_ungetwc);
     rp->ri_linebuf = NULL;
@@ -176,7 +176,7 @@ static wint_t string_ungetwc(wint_t wc, instream_t *ip)
 
 instream_t *make_string_instream(const wchar_t *str, size_t size)
 {
-    string_instream_t *sp = (string_instream_t *)malloc(sizeof *sp);
+    string_instream_t *sp = malloc(sizeof *sp);
     instream_t *ip = &sp->si_instream;
     init_instream(ip, string_getwc, string_ungetwc);
     sp->si_inbuf = str;
@@ -223,7 +223,7 @@ static int file_vprintf(outstream_t *out, const wchar_t *fmt, va_list ap)
 
 outstream_t *make_file_outstream(FILE *f)
 {
-    file_outstream_t *fp = (file_outstream_t *)malloc(sizeof *fp);
+    file_outstream_t *fp = malloc(sizeof *fp);
     outstream_t *out = &fp->fo_outstream;
     init_outstream(out, file_putwc, file_vprintf);
     fp->fo_file = f;
@@ -259,7 +259,7 @@ static int string_vprintf(outstream_t *out, const wchar_t *fmt, va_list ap)
 
 outstream_t *make_string_outstream(wchar_t *outbuf, size_t size)
 {
-    string_outstream_t *sp = (string_outstream_t *)malloc(sizeof *sp);
+    string_outstream_t *sp = malloc(sizeof *sp);
     outstream_t *out = &sp->so_outstream;
     init_outstream(out, string_putwc, string_vprintf);
     sp->so_outbuf = outbuf;
