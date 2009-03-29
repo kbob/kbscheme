@@ -34,7 +34,7 @@
 	return index;							\
     }									\
 									\
-    type *next_##var(size_t n)						\
+    static inline type *next_##var(size_t n)				\
     {									\
         return &var[alloc_##var(n)];					\
     }									\
@@ -55,24 +55,24 @@
 
 typedef unsigned char uint8_t;
 
-typedef enum action {
-    A_ACCEPT,				/* final: parse successful */
-    A_EOF,				/* final: reached end of input */
-    A_NIL,				/* NIL */
-    A_TAKE_1st,				/* 1st sym of RHS */
-    A_TAKE_2nd,				/* 2nd of RHS */
-    A_CONS_1_2,				/* cons(1st, 2nd) */
-    A_CONS_1_3,				/* cons(1st, 3rd) */
-    A_VEC_2nd,				/* vector(2nd) */
-    A_BYTVEC_2nd,			/* bytevector(2nd) */
-    A_ABBR_1_2,				/* (1st 2nd) */
-} action_t;
+/* XXX rename effect to semantics? */
+typedef enum effect {
+    E_ACCEPT,				/* final: parse successful */
+    E_EOF,				/* final: reached end of input */
+    E_NIL,				/* NIL */
+    E_TAKE_1st,				/* 1st sym of RHS */
+    E_TAKE_2nd,				/* 2nd of RHS */
+    E_CONS_1_2,				/* cons(1st, 2nd) */
+    E_CONS_1_3,				/* cons(1st, 3rd) */
+    E_VEC_2nd,				/* vector(2nd) */
+    E_BYTVEC_2nd,			/* bytevector(2nd) */
+    E_ABBR_1_2,				/* (1st 2nd) */
+} effect_t;
 
 typedef enum char_type {
     CT_NONE = 0,
     CT_TERMINAL = 0x40,
     CT_NONTERMINAL = 0x80,
-    CT_MARKER = 0xC0,
     CTMASK = 0xC0,
     SYMMASK = ~(CTMASK)
 } char_type_t;
@@ -86,7 +86,7 @@ typedef const bitset_word_t *const_bitset_t;
 typedef struct production {
     char        p_lhs;
     const char *p_rhs;
-    action_t    p_action;
+    effect_t    p_effect;
 } production_t;
 
 typedef struct item {
@@ -97,11 +97,19 @@ typedef struct item {
 typedef bitset_t item_set_t;
 
 typedef size_t transition_t;
-#define NULL_TRANSITION (~(size_t)0)
-#define TRANSITION(set, sym) transitions[(set) * symbols_size + (sym)]
+#define NULL_TRANSITION      (~(size_t)0)
+#define TRANSITION(set, sym) (transitions[(set) * symbols_size + (sym)])
 
-typedef struct actionX {
-} actionX_t;
+typedef enum action_op {
+    A_ACCEPT,
+    A_SHIFT,
+    A_REDUCE
+} action_op_t;
+
+typedef struct action {
+    action_op_t a_op;
+    uint8_t     a_index;
+} action_t;
 
 typedef struct goto_ {
 } goto_t;
@@ -109,6 +117,7 @@ typedef struct goto_ {
 /* This is the original YACC grammar. */
 #if 0
 %%
+
 program  : comment program
          | datum			{ *opp = $1; YYACCEPT;    }
          | /* empty */			{ *reached_eof = true;    }
@@ -131,12 +140,13 @@ compound : '(' sequence ')'		{ $$ = $2;                }
 
 sequence : datum sequence		{ $$ = make_pair($1, $2); }
          | comment sequence		{ $$ = $2;                }
-         | datum '.' datum		{ $$ = make_pair($1, $3); }
+         | datum comments '.' comments datum comments
+					{ $$ = make_pair($1, $5); }
          | /* empty */			{ $$ = NIL;               }
          ;
 
 elements : datum elements		{ $$ = make_pair($1, $2); }
-         | comment elements		{ $$ = $2;                }  
+         | comment elements		{ $$ = $2;                }
          | /* empty */			{ $$ = NIL;               }
          ;
 
@@ -145,8 +155,13 @@ bytes    : EXACT_NUMBER bytes		{ $$ = make_pair($1, $2); }
          | /* empty */			{ $$ = NIL;               }
          ;
 
+comments : comment comments
+	 | /* empty */
+         ;
+
 comment  : COMMENT datum
          ;
+
 %%
 #endif
 
@@ -179,54 +194,64 @@ comment  : COMMENT datum
  *	e = elements
  *	b = bytes
  *	x = comment
+ *	z = comments
  */
 
 static const production_t grammar[] = {
-    { 'Z', "p",   A_TAKE_1st   },	/* initial production added */
+    { 'a', "p",   E_TAKE_1st   },	/* initial production added */
 
-    { 'p', "xp",  A_TAKE_1st   },
-    { 'p', "d",   A_ACCEPT     },
-    { 'p', "",    A_EOF        },
+    { 'p', "xp",  E_TAKE_1st   },
+    { 'p', "d",   E_ACCEPT     },
+    { 'p', "",    E_EOF        },
 
-    { 'd', "s",   A_TAKE_1st   },
-    { 'd', "c",   A_TAKE_1st   },
+    { 'd', "s",   E_TAKE_1st   },
+    { 'd', "c",   E_TAKE_1st   },
 
-    { 's', "N",   A_TAKE_1st   },
-    { 's', "S",   A_TAKE_1st   },
+    { 's', "N",   E_TAKE_1st   },
+    { 's', "S",   E_TAKE_1st   },
 
-    { 'c', "(i)", A_TAKE_2nd   },
-    { 'c', "[i]", A_TAKE_2nd   },
-    { 'c', "Ve)", A_VEC_2nd    },
-    { 'c', "Bb)", A_BYTVEC_2nd },
-    { 'c', "Ad",  A_ABBR_1_2   },
+    { 'c', "(i)", E_TAKE_2nd   },
+    { 'c', "[i]", E_TAKE_2nd   },
+    { 'c', "Ve)", E_VEC_2nd    },
+    { 'c', "Bb)", E_BYTVEC_2nd },
+    { 'c', "Ad",  E_ABBR_1_2   },
 
-    { 'i', "di",  A_CONS_1_2   },
-    { 'i', "xi",  A_TAKE_2nd   },
-    { 'i', "dDd", A_CONS_1_3   },
-    { 'i', "",    A_NIL        },
+    { 'i', "di",  E_CONS_1_2   },
+    { 'i', "xi",  E_TAKE_2nd   },
+    { 'i', "dDd", E_CONS_1_3   },
+    { 'i', "",    E_NIL        },
 
-    { 'e', "de",  A_CONS_1_2   },
-    { 'e', "xe",  A_TAKE_2nd   },
-    { 'e', "",    A_NIL        },
+    { 'e', "de",  E_CONS_1_2   },
+    { 'e', "xe",  E_TAKE_2nd   },
+    { 'e', "",    E_NIL        },
 
-    { 'b', "Nb",  A_CONS_1_2   },
-    { 'b', "xb",  A_TAKE_2nd   },
-    { 'b', "",    A_NIL        },
+    { 'b', "Nb",  E_CONS_1_2   },
+    { 'b', "xb",  E_TAKE_2nd   },
+    { 'b', "",    E_NIL        },
 
-    { 'x', "Cd",  A_NIL        },
+    { 'x', "Cd",  E_NIL        },
 };
 static const size_t grammar_size = sizeof grammar / sizeof *grammar;
 
 static uint8_t charmap[256];
 static const size_t charmap_size = sizeof charmap / sizeof *charmap;
 
-SIZED_ARRAY(char,          symbols,      21);
-SIZED_ARRAY(item_t,        items,        63);
-SIZED_ARRAY(bitset_word_t, bitsets,     312);
-SIZED_ARRAY(item_set_t,    item_sets,    39);
-SIZED_ARRAY(transition_t,  transitions, 39 * 21);
-SIZED_ARRAY(action_t,      actions,     100);
-SIZED_ARRAY(goto_t,        gotos,       100);
+#define NT   12				/* number of terminal symbols */
+#define NN    9				/* number of nonterminal symbols */
+#define NS  (NT + NN)			/* number of symbols */
+#define NI   63				/* number of items */
+#define NBW 312				/* number of bitset words */
+#define NIS  39				/* number of item sets */
+
+SIZED_ARRAY(char,          symbols,           NS);
+SIZED_ARRAY(char,          terminals,         NT);
+SIZED_ARRAY(bitset_word_t, bitsets,          NBW);
+//SIZED_ARRAY(symset_t,      sym_first,        100);
+SIZED_ARRAY(item_t,        items,             NI);
+SIZED_ARRAY(item_set_t,    item_sets,        NIS);
+SIZED_ARRAY(transition_t,  transitions, NS * NIS);
+SIZED_ARRAY(action_t,      actions,     NT * NIS);
+SIZED_ARRAY(goto_t,        gotos,       NN * NIS);
 
 static inline bool char_is_nonterminal(char c)
 {
@@ -310,13 +335,20 @@ static void init_symbols(void)
 	    if (!charmap[(uint8_t)*p])
 		charmap[(uint8_t)*p] = CT_TERMINAL;
     assert(charmap['$'] == CT_NONE);
-    charmap['$'] = CT_MARKER;
+    charmap['$'] = CT_TERMINAL;
     for (i = j = 0; i < charmap_size; i++)
 	if (charmap[i] != CT_NONE) {
+	    if (charmap[i] == CT_TERMINAL)
+		*next_terminals(1) = (char)i;
 	    charmap[i] |= j++;
 	    *next_symbols(1) = (char)i;
 	}
     assert(!(symbols_size & CTMASK));
+}
+
+static void init_first(void)
+{
+    
 }
 
 #if 0
@@ -340,6 +372,7 @@ static const char *item_repr(const item_t *item) /* XXX */
 }
 #endif
 
+#if 0
 static void print_note_XXX(const char *label, const item_set_t set)
 {
     printf("%s [", label);
@@ -351,10 +384,11 @@ static void print_note_XXX(const char *label, const item_set_t set)
     }
     printf("]\n");
 }
+#endif
 
 static void close_item_set(item_set_t set)
 {
-    print_note_XXX("close", set);
+    //print_note_XXX("close", set);
     bitset_word_t unprocessed[BITSET_WORDS(items_size)];
     bitset_copy(unprocessed, set, items_size);
     bool done;
@@ -391,7 +425,7 @@ static void close_item_set(item_set_t set)
 	    //printf("\n");
 	}
     } while (!done);
-    print_note_XXX("close returns", set);
+    //print_note_XXX("close returns", set);
 }
 
 static void init_items(void)
@@ -440,23 +474,25 @@ static bool symbol_follows_item_set(char symbol, item_set_t set)
 }
 #endif
 
-static item_set_t alloc_item_set(void)
+static size_t alloc_item_set(void)
 {
     /* XXX move this function higher in the file. */
-    item_set_t *setp = next_item_sets(1);
-    *setp = bitset_alloc(items_size);
-    return *setp;
+    size_t sindex = alloc_item_sets(1);
+    size_t tindex = alloc_transitions(symbols_size);
+    assert(tindex == sindex * symbols_size);
+    item_sets[sindex] = bitset_alloc(items_size);
+    size_t i;
+    for (i = 0; i < symbols_size; i++)
+	TRANSITION(sindex, i) = NULL_TRANSITION;
+    return sindex;
 }
 
 static void init_item_sets(void)
 {
     size_t i, j, k;
-    item_set_t set_0 = alloc_item_set();
+    item_set_t set_0 = item_sets[alloc_item_set()];
     bitset_set_bit(0, set_0);
     close_item_set(set_0);
-    (void)alloc_transitions(symbols_size);
-    for (k = 0; k < symbols_size; k++)
-	TRANSITION(0, k) = NULL_TRANSITION;
     for (i = 0; i < item_sets_size; i++) {
 	item_set_t set = item_sets[i];
 	/* XXX iterate symbols instead */
@@ -486,12 +522,8 @@ static void init_item_sets(void)
 		    if (bitsets_equal(item_sets[k], nset, items_size))
 			dest = k;
 		if (dest == NULL_TRANSITION) {
-		    dest = item_sets_size;
-		    item_set_t dest_set = alloc_item_set();
-		    bitset_copy(dest_set, nset, items_size);
-		    (void)alloc_transitions(symbols_size);
-		    for (k = 0; k < symbols_size; k++)
-			TRANSITION(dest, k) = NULL_TRANSITION;
+		    dest = alloc_item_set();
+		    bitset_copy(item_sets[dest], nset, items_size);
 		}
 		TRANSITION(i, sym_index) = dest;
 	    }
@@ -539,6 +571,9 @@ static void init_item_sets(void)
 
 static void init_actions(void)
 {
+    //    alloc_actions(item_sets_size * nonterminals_size);
+    //    for (i = 0; i < item_sets_size; i++)
+    //	alloc
 }
 
 static void init_goto(void)
@@ -549,6 +584,7 @@ __attribute__((constructor))
 static void init_parser(void)
 {
     init_symbols();
+    init_first();
     init_items();
     init_item_sets();
     init_actions();
