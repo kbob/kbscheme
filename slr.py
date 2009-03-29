@@ -22,7 +22,7 @@ grammar = (
     'c=Ad',
     'i=di',
     'i=xi',
-    'i=dDd',
+    'i=dzDzdz',
     'i=',
     'e=de',
     'e=xe',
@@ -30,6 +30,8 @@ grammar = (
     'b=Nb',
     'b=xb',
     'b=',
+    'z=xz',
+    'z=',
     'x=Cd',
     )
 grammar = ('a=p',) + grammar
@@ -45,6 +47,7 @@ follow = {                          # XXX hand-constructed follow set.
     'e': 'NS([VBAC)',
     'b': 'NC)',
     'x': '$NS([VBAC)D',
+    'z': 'NS([VBAC)D',
     }
 
 
@@ -63,23 +66,23 @@ tokmap = {
 
 
 red_map = {
-    'p=d':   'ACCEPT',
-    'p=':    'EOF',
-    'c=(i)': '$$ = $2',
-    'c=[i]': '$$ = $2',
-    'c=Ve)': '$$ = Vector($2)',
-    'c=Bb)': '$$ = ByteVector($2)',
-    'c=Ad':  '$$ = abbrev($1, $2)',
-    'i=di':  '$$ = Cons($1, $2)',
-    'i=xi':  '$$ = $2',
-    'i=dDd': '$$ = Cons($1, $3)',
-    'i=':    '$$ = Nil',
-    'e=de':  '$$ = Cons($1, $2)',
-    'e=xe':  '$$ = $2',
-    'e=':    '$$ = Nil',
-    'b=Nb':  '$$ = Cons($1, $2)',
-    'b=xb':  '$$ = $2',
-    'b=':    '$$ = Nil',
+    'p=d':      'ACCEPT',
+    'p=':       'EOF',
+    'c=(i)':    '$$ = $2',
+    'c=[i]':    '$$ = $2',
+    'c=Ve)':    '$$ = Vector($2)',
+    'c=Bb)':    '$$ = ByteVector($2)',
+    'c=Ad':     '$$ = abbrev($1, $2)',
+    'i=di':     '$$ = Cons($1, $2)',
+    'i=xi':     '$$ = $2',
+    'i=dzDzdz': '$$ = Cons($1, $5)',
+    'i=':       '$$ = Nil',
+    'e=de':     '$$ = Cons($1, $2)',
+    'e=xe':     '$$ = $2',
+    'e=':       '$$ = Nil',
+    'b=Nb':     '$$ = Cons($1, $2)',
+    'b=xb':     '$$ = $2',
+    'b=':       '$$ = Nil',
     }
 
 
@@ -204,8 +207,8 @@ def parse(input):
             value = cons(vstack[ix], cons(vstack[ix + 1], nil))
         elif effect == '$$ = Cons($1, $2)':
             value = cons(vstack[ix], vstack[ix + 1])
-        elif effect == '$$ = Cons($1, $3)':
-            value = cons(vstack[ix], vstack[ix + 2])
+        elif effect == '$$ = Cons($1, $5)':
+            value = cons(vstack[ix], vstack[ix + 4])
         elif effect == 'ACCEPT':
             yypval = vstack[-1]
             return 'ACCEPT'
@@ -224,7 +227,7 @@ def parse(input):
         if not action:
             raise Syntax()
         v, k = action[0], int(action[1:])
-        # print 'token=%r action=%r stack=%r' % (token, action, stack)
+        print 'token=%r action=%r stack=%r' % (token, action, stack)
         if v == 's':
             vstack.append(yylval)
             NS = goto[stack[-1]][token]
@@ -390,7 +393,7 @@ def action_table(states, tt):
         a = terminal_columns(row)
         if accept_item in state:
             a['$'] = 'a0'
-        assert len(list(reduce_states(state))) <= 1
+#        assert len(list(reduce_states(state))) <= 1
         for reduction, nonterm in reduce_states(state):
             # assert not a, 'Conflict'
             for sym in tplus:
@@ -436,8 +439,8 @@ terminals = set(ch for g in grammar for ch in g[2:] if ch not in nonterminals)
 symbols = nonterminals | terminals | set('$')
 
 states, tt = transition_table(grammar)
-pretty_print_states(states)
-pretty_print_transitions(tt)
+#pretty_print_states(states)
+#pretty_print_transitions(tt)
 actions = action_table(states, tt)
 # print 'actions'; pprint.pprint(actions)
 goto = goto_table(tt)
