@@ -57,7 +57,8 @@ compound : '(' sequence ')'		{ $$ = $2;                }
 
 sequence : datum sequence		{ $$ = make_pair($1, $2); }
          | comment sequence		{ $$ = $2;                }
-         | datum '.' datum		{ $$ = make_pair($1, $3); }
+         | datum comments '.' comments datum comments
+					{ $$ = make_pair($1, $5); }
          | /* empty */			{ $$ = NIL;               }
          ;
 
@@ -69,6 +70,10 @@ elements : datum elements		{ $$ = make_pair($1, $2); }
 bytes    : EXACT_NUMBER bytes		{ $$ = make_pair($1, $2); }
          | comment bytes		{ $$ = $2;                }
          | /* empty */			{ $$ = NIL;               }
+         ;
+
+comments : comment comments
+	 | /* empty */
          ;
 
 comment  : COMMENT datum
@@ -248,7 +253,7 @@ static int scan_ident(const wchar_t *prefix, YYSTYPE *lvalp, instream_t *in)
 
 static int yylex(YYSTYPE *lvalp, instream_t *in)
 {
-    wint_t wc;
+    wint_t wc, w2;
 
     while ((wc = instream_getwc(in)) != WEOF) {
 	if (is_whitespace(wc))
@@ -266,13 +271,13 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
              * ... is an identifier.
              * Anything else is an error. */
 	    int n = 1;
-	    while ((wc = instream_getwc(in)) == L'.')
+	    while ((w2 = instream_getwc(in)) == L'.')
 		n++;
-	    if (wc != WEOF)
-		instream_ungetwc(wc, in);
-	    if (!is_ident_subsequent(wc)) {
+	    if (w2 != WEOF)
+		instream_ungetwc(w2, in);
+	    if (!is_ident_subsequent(w2)) {
 		if (n == 1)
-		    return wctob('.');
+		    return wctob(L'.');
 		if (n == 3) {
 		    *lvalp = make_symbol(L"...");
 		    return SIMPLE;
@@ -289,12 +294,12 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    return ABBREV;
 	}
 	if (wc == L',') {
-	    wc = instream_getwc(in);
-	    if (wc == L'@') {
+	    w2 = instream_getwc(in);
+	    if (w2 == L'@') {
 		*lvalp = make_symbol(L"unquote-splicing");
 		return ABBREV;
 	    }
-	    instream_ungetwc(wc, in);
+	    instream_ungetwc(w2, in);
 	    *lvalp = make_symbol(L"unquote");
 	    return ABBREV;
 	}
@@ -313,18 +318,30 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		*lvalp = make_boolean(false);
 		return SIMPLE;
 
-	    case L'(':
-	      return BEGIN_VECTOR;
+	    case L'(':			
+		return BEGIN_VECTOR;
 
-	    //case L'v':
-	    //  verify "#vu8(" and return BEGIN_BYTEARRAY;
+	    case L'v':			/* #vu8( */
+		
+		if ((w2 = instream_getwc(in)) == L'u' &&
+		    (w2 = instream_getwc(in)) == L'8' &&
+		    (w2 = instream_getwc(in)) == L'(')
+		    return BEGIN_BYTEVECTOR;
+		if (w2 != WEOF)
+		    instream_ungetwc(w2, in);
+		/* fall through to disgrace. */
+		break;
 
-	    case L'!':
-		if ((wc = instream_getwc(in)) != WEOF && is_ident_initial(wc))
-		    while ((wc = instream_getwc(in)) != WEOF &&
-			   is_ident_subsequent(wc))
-			continue;
-		continue;
+	    case L'!':			/* #!<identifier> */
+		if ((w2 = instream_getwc(in)) != WEOF &&
+		    is_ident_initial(w2)) {
+		    instream_ungetwc(w2, in);
+		    scan_ident(L"#!", lvalp, in);
+		    continue;
+		}
+		instream_ungetwc(w2, in);
+		/* fall through to illegitimacy. */
+		break;
 
 	    case L'|':
 		/* scan until another | followed by # are found,
@@ -332,17 +349,17 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		{
 		    int state = 0, depth = 1;
 		    while (depth) {
-			wc = instream_getwc(in);
-			if (wc == WEOF)
+			w2 = instream_getwc(in);
+			if (w2 == WEOF)
 			    assert(0 && "unterminated block comment");
-			if (wc == L'|' && state == 0)
+			if (w2 == L'|' && state == 0)
 			    state = 1;
-			else if (wc == L'|' && state == 2) {
+			else if (w2 == L'|' && state == 2) {
 			    state = 0;
 			    depth++;
-			} else if (wc == L'#' && state == 0)
+			} else if (w2 == L'#' && state == 0)
 			    state = 2;
-			else if (wc == L'#' && state == 1) {
+			else if (w2 == L'#' && state == 1) {
 			    state = 0;
 			    --depth;
 			}
@@ -362,20 +379,18 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 		return ABBREV;
 
 	    case L',':
-		wc = instream_getwc(in);
-		if (wc == L'@') {
+		w2 = instream_getwc(in);
+		if (w2 == L'@') {
 		    *lvalp = make_symbol(L"unsyntax-splicing");
 		    return ABBREV;
 		}
-		instream_ungetwc(wc, in);
+		instream_ungetwc(w2, in);
 		*lvalp = make_symbol(L"unsyntax");
 		return ABBREV;
-
-	    default:
-		/* fall through to failure. */
-		instream_ungetwc(wc, in);
-		wc = L'#';
 	    }
+	    /* fall through to failure. */
+	    instream_ungetwc(wc, in);
+	    wc = L'#';
 	}
 	if (wc == L'-') {
 	    /*
@@ -385,31 +400,31 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	     * -1, -.1 -#b1 are numbers.
 	     * Anything else is an error.
 	     */
-	    wc = instream_getwc(in);
-	    if (wc != WEOF)
-		instream_ungetwc(wc, in);
-	    if (wc == WEOF || !is_ident_subsequent(wc)) {
+	    w2 = instream_getwc(in);
+	    if (w2 != WEOF)
+		instream_ungetwc(w2, in);
+	    if (w2 == WEOF || !is_ident_subsequent(w2)) {
 		*lvalp = make_symbol(L"-");
 		return SIMPLE;
 	    }
-	    if (wc == L'.' || is_digit(wc))
+	    if (w2 == L'.' || is_digit(w2))
 		return scan_number(-1, lvalp, in);
-	    if (wc == L'>')
+	    if (w2 == L'>')
 		return scan_ident(L"-", lvalp, in);
 	}
 	if (wc == L'+') {
-	    wc = instream_getwc(in);
-	    if (wc == EOF) {
+	    w2 = instream_getwc(in);
+	    if (w2 == EOF) {
 		*lvalp = make_symbol(L"+");
 		return SIMPLE;
 	    }
-	    if (!is_ident_subsequent(wc)) {
-		instream_ungetwc(wc, in);
+	    if (!is_ident_subsequent(w2)) {
+		instream_ungetwc(w2, in);
 		*lvalp = make_symbol(L"+");
 		return SIMPLE;
 	    }
-	    if (is_digit(wc)) {
-		instream_ungetwc(wc, in);
+	    if (is_digit(w2)) {
+		instream_ungetwc(w2, in);
 		return scan_number(+1, lvalp, in);
 	    }
 	}
@@ -418,20 +433,19 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 	    return scan_number(+1, lvalp, in);
 	}
 	if (wc == L'\\') {
-	    wc = instream_getwc(in);
-	    if (wc == L'x' || wc == L'X') {
+	    w2 = instream_getwc(in);
+	    if (w2 == L'x' || w2 == L'X') {
 		wchar_t prefix[2] = { inline_hex_escape(in), L'\0' };
 		return scan_ident(prefix, lvalp, in);
-	    } else if (wc != WEOF)
-		instream_ungetwc(wc, in);
-	    wc = L'\\';
+	    } else if (w2 != WEOF)
+		instream_ungetwc(w2, in);
 	    /* fall through into purgatory */
 	}
 	if (is_ident_initial(wc)) {
 	    instream_ungetwc(wc, in);
 	    return scan_ident(L"", lvalp, in);
 	}
-	fprintf(stderr, "unexpected char L'\\x%08x' = %d\n", wc, wc);
+	fprintf(stderr, "unexpected char L'\\x%08x' = %d = %lc\n", wc, wc, wc);
 	assert(0);
     }
     return 0;				/* EOF */
@@ -484,6 +498,21 @@ TEST_READ(L"(a#;(comment)b)",           L"(a b)");
 TEST_READ(L"(a#;(\n)b)",                L"(a b)");
 TEST_READ(L"(a#;\t()b)",                L"(a b)");
 TEST_READ(L"(a#;((c)(d))b)",            L"(a b)");
+TEST_READ(L"(#;c a . b)",		L"(a . b)");
+TEST_READ(L"(#;c#;c a . b)",		L"(a . b)");
+TEST_READ(L"(a#;c . b)",		L"(a . b)");
+TEST_READ(L"(a #;c#;c . b)",		L"(a . b)");
+TEST_READ(L"(a #;c#;c . #;c b)",	L"(a . b)");
+TEST_READ(L"(a #;c . #;c #;c b)",	L"(a . b)");
+TEST_READ(L"(a #;c#;c . #;c b #;c)",	L"(a . b)");
+TEST_READ(L"(a . #;c#;c b#;c#;c)",	L"(a . b)");
+TEST_READ(L"(a#;c . #;c#;c b#;c#;c)",	L"(a . b)");
+TEST_READ(L"(a . #;()#;() b#;()#;())",	L"(a . b)");
+TEST_READ(L"(a#!r6rs b)",		L"(a b)");
+TEST_READ(L"#!r6rs(a b)",		L"(a b)");
+TEST_READ(L"(#!r6rs a b)",		L"(a b)");
+TEST_READ(L"(#!r6\x33s a b)",		L"(a b)");
+//TEST_READ(L"#! a",			L"a");
 
 #define TEST_IDENT(name)						\
     TEST_READ(L ## #name, L ## #name);					\
@@ -602,4 +631,4 @@ TEST_EVAL(L"(pair? '[a b])",		L"#t");
 TEST_READ(L"#(a b)",			L"#(a b)");
 TEST_READ(L"#(a (b c))",		L"#(a (b c))");
 TEST_READ(L"#(a #(b c))",		L"#(a #(b c))");
-//TEST_READ(L"#vu8(a b)",		L"#vu8(a b)");
+//TEST_READ(L"#vu8(1 2)",			L"#vu8(1 2)");
