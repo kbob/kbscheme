@@ -89,7 +89,8 @@ static void test_all(test_phase_t phase, test_driver_t driver)
 		err_count, &"s"[err_count == 1], phase_name(phase));
 	exit(1);
     } else
-	printf("  %3d %s tests passed.\n", test_count, phase_name(phase));
+	printf("  %3d %s test%s passed.\n",
+	       test_count, phase_name(phase), &"s"[test_count == 1]);
 }
 
 void register_test(test_case_t *tc)

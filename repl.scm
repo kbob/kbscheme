@@ -5,7 +5,7 @@
  (define env (draft-environment)) ; XXX should inherit (rnrs (6)).
  (define (repl)
   ((lambda (x)
-     (if (not (eq? x 'exit))
+     (if (not (eq? x (quote exit)))
 	 ((lambda ()
 	    (draft-print (eval x env))
 	    (repl)))))

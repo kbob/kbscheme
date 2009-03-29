@@ -474,7 +474,7 @@ TEST_READ(L"(a\fb)",                    L"(a b)");
 TEST_READ(L"(a\rb)",                    L"(a b)");
 TEST_READ(L"(a\x0085"L"b)",             L"(a b)"); /* <next line> */
 TEST_READ(L"(a\x2028"L"b)",             L"(a b)"); /* <line separator> */
-TEST_READ(L"(a\x2029"L"b)",             L"(a b)"); /* paragraph separator> */
+TEST_READ(L"(a\x2029"L"b)",             L"(a b)"); /* <paragraph separator> */
 TEST_READ(L"(a\x00a0"L"b)",             L"(a b)"); /* category Zs */
 TEST_READ(L"(a\x2028"L"b)",             L"(a b)"); /* category Zl */
 TEST_READ(L"(a\x2029"L"b)",             L"(a b)"); /* category Zp */
@@ -512,7 +512,6 @@ TEST_READ(L"(a#!r6rs b)",		L"(a b)");
 TEST_READ(L"#!r6rs(a b)",		L"(a b)");
 TEST_READ(L"(#!r6rs a b)",		L"(a b)");
 TEST_READ(L"(#!r6\x33s a b)",		L"(a b)");
-//TEST_READ(L"#! a",			L"a");
 
 #define TEST_IDENT(name)						\
     TEST_READ(L ## #name, L ## #name);					\
