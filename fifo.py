@@ -5,44 +5,77 @@ import collections
 import itertools
 
 
+# Nonterminals
+#   a start
+#   p program
+#   d datum
+#   s simple
+#   c compound
+#   i sequence (interior)
+#   e elements
+#   b bytes
+#   y comments
+#   x comment
+
+# Terminals
+#   N number
+#   S simple
+#   A abbrev
+#   D dot
+#   X comment
+#   V begin_vector
+#   B begin_bytevector
+
 grammar = (
     'a=p',
+
     'p=xp',
     'p=d',
     'p=',
+
     'd=s',
     'd=c',
+
     's=N',
     's=S',
+
     'c=(i)',
     'c=[i]',
     'c=Ve)',
     'c=Bb)',
     'c=Ad',
+
     'i=di',
     'i=xi',
-    'i=dDd',
+    'i=dyDydy',
     'i=',
+
     'e=de',
     'e=xe',
     'e=',
+
     'b=Nb',
     'b=xb',
     'b=',
+
+    'y=xy',
+    'y=',
+
     'x=Cd',
     )
 
 def test():
     Fo = {                          # XXX hand-constructed follow set.
         'a': '$',
-        'p': 'NS([VBAC$',
+        'p': '$',
         'd': 'NS([VBAC])D$',
         's': 'NS([VBAC])D$',
         'c': 'NS([VBAC])D$',
-        'i': 'NS([VBAC])D',
-        'e': 'NS([VBAC)',
-        'b': 'NC)',
-        'x': '$NS([VBAC)D',
+        'i': '])',
+        'e': ')',
+        'b': ')',
+        'y': 'NS([VBA])D',
+        'x': '$NS([VBAC])D',
         }
     for s in nonterminals:
         def fmt(f):
@@ -110,7 +143,7 @@ def make_sym_first():
                     done = False
                 if '-' not in sym_first[y]:
                     break
-    pretty_print_set('sym_first', sym_first)
+    # pretty_print_set('sym_first', sym_first)
     return sym_first
 
 
@@ -128,18 +161,18 @@ def first(w):
 def make_follow():
     follow = collections.defaultdict(set)
     follow[grammar[0][0]] = set('$')
-    pretty_print_set('follow 1', follow)
+    # pretty_print_set('follow 1', follow)
     for g in grammar:
         for i in range(3, len(g)):
             b, beta = g[i - 1], g[i:]
             if b in nonterminals:
                 print u'2: follow(%s) |= first(%s) = %s (except \u03b5)' % (b, beta or u'\u03b5', setrep(first(beta)))
                 follow[b] |= first(beta) - set('-')
-    pretty_print_set('follow 2', follow)
+    # pretty_print_set('follow 2', follow)
     done = False
     while not done:
         done = True
-        print 'closing follow'
+        # print 'closing follow'
         for g in grammar:
             for i in reversed(range(2, len(g))):
                 a, b, beta = g[0], g[i], g[i+1:]
