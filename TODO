@@ -52,8 +52,8 @@ DONE	full mem model
 	    Recognize strings.
  DONE	    Recognize vectors.
 	    Recognize bytevectors.
-	    Verify "#!r6rs".
-	    Accept "#!/path/to/scheme".
+ DONE	    Verify "#!r6rs".
+ DONE	    Accept "#!/path/to/scheme".
  DONE	    Recognize nested #| ... |# comments.
  DONE	    Improve char classes for identifiers.
  DONE 	    Recognize peculiar identifiers.
