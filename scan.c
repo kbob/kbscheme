@@ -117,6 +117,7 @@ static token_type_t scan_ident(const wchar_t *prefix,
     wchar_t wc;
     size_t len = 16, pos = wcslen(prefix);
     assert(pos < len);
+    /* XXX move this buffer into the heap.  (Requires byte vectors.) */
     wchar_t *buf = alloca(len * sizeof *buf);
     wcscpy(buf, prefix);
     while (true) {
@@ -154,6 +155,7 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
     wint_t wc, w2;
 
     while ((wc = instream_getwc(in)) != WEOF) {
+	/* XXX implement " <string element>* " */
 	if (is_whitespace(wc))
 	    continue;
 	if (wc == L';') {
@@ -238,7 +240,8 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		if ((w2 = instream_getwc(in)) != WEOF &&
 		    is_ident_initial(w2)) {
 		    instream_ungetwc(w2, in);
-		    scan_ident(L"#!", lvalp, in);
+		    obj_t *unused;
+		    scan_ident(L"#!", &unused, in);
 		    continue;
 		}
 		instream_ungetwc(w2, in);
