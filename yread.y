@@ -55,10 +55,15 @@ compound : '(' sequence ')'		{ $$ = $2;                }
          | ABBREV datum			{ $$ = make_abbr($1, $2); }
          ;
 
-sequence : datum sequence		{ $$ = make_pair($1, $2); }
+sequence : datum tail			{ $$ = make_pair($1, $2); }
          | comment sequence		{ $$ = $2;                }
-         | datum comments '.' comments datum comments
-					{ $$ = make_pair($1, $5); }
+         | /* empty */			{ $$ = NIL; }
+         ;
+
+tail     : datum tail			{ $$ = make_pair($1, $2); }
+         | comment tail			{ $$ = $2;                }
+         | '.' comments datum comments
+					{ $$ = $3; }
          | /* empty */			{ $$ = NIL;               }
          ;
 
