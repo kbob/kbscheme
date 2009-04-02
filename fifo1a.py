@@ -6,25 +6,20 @@ import itertools
 
 
 # Nonterminals
-#   a start
-#   p program
 #   d datum
-#   s simple
-#   c compound
-#   i sequence (interior)
-#   e elements
-#   b bytes
-#   y comments
-#   x comment
+#   i sequence (list interior)
+#   e elements (vector interior)
+#   b bytes (bytevector interior)
 
 # Terminals
 #   N number
 #   S simple
 #   A abbrev
-#   D dot
 #   X comment
 #   V begin_vector
 #   B begin_bytevector
+#   ( ) . [ ] themselves
+
 
 grammar = (
     'd=N',
@@ -35,15 +30,11 @@ grammar = (
     'd=Bb)',
     'd=Ad',
 
-#    'i=di',
-#    'i=dDd',
-#    'i=',
-
     'i=dj',
     'i=',
     
     'j=dj',
-    'j=Dd',
+    'j=.d',
     'j=',
 
     'e=de',
@@ -51,16 +42,16 @@ grammar = (
 
     'b=Nb',
     'b=',
-
     )
+
 
 def test():
     Fo = {                          # XXX hand-constructed follow set.
         'a': '$',
         'p': '$',
-        'd': 'NS([VBA])D$',
-        's': 'NS([VBA])D$',
-        'c': 'NS([VBA])D$',
+        'd': 'NS([VBA]).$',
+        's': 'NS([VBA]).$',
+        'c': 'NS([VBA]).$',
         'i': '])',
         'j': '])',
         'e': ')',
@@ -70,27 +61,7 @@ def test():
         def fmt(f):
             return ''.join(sorted(f))
         # print 's=%r Fo=%r follow=%r' % (s, fmt(Fo[s]), fmt(follow[s]))
-        assert set(Fo[s]) == follow[s]
-
-
-XXXgrammar = (
-    'e=tE',
-    'E=+tE',
-    'E=',
-    't=fT',
-    'T=*fT',
-    'T=',
-    'f=(e)',
-    'f=I',
-    )
-
-def XXXtest():
-    assert first('e') == first('t') == first('f') == set('(I')
-    assert first('E') == set('+-')
-    assert first('T') == set('*-')
-    assert follow['e'] == follow['E'] == set(')$')
-    assert follow['t'] == follow['T'] == set('+)$')
-    assert follow['f'] == set('+*)$')
+        assert set(Fo[s]) == follow[s], 'Fo[%r] got %r, expected %r' % (s, fmt(follow[s]), fmt(Fo[s]))
 
 
 symbols = set(''.join(grammar).replace('=', '$'))
@@ -105,14 +76,34 @@ def setrep(set):
         for mem in sorted(set):
             if mem != '-':
                 yield mem
-    return '{%s}' % ' '.join(setfu(set))
+    return ' '.join(setfu(set))
 
-def pretty_print_set(label, set):
+
+def pretty_print_set(label, set, key=None):
     print label
-    for x in sorted(set):
-        print '    %s: %s' % (x, setrep(set[x])[1:-1])
+    w = max(len(i) for i in set)
+    for x in sorted(set, key=key):
+        print '    %-*s: %s' % (w, x, setrep(set[x]))
     print
 
+
+def setrep(set):
+    def setfu(set):
+        if '-' in set:
+            yield u'\u03b5'
+        for mem in sorted(set):
+            if mem != '-':
+                yield mem
+    return ''.join(setfu(set))
+
+
+def pretty_print_set(label, set, key=None):
+    print '%s = {' % label[:2]
+    w = max(len(i) for i in set) + 3
+    for x in sorted(set, key=key):
+        print "    %-*s '%s'," % (w, "'%s':" % x, setrep(set[x]))
+    print '}\n\n'
+    
 
 def make_sym_first():
     sym_first = collections.defaultdict(set)
@@ -132,7 +123,7 @@ def make_sym_first():
                     done = False
                 if '-' not in sym_first[y]:
                     break
-    pretty_print_set('sym_first', sym_first)
+    # pretty_print_set('sym_first', sym_first)
     return sym_first
 
 
@@ -174,11 +165,20 @@ def make_follow():
                     if not follow[b] >= follow[a]:
                         done = False
                         follow[b] |= follow[a]
-    pretty_print_set('follow 3', follow)
+    def keyfunc(sym):
+        for i, rule in enumerate(grammar):
+            if rule.startswith(sym):
+                return i
+    pretty_print_set('Follow', follow, key=keyfunc)
     return follow
 
 
 sym_first = make_sym_first()
+
+first_dict = dict((rule, first(rule[2:])) for rule in grammar)
+pretty_print_set('First', first_dict,
+                 key=lambda rule: list(grammar).index(rule))
+
 follow = make_follow()
 test()
 

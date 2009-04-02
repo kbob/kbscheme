@@ -7,6 +7,22 @@ import pprint
 import re
 
 
+# Nonterminals
+#   d datum
+#   i sequence (list interior)
+#   e elements (vector interior)
+#   b bytes (bytevector interior)
+
+# Terminals
+#   N number
+#   S simple
+#   A abbrev
+#   X comment
+#   V begin_vector
+#   B begin_bytevector
+#   ( ) . [ ] themselves
+
+
 grammar = (
     'd=N',
     'd=S',
@@ -34,9 +50,7 @@ grammar = (
 symbols = set(''.join(grammar).replace('=', '$'))
 nonterminals = set(r[0] for r in grammar)
 terminals = symbols - nonterminals
-valued_terminals = 'ANS'
 start_symbol = grammar[0][0]
-assert start_symbol == 'd'
 
 
 Fi = {
@@ -61,7 +75,8 @@ Fi = {
     'b=Nb' : 'N',
     'b='   : 'ε',
     }
-assert set(Fi) == set(grammar)
+assert set(Fi) <= set(grammar), 'Fi extra %r' % (set(Fi) - set(grammar))
+assert set(Fi) == set(grammar), 'Fi missing %r' % (set(grammar) - set(Fi))
 
 
 Fo = {
@@ -71,7 +86,8 @@ Fo = {
     'e': ')',
     'b': ')',
     }
-assert set(Fo) == nonterminals
+assert set(Fo) <= nonterminals, 'Fo extra %r' % (set(Fo) - nonterminals)
+assert set(Fo) == nonterminals, 'Fo missing %r' % (nonterminals - set(Fo))
 
 
 def make_parsing_table():
@@ -126,7 +142,7 @@ red_map = {
 
     'b=':    'EndByteVector',
     }
-assert set(red_map) <= set(grammar)
+assert set(red_map) <= set(grammar), 'red_map extra %r' % (set(red_map) - set(grammar))
 
 
 class nil(object):
@@ -212,7 +228,6 @@ tokmap = {
     'c': 'S',
     'd': 'S',
     "'": 'A',
-    ';': 'C',
     }
 
 
@@ -238,8 +253,6 @@ def parse(T, input):
     stack = ['$', start_symbol]
     input = list(input)
     tok = yylex(input)
-    if tok == '$':
-        return [EOF]
     while True:
         i = stack[-1]
         rule = T.get(i, {}).get(tok)
@@ -299,8 +312,10 @@ def build(actions):
             reg = cons(action, reg)
         first = False
     assert len(vstack) == 0
-    assert reg.cdr is nil
-    return reg.car
+    if reg:
+        assert reg.cdr is nil
+        return reg.car
+    return EOF
 
 
 def read(input):
@@ -311,7 +326,7 @@ def read(input):
 
 
 tests = [
-    ['',              "EOF"],
+    ['',              'EOF'],
     ['a',             'a'],
     ['1',             '1'],
     ['()',            '()'],
@@ -344,13 +359,13 @@ tests = [
     ["('abc)",        '((quote a) b c)'],
     ["(a'bc)",        '(a (quote b) c)'],
     ["'''a",          '(quote (quote (quote a)))'],
-    [';a',            "EOF"],
+    [';a',            'EOF'],
     [';ab',           'b'],
     ['(;a)',          '()'],
     ['(a;b)',         '(a)'],
     ['(a;bc)',        '(a c)'],
     [';(a(b))(c)',    '(c)'],
-    [';(a(b))',       "EOF"],
+    [';(a(b))',       'EOF'],
     [')',             '&syntax'],
     ["'",             '&syntax'],
     ['(',             '&syntax'],
@@ -368,7 +383,7 @@ tests = [
 
 
 for input, expected in tests:
-    if ';' in input:
+    if ';' in input or 'EOF' in expected:
         print '  skipping %s' % input
         continue
     print 'testing %s' % input
