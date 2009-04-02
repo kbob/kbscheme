@@ -18,11 +18,9 @@ static obj_t *read_sequence(instream_t *in)
     token_type_t tok;
     AUTO_ROOT(obj, read_object(in, &tok));
     if (tok != TOK_RPAREN && tok != TOK_EOF) {
-	//PUSH_ROOT(tok.tok_obj);
 	AUTO_ROOT(cdr, read_sequence(in));
 	obj = make_pair(obj, cdr);
 	POP_ROOT(cdr);
-	//POP_ROOT(tok.tok_obj);
     }
     POP_ROOT(obj);
     return obj;
