@@ -6,6 +6,7 @@ import itertools
 
 
 # Nonterminals
+#   p program
 #   d datum
 #   i sequence (list interior)
 #   e elements (vector interior)
@@ -62,11 +63,8 @@ grammar = (
 
 def test():
     Fo = {                          # XXX hand-constructed follow set.
-        'a': '$',
         'p': '$',
         'd': 'NS([VBA]).;$',
-        's': 'NS([VBA]).;$',
-        'c': 'NS([VBA]).;$',
         'i': '])',
         'j': '])',
         'e': ')',
@@ -74,6 +72,7 @@ def test():
         'x': 'NS([VBA]).;$',
         'y': 'NS([VBA])',
         }
+    assert all(s in nonterminals for s in Fo)
     for s in nonterminals:
         def fmt(f):
             return ''.join(sorted(f))
@@ -84,24 +83,7 @@ def test():
 symbols = set(''.join(grammar).replace('=', '$'))
 nonterminals = set(g[0] for g in grammar)
 terminals = symbols - nonterminals
-
-
-def setrep(set):
-    def setfu(set):
-        if '-' in set:
-            yield u'\u03b5'
-        for mem in sorted(set):
-            if mem != '-':
-                yield mem
-    return ' '.join(setfu(set))
-
-
-def pretty_print_set(label, set, key=None):
-    print label
-    w = max(len(i) for i in set)
-    for x in sorted(set, key=key):
-        print '    %-*s: %s' % (w, x, setrep(set[x]))
-    print
+start_symbol = grammar[0][0]
 
 
 def setrep(set):
@@ -151,34 +133,27 @@ def first(w):
         if '-' not in sym_first[y]:
             f -= set('-')
             break
-    # print u'first(%s) => {%s}' % (w or u'\u03b5', ', '.join(sorted(f)))
+    # print u'first(%s) => {%s}' % (w or u'\u03b5', ' '.join(sorted(f)))
     return f
 
 
 def make_follow():
     follow = collections.defaultdict(set)
-    follow[grammar[0][0]] = set('$')
-    # pretty_print_set('follow 1', follow)
+    follow[start_symbol] = set('$')
     for g in grammar:
         for i in range(3, len(g)):
             b, beta = g[i - 1], g[i:]
             if b in nonterminals:
-                # print u'2: follow(%s) |= first(%s) = %s (except \u03b5)' % (b, beta or u'\u03b5', setrep(first(beta)))
                 follow[b] |= first(beta) - set('-')
-    # pretty_print_set('follow 2', follow)
     done = False
     while not done:
         done = True
-        # print 'closing follow'
         for g in grammar:
             for i in reversed(range(2, len(g))):
                 a, b, beta = g[0], g[i], g[i+1:]
                 if '-' not in first(beta):
                     break
-                # else:
-                #     print u'%s =*=> \u03b5' % (beta or u'\u03b5')
                 if b in nonterminals:
-                    # print '3: follow(%s) |= follow(%s) = %s' % (b, a, setrep(follow[a]))
                     if not follow[b] >= follow[a]:
                         done = False
                         follow[b] |= follow[a]
