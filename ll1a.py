@@ -91,58 +91,60 @@ assert set(Fo) == nonterminals, 'Fo missing %r' % (nonterminals - set(Fo))
 
 
 def make_parsing_table():
-    # def ps(name, value):
-    #     print name, ''.join(sorted(value)), len(value)
-    # ps('terminals', terminals)
-    # ps('nonterminals', nonterminals)
-    # ps('symbols', symbols)
     def entry_rules(A, a):
-        # print 'entry_rules(A=%r, a=%r)' % (A, a)
         for g in grammar:
             if g[0] == A:
-                # print '    g', g
                 if a in Fi[g]:
-                    # print '        %r is in Fi[%r]' % (a, g)
                     yield g
                 if 'ε' in Fi[g] and a in Fo[A]:
-                    # print "        ε is in Fi[%r] and %r is in Fo[%r]" % (g, a, A)
                     yield g
-        # print
     def entry(A, a):
         rules = list(entry_rules(A, a))
-        if len(rules) > 1:
-            print 'A=%r a=%r rules=%r' % (A, a, rules)
         assert len(rules) <= 1, 'grammar is not LL(1)'
         return rules and rules[0] or None
     T = dict((n, (dict((t, entry(n, t))
                        for t in terminals)))
              for n in nonterminals)
-#    print 'T'
-#    pprint.pprint(T)
-#    print
     return T
 
 
 T = make_parsing_table()
+if False:
+    def tk(t):
+        return (t == '$', t)
+    def pt(n, t):
+        z = T[n][t]
+        if z is None:
+            return '-'
+        for i, rule in enumerate(grammar):
+            if rule == z:
+                return i
+    tt = list(sorted(terminals, key=tk))
+    print '      %s' % (''.join('%-3s' % t for t in tt))
+    print '    ' + '---' * len(tt)
+    for n in sorted(nonterminals):
+        print '%3c : %s' % (n, ''.join('%-3s' % pt(n, t) for t in tt))
+    exit()
 
 
 red_map = {
-    'd=(i)': 'OpenList',
-    'd=[i]': 'OpenList',
-    'd=Ve)': 'OpenVector',
-    'd=Bb)': 'OpenByteVector',
-    'd=Ad':  'Abbrev',
+    'd=(i)':  'OpenList',
+    'd=[i]':  'OpenList',
+    'd=Ve)':  'OpenVector',
+    'd=Bb)':  'OpenByteVector',
+    'd=Ad':   'Abbrev',
 
-    'i=':    'CloseList',
+    'i=':     'CloseList',
 
-    'j=.d':  'DotClose',
-    'j=':    'CloseList',
+    'j=.d':   'DotClose',
+    'j=':     'CloseList',
 
-    'e=':    'CloseVector',
+    'e=':     'CloseVector',
 
-    'b=':    'EndByteVector',
+    'b=':     'CloseByteVector',
     }
-assert set(red_map) <= set(grammar), 'red_map extra %r' % (set(red_map) - set(grammar))
+assert set(red_map) <= set(grammar), \
+       'red_map extra %r' % (set(red_map) - set(grammar))
 
 
 class nil(object):
@@ -257,21 +259,16 @@ def parse(T, input):
         i = stack[-1]
         rule = T.get(i, {}).get(tok)
         if rule:
-            s0 = ' '.join(reversed(stack))
             stack[-1:] = rule[:1:-1]  # pop; push reversed RHS
-            s1 = ' '.join(reversed(stack))
             red = red_map.get(rule, '')
-            # print '%-8s %-20s %-11s => %s' % (rule, red, s0, s1)
             if red:
                 ostack.append(red)
         else:
             sym = stack.pop()
-            # print '%30spop %r' % ('', sym)
             if sym == '$':
                 break
             if sym != tok:
                 raise Syntax()
-            assert sym == tok, 'sym=%r, tok=%r' % (sym, tok)
             if yylval is not None:
                 ostack.append(yylval)
             tok = yylex(input)
@@ -281,7 +278,6 @@ def parse(T, input):
 def build(actions):
     vstack = []
     reg = nil
-    first = True
     for action in reversed(actions):
         if action == 'CloseList':
             vstack.append(reg)
@@ -294,7 +290,7 @@ def build(actions):
         elif action == 'CloseVector':
             vstack.append(reg)
             reg = nil
-        elif action == 'EndByteVector':
+        elif action == 'CloseByteVector':
             vstack.append(reg)
             reg = nil
         elif action == 'OpenList':
@@ -310,7 +306,6 @@ def build(actions):
             reg = cons(reg, parent)
         else:
             reg = cons(action, reg)
-        first = False
     assert len(vstack) == 0
     if reg:
         assert reg.cdr is nil
@@ -358,6 +353,7 @@ tests = [
     ["V'a'(ab))",     '#((quote a) (quote (a b)))'],
     ["('abc)",        '((quote a) b c)'],
     ["(a'bc)",        '(a (quote b) c)'],
+    ["(ab'c)",        '(a b (quote c))'],
     ["'''a",          '(quote (quote (quote a)))'],
     [';a',            'EOF'],
     [';ab',           'b'],
