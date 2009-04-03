@@ -1,5 +1,7 @@
 #include "io.h"
 
+#include "bool.h"
+
 #include <assert.h>
 #include <limits.h>
 #include <readline/readline.h>
@@ -208,7 +210,7 @@ static int file_vprintf(outstream_t *out, const wchar_t *fmt, va_list ap)
     if (fwide(fp->fo_file, 0) > 0)
 	return vfwprintf(fp->fo_file, fmt, ap);
     size_t max = 64;
-    while (1) {
+    while (true) {
 	wchar_t *buf = alloca(max * sizeof *buf);
 	int i, n = vswprintf(buf, max, fmt, ap);
 	if (n >= 0) {
