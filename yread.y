@@ -18,16 +18,24 @@
     #define YYSTYPE optr_t
 
     static int yylex(YYSTYPE *, instream_t *);
-    static void yyerror (instream_t *, obj_t **, bool *, char const *s);
-    static obj_t *make_abbr(obj_t *car, obj_t *cadr);
+    static void yyerror (instream_t *, obj_t **, char const *s);
     static obj_t *build_vector(obj_t *list);
     static obj_t *build_bytevec(obj_t *list);
+
+    ROOT(OPEN_LIST);
+    ROOT(OPEN_VECTOR);
+    ROOT(OPEN_BYTEVECTOR);
+    ROOT(OPEN_ABBREV);
+    ROOT(CLOSE_SEQ);
+    ROOT(DOT_CLOSE);
+    ROOT(DISCARD);
+
+    static void emit(YYSTYPE p);
 %}
 
 %pure-parser
 %parse-param {instream_t *in}
 %parse-param {obj_t **opp}
-%parse-param {bool *reached_eof}
 %lex-param   {instream_t *in}
 %error-verbose
 
@@ -35,63 +43,131 @@
 
 %%
 
-program  : comment program
-         | datum			{ *opp = $1; YYACCEPT;    }
-         | /* empty */			{ *reached_eof = true;    }
+program  :				comment program
+         |				datum { YYACCEPT; }
+         |				/* empty */
          ;
 
-datum    : simple
-         | compound
+datum    :				EXACT_NUMBER { emit($1); }
+         |				SIMPLE       { emit($1); }
+         | { emit(OPEN_LIST); }		'(' sequence ')'
+         | { emit(OPEN_LIST); }		'[' sequence ']'
+         | { emit(OPEN_VECTOR); }	BEGIN_VECTOR elements ')'
+         | { emit(OPEN_BYTEVECTOR); }	BEGIN_BYTEVECTOR bytes ')'
+         | { emit(OPEN_ABBREV); }	ABBREV { emit($2); } datum
          ;
 
-simple   : EXACT_NUMBER
-         | SIMPLE
+sequence :				datum tail
+         |				comment sequence
+         | { emit(CLOSE_SEQ); }		/* empty */
          ;
 
-compound : '(' sequence ')'		{ $$ = $2;                }
-         | '[' sequence ']'		{ $$ = $2;                }
-         | BEGIN_VECTOR elements ')'	{ $$ = build_vector($2);  }
-         | BEGIN_BYTEVECTOR bytes ')'	{ $$ = build_bytevec($2); }
-         | ABBREV datum			{ $$ = make_abbr($1, $2); }
+tail     :				datum tail
+         |				comment tail
+         | { emit(DOT_CLOSE); }		'.' comments datum comments
+         | { emit(CLOSE_SEQ); }		/* empty */
          ;
 
-sequence : datum tail			{ $$ = make_pair($1, $2); }
-         | comment sequence		{ $$ = $2;                }
-         | /* empty */			{ $$ = NIL; }
+elements :				datum elements
+         |				comment elements
+         | { emit(CLOSE_SEQ); }		/* empty */
          ;
 
-tail     : datum tail			{ $$ = make_pair($1, $2); }
-         | comment tail			{ $$ = $2;                }
-         | '.' comments datum comments
-					{ $$ = $3; }
-         | /* empty */			{ $$ = NIL;               }
+bytes    :                              EXACT_NUMBER { emit($1); } bytes
+         |                              comment bytes
+         | { emit(CLOSE_SEQ); }	  /* empty */
          ;
 
-elements : datum elements		{ $$ = make_pair($1, $2); }
-         | comment elements		{ $$ = $2;                }
-         | /* empty */			{ $$ = NIL;               }
+comments :                              comment comments
+	 |                              /* empty */
          ;
 
-bytes    : EXACT_NUMBER bytes		{ $$ = make_pair($1, $2); }
-         | comment bytes		{ $$ = $2;                }
-         | /* empty */			{ $$ = NIL;               }
-         ;
-
-comments : comment comments
-	 | /* empty */
-         ;
-
-comment  : COMMENT datum
+comment  : { emit(DISCARD); }           COMMENT datum
          ;
 
 %%
 
-static obj_t *make_abbr(obj_t *car, obj_t *cadr)
+ROOT(build_list);
+
+static void emit(obj_t *op)
 {
-    PUSH_ROOT(car);
-    obj_t *list = make_pair(car, make_pair(cadr, NIL));
-    POP_ROOT(car);
-    return list;
+    build_list = make_pair(op, build_list);
+}
+
+static bool build(obj_t **obj_out)
+{
+    static bool first_time = true;
+    if (first_time) {
+	first_time = false;
+	OPEN_LIST       = make_C_procedure(&&open_list,        NIL, NIL);
+	OPEN_VECTOR     = make_C_procedure(&&open_vector,      NIL, NIL);
+	OPEN_BYTEVECTOR = make_C_procedure(&&open_bytevector,  NIL, NIL);
+	OPEN_ABBREV     = make_C_procedure(&&open_abbrev,      NIL, NIL);
+	CLOSE_SEQ       = make_C_procedure(&&close_seq,        NIL, NIL);
+	DOT_CLOSE       = make_C_procedure(&&dot_close,        NIL, NIL);
+	DISCARD         = make_C_procedure(&&discard,          NIL, NIL);
+    }
+    PUSH_ROOT(build_list);
+    AUTO_ROOT(vstack, NIL);
+    AUTO_ROOT(reg, NIL);
+    AUTO_ROOT(tmp, NIL);
+    while (build_list) {
+	obj_t *op = pair_car(build_list);
+	build_list = pair_cdr(build_list);
+	if (is_procedure(op) && procedure_is_C(op))
+	    goto *procedure_body(op);
+
+ /* default: */
+	reg = make_pair(op, reg);
+	continue;
+
+    open_list:
+	reg = make_pair(reg, pair_car(vstack));
+	vstack = pair_cdr(vstack);
+	continue;
+
+    open_vector:
+	reg = build_vector(reg);
+	reg = make_pair(reg, pair_car(vstack));
+	vstack = pair_cdr(vstack);
+	continue;
+
+    open_bytevector:
+	reg = build_bytevec(reg);
+	reg = make_pair(reg, pair_car(vstack));
+	vstack = pair_cdr(vstack);
+	continue;
+
+    open_abbrev:
+	tmp = make_pair(pair_car(pair_cdr(reg)), NIL);
+	tmp = make_pair(pair_car(reg), tmp);
+	reg = make_pair(tmp, pair_cdr(pair_cdr(reg)));
+	continue;
+
+    close_seq:
+	vstack = make_pair(reg, vstack);
+	reg = NIL;
+	continue;
+
+    dot_close:
+	vstack = make_pair(pair_cdr(reg), vstack);
+	reg = pair_car(reg);
+	continue;
+
+    discard:
+	reg = pair_cdr(reg);
+	continue;
+    }
+    assert(vstack == NIL);
+
+    bool success = false;
+    if (reg) {
+	assert(pair_cdr(reg) == NIL);
+	*obj_out = pair_car(reg);
+	success = true;
+    }
+    POP_FUNCTION_ROOTS();
+    return success;
 }
 
 static obj_t *build_vector(obj_t *list)
@@ -457,18 +533,20 @@ static int yylex(YYSTYPE *lvalp, instream_t *in)
 }
 
 static void
-yyerror (instream_t *in, obj_t **opp, bool *reached_eof, char const *s)
+yyerror (instream_t *in, obj_t **opp, char const *s)
 {
     fprintf (stderr, "%s\n", s);
 }
 
 bool read_stream(instream_t *in, obj_t **obj_out)
 {
-    bool reached_eof = false;
+    build_list = NIL;
+    (void) build(obj_out);
     *obj_out = NIL;
-    int r = yyparse(in, obj_out, &reached_eof);
+    build_list = NIL;
+    int r = yyparse(in, obj_out);
     assert(r == 0);
-    return !reached_eof;
+    return build(obj_out);
 }
 
 /* spaces */
@@ -636,3 +714,19 @@ TEST_READ(L"#(a b)",			L"#(a b)");
 TEST_READ(L"#(a (b c))",		L"#(a (b c))");
 TEST_READ(L"#(a #(b c))",		L"#(a #(b c))");
 //TEST_READ(L"#vu8(1 2)",			L"#vu8(1 2)");
+
+/* abbreviations */
+TEST_READ(L"'a",			L"(quote a)");
+TEST_READ(L"'(a b)",			L"(quote (a b))");
+TEST_READ(L"#('a '(a b))",		L"#((quote a) (quote (a b)))");
+TEST_READ(L"('a b c)",			L"((quote a) b c)");
+TEST_READ(L"(a 'b c)",			L"(a (quote b) c)");
+TEST_READ(L"(a b 'c)",			L"(a b (quote c))");
+TEST_READ(L"'''a",                      L"(quote (quote (quote a)))");
+TEST_READ(L"`a",			L"(quasiquote a)");
+TEST_READ(L",a",			L"(unquote a)");
+TEST_READ(L",@a",			L"(unquote-splicing a)");
+TEST_READ(L"#'a",			L"(syntax a)");
+TEST_READ(L"#`a",			L"(quasisyntax a)");
+TEST_READ(L"#,a",			L"(unsyntax a)");
+TEST_READ(L"#,@a",			L"(unsyntax-splicing a)");
