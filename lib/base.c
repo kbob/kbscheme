@@ -625,6 +625,13 @@ ALIAS_NAME(NIL, L"call-with-current-continuation", NIL, L"call/cc");
 
 TEST_EVAL(L"(call-with-current-continuation procedure?)", L"#t");
 
+TEST_EVAL(L"(define plus3 ())\n"
+          L"(+ 3 (call/cc\n"
+          L"      (lambda (exit)\n"
+          L"        (set! plus3 exit)\n"
+          L"        4)))\n"
+          L"(plus3 5)",			L"8");
+
 
 /* 11.16.  Iteration
  *
