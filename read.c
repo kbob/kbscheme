@@ -1,7 +1,6 @@
 #include "read.h"
 
 #include "io.h"
-#include "print.h"			/* XXX */
 #include "roots.h"
 #include "scan.h"
 #include "test.h"
@@ -9,59 +8,56 @@
 
 #include <assert.h>
 #include <limits.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#undef DUMP_TABLES
-
-#if 0
-build nonterminals;
-count terminals including $ and -;
-assert(1 << terminal_count > 1 << terminal_count / 2);
-assert(1 << terminal_count < USHRT_MAX);
-typedef uint16_t terminal_set_t;
-
-terminal_set_t sym_first   [sizeof nonterminals];
-terminal_set_t follow      [sizeof grammar];
-build parse table [sizeof nonterminals * sizeof terminals];
-
 /*
- * Indices.
- * symbols = terminals + {$, epsilon} + nonterminals.
- * sym_first is indexed by [symbols].
- * parse_table is indexed by [nonterminals] X [terminals + {$}].
- * follow is indexed by [nonterminals].
- * terminal_set_t is indexed by [terminals + {$, epsilon}].
+ * This module is the Scheme reader (parser).  It recognizes all of
+ * Scheme's grammar as specified in r6rs, modulo the scanner's
+ * limitations.  This includes datum comments, e.g., "#; datum", which
+ * are the most difficult part.
+ * 
+ * The reader is implemented as a table-driven LL(1) parser.  The
+ * table is generated at run time from a hardcoded grammar.  The
+ * method and terminology closely follow Wikipedia's LL parser page:
  *
- * terminals_size = count of [terminals + {$}].
- * exterminals_size = count of [terminals + {$, epsilon}] = terminals_size + 1.
+ *     http://en.wikipedia.org/wiki/LL_parser
  *
- * symbol indices: terminals come first, then $, then epsilon, then nonterminals.
- * Each terminal (and $ and epsilon) has both a symbol index and a terminal index.
- * Each nonterminal has both a symbol index and a nonterminal index.
- * sym_index maps any symbol char to its symbol index.
- * term_index maps a terminal char, $ or epsilon to its terminal index.
- * nonterm_index maps a nonterminal to its nonterminal index.
- *
- * A terminal's terminal index == its symbol index.
+ * The reader runs in two phases.  The first phase, parse, uses the
+ * stream of input tokens and the parsing table to generate a stack of
+ * actions.  The second phase, build, consumes the actions, in LIFO
+ * order, and builds the resultant Scheme expression data structure.
  */
 
+#define DUMP_TABLES 0			/* If true, print generated tables. */
+
+#if DUMP_TABLES
+  #include <stdio.h>
 #endif
 
 /*
- * Declare an array with the given base type, name, and size.
+ * SIZED_ARRAY: declare a fixed-size static array.  Fail if the
+ * program tries to allocate too many elements, and warn if it doesn't
+ * allocate them all.
  *
- * Also define three functions.
+ * The intention is to let you declare "SIZED_ARRAY(int, foo, 42)" and
+ * fail the unit tests if foo's size changes.
  *
- * alloc_foo(n) allocates the next n available elements and returns its index.
- * next_foo(n) allocates the next n available elements and returns its address.
  *
- * Also defines the variable foo_size which holds the current number
- * of elements allocated.
+ * SIZED_ARRAY(int, foo, 42) declares four names.
+ *
+ *  - foo is the array.  It contains 42 ints.
+ *
+ *  - alloc_foo(n) allocates n elements and returns the index of the
+ *    first.
+ *
+ *  - next_foo(n) allocates n elements and returns a pointer to the
+ *    first.
+ *
+ *  - foo_size is the number of elements currently allocated.
  */
 
-#ifdef NDEBUG
+#if NDEBUG
   #define IF_ASSERTIONS(x)
 #else
   #define IF_ASSERTIONS(x) x
@@ -98,11 +94,41 @@ build parse table [sizeof nonterminals * sizeof terminals];
 	}								\
     )
 
+/*
+ * A stack is implemented as a linked list.
+ */
+
+static inline bool stack_is_empty(const obj_t *stack)
+{
+    return stack == NIL;
+}
+
+static inline void stack_push(obj_t **stack, obj_t *elem)
+{
+    *stack = make_pair(elem, *stack);
+}
+
+static inline obj_t *stack_pop(obj_t **stack)
+{
+    obj_t *elem = pair_car(*stack);
+    *stack = pair_cdr(*stack);
+    return elem;
+}
+
+static inline obj_t *stack_top(obj_t *stack)
+{
+    return pair_car(stack);
+}
+
 typedef unsigned char uint8_t;
 #define UINT8_MAX UCHAR_MAX
 typedef unsigned short uint16_t;
 #define UINT16_MAX USHRT_MAX
 
+/*
+ * Special actions are implemented as anonymous pairs.
+ * They are initialized by build() when it's called with init=true.
+ */
 static bool build(bool init, obj_t *actions, obj_t **obj_out);
 
 ROOT(ACTION_BEGIN_LIST);
@@ -113,10 +139,44 @@ ROOT(ACTION_DOT_END);
 ROOT(ACTION_ABBREV);
 ROOT_CONSTRUCTOR(ACTION_DISCARD)
 {
-    build(true, NIL, NULL);		/* Initialize action roots. */
+    build(true, NIL, NULL);		/* Initialize all action roots. */
     return ACTION_DISCARD;
 }
 
+/*
+ * Let's define some character classes and indices.
+ *
+ * Terminals are the symbols that are returned by the scanner.  They
+ * correspond to tokens, including the special token, TOK_EOF.
+ *
+ * Extended terminals, or exterminals, are the set of terminals plus
+ * the empty string symbol, '-'.  (It's a lowercase epsilon in the
+ * literature, but we're using ASCII here.)
+ *
+ * Nonterminals are the symbols that appear on the left side of
+ * grammar productions.  They do not appear in the input stream.
+ *
+ * Each class has its own index type for indexing the various parser
+ * generator tables.
+ *
+ * Each symbol has symbol index.  All symbols, whether they're
+ * terminals, nonterminals, or epsilon, have a symbol index.
+ *
+ * Each exterminal has a terminal index.  An exterminal's terminal
+ * index is equal to its symbol index.
+ *
+ * Each nonterminal has a nonterminal index.  A nonterminal index
+ * is NOT equal to a symbol index.
+ *
+ * Another way to say that is that the symbols are ordered with the
+ * terminals coming first, then epsilon, then the nonterminals last.
+ */
+
+
+/*
+ * A character type is one of (CT_TERMINAL, CT_NONTERMINAL, CT_NONE)
+ * or'ed with a symbol index.
+ */
 typedef enum char_type {
     CT_NONE = 0,
     CT_TERMINAL = 0x40,
@@ -127,137 +187,74 @@ typedef enum char_type {
 
 typedef uint16_t exterminal_set_t;
 
+/*
+ * The language grammar is made up of productions.  Each production
+ * has a nonterminal on the left-hand side and a sequence of zero or
+ * more symbols on the right-hand side.  Some productions also have
+ * actions associated - something the parser should do when it begins
+ * to match the production.
+ *
+ * For example, the production, "E ::= E + T" would be represented by
+ * the production_t initializer { 'E', 'E+T', (some action) }.
+ */
 typedef struct production {
     char        p_lhs;
     const char *p_rhs;
     obj_t     **p_action;
 } production_t;
 
+/*
+ * A token_pair pairs a token_type_t, as returned by the scanner,
+ * with a terminal symbol, as used in the grammar.
+ */
 typedef struct token_pair {
     char         tm_term;
     token_type_t tm_ttype;
 } token_pair_t;
 
-#if 0
-/* This is the original YACC grammar. */
-
-%%
-
-program  :				comment program
-         |				datum { YYACCEPT; }
-         |				/* empty */
-         ;
-
-datum    :				EXACT_NUMBER { emit($1); }
-         |				SIMPLE       { emit($1); }
-         | { emit(OPEN_LIST); }		'(' sequence ')'
-         | { emit(OPEN_LIST); }		'[' sequence ']'
-         | { emit(OPEN_VECTOR); }	BEGIN_VECTOR elements ')'
-         | { emit(OPEN_BYTEVECTOR); }	BEGIN_BYTEVECTOR bytes ')'
-         | { emit(OPEN_ABBREV); }	ABBREV { emit($2); } datum
-         ;
-
-sequence :				datum tail
-         |				comment sequence
-         | { emit(CLOSE_SEQ); }		/* empty */
-         ;
-
-tail     :				datum tail
-         |				comment tail
-         | { emit(DOT_CLOSE); }		'.' comments datum comments
-         | { emit(CLOSE_SEQ); }		/* empty */
-         ;
-
-elements :				datum elements
-         |				comment elements
-         | { emit(CLOSE_SEQ); }		/* empty */
-         ;
-
-bytes    :                              EXACT_NUMBER { emit($1); } bytes
-         |                              comment bytes
-         | { emit(CLOSE_SEQ); }	  /* empty */
-         ;
-
-comments :                              comment comments
-	 |                              /* empty */
-         ;
-
-comment  : { emit(DISCARD); }           COMMENT datum
-         ;
-
-%%
-#endif
-
 /*
- * The following initializer declares the same grammar as the YACC
- * code above with some loss of readability.
- *
- * Here's the substitution table.
- *
- *  Terminals
- *	( = begin list
- *	) = end
- *	[ = alt begin list
- *	] = alt end list
- *	. = period
- *	V = begin vector
- *	B = begin bytevector
- *	N = exact number
- *	S = simple datum (e.g., symbol, character, string, inexact number)
- *	A = abbrev (e.g., quote, quasisyntax)
- *	; = comment, (#;)
- *
- *  Nonterminals
- *	p = program
- *	d = datum
- *	i = sequence (aka list interior)
- *      j = tail (list interior after 1st element)
- *	e = elements (vector interior)
- *	b = bytes (bytevector interior)
- *	x = comment
- *	z = comments
+ * The grammar is a set of productions and associated actions.
  */
-
 static const production_t grammar[] = {
-    { 'p', "xp",                         },
-    { 'p', "d",                          },
-    { 'p', "",                           },
+    { 'p', "xp",                         }, /* program ::= comment program */
+    { 'p', "d",                          }, /* program ::= datum */
+    { 'p', "",                           }, /* program ::= (empty) */
 
-    { 'd', "N",                          },
-    { 'd', "S",                          },
-    { 'd', "(i)",  &ACTION_BEGIN_LIST    },
-    { 'd', "[i]",  &ACTION_BEGIN_LIST    },
-    { 'd', "Ve)",  &ACTION_BEGIN_VECTOR  },
-    { 'd', "Bb)",  &ACTION_BEGIN_BYTEVEC },
-    { 'd', "Ad",   &ACTION_ABBREV        },
+    { 'd', "N",                          }, /* datum ::= EXACT_NUMBER */
+    { 'd', "S",                          }, /* datum ::= SIMPLE */
+    { 'd', "(i)",  &ACTION_BEGIN_LIST    }, /* datum ::= ( interior ) */
+    { 'd', "[i]",  &ACTION_BEGIN_LIST    }, /* datum ::= [ interior ] */
+    { 'd', "Ve)",  &ACTION_BEGIN_VECTOR  }, /* datum ::= #( elements ) */
+    { 'd', "Bb)",  &ACTION_BEGIN_BYTEVEC }, /* datum ::= #vu8( bytes ) */
+    { 'd', "Ad",   &ACTION_ABBREV        }, /* datum ::= ABBREV datum */
 
-    { 'i', "dj",                         },
-    { 'i', "xi",                         },
-    { 'i', "",     &ACTION_END_SEQUENCE  },
+    { 'i', "dj",                         }, /* interior ::= datum tail */
+    { 'i', "xi",                         }, /* interior ::= comment interior */
+    { 'i', "",     &ACTION_END_SEQUENCE  }, /* interior ::= (empty) */
 
-    { 'j', "dj",                         },
-    { 'j', "xj",                         },
-    { 'j', ".ydy", &ACTION_DOT_END       },
-    { 'j', "",     &ACTION_END_SEQUENCE  },
+    { 'j', "dj",                         }, /* tail ::= datum tail */
+    { 'j', "xj",                         }, /* tail ::= comment tail */
+    { 'j', ".ydy", &ACTION_DOT_END  }, /* tail ::= . comments datum comments */
+    { 'j', "",     &ACTION_END_SEQUENCE  }, /* tail ::= (empty) */
 
-    { 'e', "de",                         },
-    { 'e', "xe",                         },
-    { 'e', "",     &ACTION_END_SEQUENCE  },
+    { 'e', "de",                         }, /* elements ::= datum elements */
+    { 'e', "xe",                         }, /* elements ::= comment elements */
+    { 'e', "",     &ACTION_END_SEQUENCE  }, /* elements ::= (empty) */
 
-    { 'b', "Nb",                         },
-    { 'b', "xb",                         },
-    { 'b', "",     &ACTION_END_SEQUENCE  },
+    { 'b', "Nb",                         }, /* bytes ::= EXACT_NUMBER bytes */
+    { 'b', "xb",                         }, /* bytes ::= comment bytes */
+    { 'b', "",     &ACTION_END_SEQUENCE  }, /* bytes ::= (empty) */
 
-    { 'x', ";d",   &ACTION_DISCARD       },
+    { 'x', ";d",   &ACTION_DISCARD       }, /* comment ::= #; datum */
 
-    { 'y', "xy",                         },
-    { 'y', "",                           },
+    { 'y', "xy",                         }, /* comments ::= comment comments */
+    { 'y', "",                           }, /* comments ::= (empty) */
 };
 static const size_t grammar_size = sizeof grammar / sizeof *grammar;
 
 /*
- * token_pairs maps between the grammar's token symbols
- * and the token_type_t values that yylex() returns.
+ * token_pairs map between the grammar's token symbols and the
+ * token_type_t values that the scanner returns.
  */
 static token_pair_t token_pairs[] = {
     { 'N', TOK_EXACT_NUMBER },
@@ -275,16 +272,39 @@ static token_pair_t token_pairs[] = {
 };
 static size_t token_pairs_size = sizeof token_pairs / sizeof *token_pairs;
 
+/*
+ * Some parsing table entries are empty.  They contain the NO_RULE value.
+ */
 static const uint8_t NO_RULE = UINT8_MAX;
 
-static char start_symbol;
+/*
+ * For each ASCII (not Unicode) character, charmap classifies
+ * the character as a terminal, nonterminal, or neither.
+ * For symbols, charmap also has the char's symbol index.
+ * See char_type_t above.
+ */
 static uint8_t charmap[256];
 static const size_t charmap_size = sizeof charmap / sizeof *charmap;
-static size_t terminals_size;
+
+static inline bool char_is_nonterminal(char c)
+{
+    return (charmap[(uint8_t)c] & CTMASK) == CT_NONTERMINAL;
+}
+
+static char start_symbol;
 static size_t epsilon;
+static size_t terminals_size;
 static size_t exterminals_size;
 static size_t nonterminals_size;
 
+/*
+ * Declare the parser generator's tables statically.
+ *
+ * symbols maps a symbol index to its ASCII representation.
+ * sym_first maps a symbol index to the set of exterminals in FIRST(s).
+ * follow maps a nonterminal index to the set of exterminals in FOLLOW(w).
+ * parsing_table maps a (terminal, nonterminal) pair to a rule index.
+ */
 #define NT   12				/* number of terminal symbols */
 #define NXT (NT + 1)			/* number of terminal symbols */
 #define NN    8				/* number of nonterminal symbols */
@@ -296,15 +316,16 @@ SIZED_ARRAY(exterminal_set_t, sym_first,         NS);
 SIZED_ARRAY(exterminal_set_t, follow,            NN);
 SIZED_ARRAY(uint8_t,          parsing_table,     NPE);
 
-static inline bool char_is_nonterminal(char c)
-{
-    return (charmap[(uint8_t)c] & CTMASK) == CT_NONTERMINAL;
-}
-
 /*
  * Initialize charmap and symbols.
  * symbols maps symbol indices to ASCII chars (not Unicode).
  * charmap maps unsigned chars to symbol indices.
+ *
+ * Also initialize start_symbol, epsilon, terminals_size,
+ * exterminals_size, and nonterminals_size.  start_symbol is the
+ * symbol where parsing starts (the symbol for the whole program).
+ * epsilon is the symbol index of epsilon, the symbol for the empty
+ * string.  *_size is the number of symbols in each set.
  */
 
 static void init_symbols(void)
@@ -345,8 +366,8 @@ static void init_symbols(void)
     nonterminals_size = symbols_size - exterminals_size;
     assert(symbols_size < CTMASK);
 
-#ifdef DUMP_TABLES
-    printf("start_symbol = %c\n", start_symbol);
+#if DUMP_TABLES
+    printf("start_symbol = '%c'\n", start_symbol);
     printf("terminals_size = %d\n", terminals_size);
     printf("exterminals_size = %d\n", exterminals_size);
     printf("nonterminals_size = %d\n", nonterminals_size);
@@ -365,6 +386,7 @@ static void init_symbols(void)
 #endif
 }
 
+/* map a character to its symbol index. */
 static inline size_t sym_index(char sym)
 {
     uint8_t cm = charmap[(size_t)sym];
@@ -372,6 +394,7 @@ static inline size_t sym_index(char sym)
     return cm & SYMMASK;
 }
 
+/* map a character to its terminal index. */
 static inline size_t term_index(char term)
 {
     uint8_t cm = charmap[(size_t)term];
@@ -379,6 +402,7 @@ static inline size_t term_index(char term)
     return cm & SYMMASK;
 }
 
+/* map a character to its nonterminal index. */
 static inline size_t nonterm_index(char nonterm)
 {
     uint8_t cm = charmap[(size_t)nonterm];
@@ -386,12 +410,14 @@ static inline size_t nonterm_index(char nonterm)
     return (cm & SYMMASK) - exterminals_size;
 }
 
+/* map a terminal index to its representation character. */
 static inline char terminal(size_t term_index)
 {
     assert(term_index < terminals_size);
     return symbols[term_index];
 }
 
+/* map a nonterminal index to its representation character. */
 static inline char nonterminal(size_t nonterm_index)
 {
     assert(nonterm_index < nonterminals_size);
@@ -405,9 +431,10 @@ static inline char nonterminal(size_t nonterm_index)
  *
  * A terminal's first-set just contains the terminal.
  *
- * A nonterminal's first-set is constructed by repeatedly
- * applying productions to the symbol, finding all terminals
- * that can be reached.
+ * A nonterminal's first-set is constructed by repeatedly applying
+ * productions to the symbol, finding all terminals that can be
+ * reached.  See the Wikipedia article referenced above for the
+ * details.
  */
 
 static void init_first(void)
@@ -442,7 +469,7 @@ static void init_first(void)
 	}
     }
 
-#ifdef DUMP_TABLES
+#if DUMP_TABLES
     printf("sym_first\n");
     for (i = 0; i < symbols_size; i++) {
 	printf("  %c:", symbols[i]);
@@ -455,11 +482,10 @@ static void init_first(void)
     printf("\n");
 
     printf("first\n");
-    exterminal_set_t first_(const char *w);
     for (i = 0; i < grammar_size; i++) {
 	const production_t *pp = &grammar[i];
 	printf("   %c=%-5s:", pp->p_lhs, pp->p_rhs);
-	exterminal_set_t f = first_(pp->p_rhs);
+	exterminal_set_t f = first(pp->p_rhs);
 	for (j = 0; j < exterminals_size; j++)
 	    if (f & 1 << j)
 		printf(" %c", symbols[j]);
@@ -470,6 +496,7 @@ static void init_first(void)
 #endif
 }
 
+/* first(omega) returns the first-set of the symbol sequence omega. */
 static exterminal_set_t first(const char *w)
 {
     const char *p;
@@ -485,11 +512,13 @@ static exterminal_set_t first(const char *w)
     return f;
 }
 
-exterminal_set_t first_(const char *w)
-{
-    return first(w);
-}
-
+/*
+ * Initialize follow.  follow maps each nonterminal to its follow-set.
+ *
+ * A symbol's follow-set is the set of terminals (including $,
+ * excluding epsilon) that could follow the expansion of the
+ * nonterminal.  See Wikipedia again.
+ */
 static void init_follow(void)
 {
     int i, j;
@@ -528,7 +557,7 @@ static void init_follow(void)
 	}
     }
 
-#ifdef DUMP_TABLES
+#if DUMP_TABLES
     printf("follow\n");
     for (i = 0; i < nonterminals_size; i++) {
 	printf("   %c:", nonterminal(i));
@@ -541,6 +570,10 @@ static void init_follow(void)
 #endif
 }
 
+/*
+ * Calculate the parsing table entry for a (nonterminal, terminal) pair.
+ * See Wikipedia again.
+ */
 static int pt_entry(char A, char a)
 {
     int found = NO_RULE;
@@ -572,12 +605,12 @@ static uint8_t parsing_table_entry(size_t i, size_t j)
     return parsing_table[i * terminals_size + j];
 }
 
-/* parsing table maps nonterminal X terminal -> nonterminal */
-
 /*
- * I have a token type.  I need a terminal index.
+ * Construct the parsing table.  The parsing table is logically a 2D
+ * array, indexed by a nonterminal index and a terminal index.
+ * The [N, T] entry contains a rule index (index into grammar[]).
+ * See Wikipedia again.
  */
-
 static void init_parsing_table(void)
 {
     size_t i, j;
@@ -590,7 +623,7 @@ static void init_parsing_table(void)
 	}
     }
     
-#ifdef DUMP_TABLES
+#if DUMP_TABLES
     printf("parsing table\n");
     printf("    ");
     for (j = 0; j < TOKEN_TYPE_COUNT; j++)
@@ -616,50 +649,62 @@ static void init_parsing_table(void)
 #endif    
 }
 
+__attribute__((constructor))
+static void init_parser(void)
+{
+    init_symbols();
+    init_first();
+    init_follow();
+    init_parsing_table();
+}
+
+/* Initialization code is above this point.  Code below runs at parse time. */
+
 static uint8_t get_rule(char symbol, size_t term)
 {
     uint8_t rule = NO_RULE;
     if (char_is_nonterminal(symbol))
 	rule = parsing_table_entry(nonterm_index(symbol), term);
-    //printf("get_rule(%c, %c) => %d\n", symbol, terminal(term), rule);
     return rule;
 }
+
+/*
+ * Parse the input stream and return an action stack.
+ * See Wikipedia again.
+ */
 static obj_t *parse(instream_t *in)
 {
     AUTO_ROOT(actions, NIL);
     AUTO_ROOT(yylval, NIL);
     AUTO_ROOT(tmp, make_fixnum(TOK_EOF));
-    AUTO_ROOT(stack, make_pair(tmp, NIL));
+    AUTO_ROOT(stack, NIL);
+    stack_push(&stack, tmp);
     tmp = make_fixnum(sym_index(start_symbol));
-    stack = make_pair(tmp, stack);
+    stack_push(&stack, tmp);
     int tok = yylex(&yylval, in);
     while (true) {
-	int i = fixnum_value(pair_car(stack));
-	//printf("i = %d = %c\n", i, symbols[i]);
-	assert(0 <= i && i < symbols_size);
-	uint8_t rule = get_rule(symbols[i], tok);
+	int sym = fixnum_value(stack_pop(&stack));
+	assert(0 <= sym && sym < symbols_size);
+	uint8_t rule = get_rule(symbols[sym], tok);
 	if (rule != NO_RULE) {
 	    const production_t *pp = &grammar[rule];
-	    stack = pair_cdr(stack);
 	    int j;
 	    for (j = strlen(pp->p_rhs); --j >= 0; ) {
 		tmp = make_fixnum(sym_index(pp->p_rhs[j]));
-		stack = make_pair(tmp, stack);
+		stack_push(&stack, tmp);
 	    }
 	    if (pp->p_action)
-		actions = make_pair(*pp->p_action, actions);
+		stack_push(&actions, *pp->p_action);
 	    
 	} else {
-	    //printf("no rule, stack = "); print_stdout(stack);
-	    int sym = fixnum_value(pair_car(stack));
-	    stack = pair_cdr(stack);
-	    //printf("sym = %d = %c\n", sym, symbols[sym]);
 	    if (sym == TOK_EOF)
 		break;
+	    /* XXX raise an exception here. */
 	    assert(sym == tok && "syntax error");
 	    if (yylval)
-		actions = make_pair(yylval, actions);
-	    if (actions && !pair_cdr(stack))
+		stack_push(&actions, yylval);
+	    if (!stack_is_empty(actions) &&
+		fixnum_value(stack_top(stack)) == TOK_EOF)
 		break;
 	    yylval = NIL;
 	    tok = yylex(&yylval, in);
@@ -669,6 +714,7 @@ static obj_t *parse(instream_t *in)
     return actions;
 }
 
+/* Build a vector from a list.  XXX move this to obj_vector.c. */
 static obj_t *build_vector(obj_t *list)
 {
     PUSH_ROOT(list);
@@ -686,11 +732,13 @@ static obj_t *build_vector(obj_t *list)
     return vec;
 }
 
+/* Build a vector from a list.  XXX move this to obj_bytevec.c. */
 static obj_t *build_bytevec(obj_t *list)
 {
     assert(false && "XXX implement bytevectors");
 }
 
+/* Build a Scheme expression from an action stack. */
 static bool build(bool init, obj_t *actions, obj_t **obj_out)
 {
     if (init) {
@@ -707,9 +755,8 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
     AUTO_ROOT(vstack, NIL);
     AUTO_ROOT(reg, NIL);
     AUTO_ROOT(tmp, NIL);
-    while (actions) {
-	obj_t *op = pair_car(actions);
-	actions = pair_cdr(actions);
+    while (!stack_is_empty(actions)) {
+	obj_t *op = stack_pop(&actions);
 	if (is_procedure(op) && procedure_is_C(op))
 	    goto *procedure_body(op);
 
@@ -718,20 +765,17 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 	continue;
 
     begin_list:
-	reg = make_pair(reg, pair_car(vstack));
-	vstack = pair_cdr(vstack);
+	reg = make_pair(reg, stack_pop(&vstack));
 	continue;
 
     begin_vector:
 	reg = build_vector(reg);
-	reg = make_pair(reg, pair_car(vstack));
-	vstack = pair_cdr(vstack);
+	reg = make_pair(reg, stack_pop(&vstack));
 	continue;
 
     begin_bytevector:
 	reg = build_bytevec(reg);
-	reg = make_pair(reg, pair_car(vstack));
-	vstack = pair_cdr(vstack);
+	reg = make_pair(reg, stack_pop(&vstack));
 	continue;
 
     abbrev:
@@ -741,12 +785,12 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 	continue;
 
     end_sequence:
-	vstack = make_pair(reg, vstack);
+	stack_push(&vstack, reg);
 	reg = NIL;
 	continue;
 
     dot_end:
-	vstack = make_pair(pair_cdr(reg), vstack);
+	stack_push(&vstack, pair_cdr(reg));
 	reg = pair_car(reg);
 	continue;
 
@@ -754,7 +798,7 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 	reg = pair_cdr(reg);
 	continue;
     }
-    assert(vstack == NIL);
+    assert(stack_is_empty(vstack));
 
     bool success = false;
     if (reg) {
@@ -769,15 +813,6 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 bool read_stream(instream_t *in, obj_t **obj_out)
 {
     return build(false, parse(in), obj_out);
-}
-
-__attribute__((constructor))
-static void init_parser(void)
-{
-    init_symbols();
-    init_first();
-    init_follow();
-    init_parsing_table();
 }
 
 /* lists */
@@ -814,6 +849,7 @@ TEST_READ(L"#,@a",			L"(unsyntax-splicing a)");
 TEST_READ(L"#; asdf ghjk",		L"ghjk");
 TEST_READ(L"(a#;()b)",                  L"(a b)");
 TEST_READ(L"(a#;(comment)b)",           L"(a b)");
+TEST_READ(L"(a#; \t(comment) b)",       L"(a b)");
 TEST_READ(L"(a#;(\n)b)",                L"(a b)");
 TEST_READ(L"(a#;\t()b)",                L"(a b)");
 TEST_READ(L"(a#;((c)(d))b)",            L"(a b)");
@@ -827,6 +863,7 @@ TEST_READ(L"(a #;c#;c . #;c b #;c)",	L"(a . b)");
 TEST_READ(L"(a . #;c#;c b#;c#;c)",	L"(a . b)");
 TEST_READ(L"(a#;c . #;c#;c b#;c#;c)",	L"(a . b)");
 TEST_READ(L"(a . #;()#;() b#;()#;())",	L"(a . b)");
+TEST_READ(L"(a #;(b #;(c d) e) f)",	L"(a f)");
 TEST_READ(L"(a#!r6rs b)",		L"(a b)");
 TEST_READ(L"#!r6rs(a b)",		L"(a b)");
 TEST_READ(L"(#!r6rs a b)",		L"(a b)");
