@@ -65,7 +65,7 @@ libs:	$(LIBS)
 
 tests:	$(TESTS)
 
-junk := *~ *.o *.so *.a .*.d a.out core
+junk := *~ *.o *.so *.a .*.d a.out core TAGS
 clean:
 	rm -f $(patsubst ./%,%,$(PROGRAMS))
 	rm -f $(patsubst ./%,%,$(LIBS))
