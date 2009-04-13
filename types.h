@@ -10,6 +10,7 @@
 #include "obj_pair.h"
 #include "obj_procedure.h"
 #include "obj_vector.h"
+#include "obj_bytevector.h"
 
 /* vector? bytearray? */
 

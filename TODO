@@ -35,7 +35,7 @@ DONE	full mem model
  DONE	    must remove value from frame - not thread safe.
  DONE	    drop mem_init_op and mem_free_op.
  DONE	    Implement vectors.
-	    Implement bytevectors.
+ DONE	    Implement bytevectors.
 	    Implement other numeric types.
 
 	GC
@@ -47,11 +47,11 @@ DONE	full mem model
 	full reader
  DONE	    Write test suite.
  DONE	    Rename yyread to a better name.
-	    Protect against gc.
+ DONE	    Protect against gc.
 	    Recognize characters.
 	    Recognize strings.
  DONE	    Recognize vectors.
-	    Recognize bytevectors.
+ DONE	    Recognize bytevectors.
  DONE	    Verify "#!r6rs".
  DONE	    Accept "#!/path/to/scheme".
  DONE	    Recognize nested #| ... |# comments.
@@ -59,7 +59,7 @@ DONE	full mem model
  DONE 	    Recognize peculiar identifiers.
  DONE	    Recognize hex escapes in identifiers.
 	    Recognize all numbers.	
-	    Rewrite for readability.
+ DONE	    Rewrite for readability.
 	    
 
 DONE	decentralize unit testing.

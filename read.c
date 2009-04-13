@@ -735,7 +735,19 @@ static obj_t *build_vector(obj_t *list)
 /* Build a vector from a list.  XXX move this to obj_bytevec.c. */
 static obj_t *build_bytevec(obj_t *list)
 {
-    assert(false && "XXX implement bytevectors");
+    PUSH_ROOT(list);
+    obj_t *p = list;
+    size_t i, size = 0;
+    do
+	size++;
+    while ((p = pair_cdr(p)));
+    AUTO_ROOT(bvec, make_bytevector(size, 0));
+    for (i = 0, p = list; i < size; i++) {
+	bytevector_set(bvec, i, fixnum_value(pair_car(p)));
+	p = pair_cdr(p);
+    }
+    POP_FUNCTION_ROOTS();
+    return bvec;
 }
 
 /* Build a Scheme expression from an action stack. */
@@ -827,7 +839,7 @@ TEST_READ(L"#(a (b c))",		L"#(a (b c))");
 TEST_READ(L"#(a #(b c))",		L"#(a #(b c))");
 
 /* bytevectors */
-//TEST_READ(L"#vu8(1 2)",			L"#vu8(1 2)");
+TEST_READ(L"#vu8(1 2)",			L"#vu8(1 2)");
 
 /* abbreviations */
 TEST_READ(L"'a",			L"(quote a)");

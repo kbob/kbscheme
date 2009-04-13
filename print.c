@@ -66,6 +66,19 @@ static void print_vector(obj_t *obj, outstream_t *out)
     outstream_printf(out, L")");
 }
 
+static void print_bytevector(obj_t *obj, outstream_t *out)
+{
+    size_t i, size = bytevector_len(obj);
+    const wchar_t *sep = L"";
+    outstream_printf(out, L"#vu8(");
+    for (i = 0; i < size; i++) {
+	outstream_printf(out, sep);
+	outstream_printf(out, L"%d", bytevector_get(obj, i));
+	sep = L" ";
+    }    
+    outstream_printf(out, L")");
+}
+
 static void print_form(obj_t *obj, outstream_t *out)
 {
     if (is_null(obj) || is_pair(obj)) {
@@ -88,6 +101,8 @@ static void print_form(obj_t *obj, outstream_t *out)
 	print_binding(obj, out);
     } else if (is_vector(obj)) {
 	print_vector(obj, out);
+    } else if (is_bytevector(obj)) {
+	print_bytevector(obj, out);
     } else {
 	outstream_printf(out, L"#<%ls-%p>", object_type_name(obj), obj);
     }
