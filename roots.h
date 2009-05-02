@@ -1,8 +1,8 @@
 #ifndef ROOTS_INCLUDED
 #define ROOTS_INCLUDED
 
-#include "concat.h"
 #include "obj.h"
+#include "uniq.h"
 
 #define ROOT             STATIC_ROOT
 #define ROOT_CONSTRUCTOR STATIC_ROOT_CONSTRUCTOR
@@ -22,14 +22,14 @@
     PUSH_ROOT(name);
 
 #define PUSH_ROOT(name)							\
-    root_descriptor_t GEN_IDENT(auto_root_) = {				\
+    root_descriptor_t UNIQ_IDENT(auto_root_) = {			\
 	L ## #name,							\
 	__func__,							\
 	&name,								\
 	NULL,								\
 	NULL								\
     };									\
-    push_root(&GEN_IDENT(auto_root_));
+    push_root(&UNIQ_IDENT(auto_root_));
 
 #define POP_ROOT(name) \
     pop_root(L ## #name)
@@ -58,8 +58,6 @@
         };								\
         record_static_root(&desc);					\
     }
-
-#define GEN_IDENT(prefix) CAT_(prefix, __LINE__)
 
 typedef struct root_descriptor root_descriptor_t;
 typedef obj_t *root_constructor_t(void);

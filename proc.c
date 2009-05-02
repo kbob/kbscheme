@@ -55,9 +55,7 @@ void register_procs(void)
 {
     while (proc_descs) {
 	proc_descriptor_t *desc = proc_descs;
-	lib_t *library = desc->pd_library;
-	if (!library)
-	    library = r6rs_base_library();
+	lib_t *library = find_library(desc->pd_libdesc->ld_namespec);
 	(*desc->pd_binder)(desc->pd_proc, library, desc->pd_name);
 	proc_descs = desc->pd_next;
     }
@@ -65,15 +63,11 @@ void register_procs(void)
     AUTO_ROOT(new_env, NIL);
     while (alias_descs) {
 	alias_descriptor_t *desc = alias_descs;
-	lib_t *old_library = desc->ad_old_library;
-	if (!old_library)
-	    old_library = r6rs_base_library();
+	lib_t *old_library = find_library(desc->ad_old_libdesc->ld_namespec);
 	env_t *old_env = library_env(old_library);
 	obj_t *binding = env_lookup(old_env, make_symbol(desc->ad_old_name));
 	value = binding_value(binding);
-	lib_t *new_library = desc->ad_new_library;
-	if (!new_library)
-	    new_library = r6rs_base_library();
+	lib_t *new_library = find_library(desc->ad_new_libdesc->ld_namespec);
 	new_env = library_env(new_library);
 	obj_t *new_symbol = make_symbol(desc->ad_new_name);
 	env_bind(new_env, new_symbol, BINDING_IMMUTABLE, value);

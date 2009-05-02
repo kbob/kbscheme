@@ -1,11 +1,11 @@
 #ifndef PROC_INCLUDED
 #define PROC_INCLUDED
 
-#include "concat.h"
 #include "lib.h"
 #include "obj_frame.h"
 #include "roots.h"
 #include "types.h"
+#include "uniq.h"
 
 /*
  * Macros to define procedures, special forms, and blocks.
@@ -122,44 +122,44 @@
 #define DECLARE_BLOCK       DECLARE_STATIC_BLOCK
 
 #define DEFINE_EXTERN_PROC(C_name, scheme_name)				\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
 			 extern,					\
 			 C_name,					\
 			 scheme_name,					\
 			 bind_proc)
 
 #define DEFINE_STATIC_PROC(C_name, scheme_name)				\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
 			 static,					\
 			 C_name,					\
 			 scheme_name,					\
 			 bind_proc)
 
 #define DEFINE_ANONYMOUS_PROC(scheme_name)				\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
                          static,					\
-                         CAT_(anonymous_, __LINE__),			\
+                         UNIQ_IDENT(anonymous_),			\
                          scheme_name,					\
 			 bind_proc)
 
 #define DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name)			\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
 			 extern,					\
 			 C_name,					\
 			 scheme_name,					\
 			 bind_special_form)
 
 #define DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name)			\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
 		         static,					\
 			 C_name,					\
 			 scheme_name,					\
 			 bind_special_form)
 
 #define DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name)			\
-    DEFINE_GENERAL_PROC_(NIL,						\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
                          static,					\
-                         CAT_(anonymous_, __LINE__),			\
+                         UNIQ_IDENT(anonymous_special_),		\
                          scheme_name,					\
 			 bind_special_form)
 
@@ -173,7 +173,7 @@
 
 #define ALIAS_NAME(old_library, old_name, new_library, new_name)	\
     __attribute__((constructor))					\
-    static void CAT_(alias_proc_, __LINE__)(void)			\
+    static void UNIQ_IDENT(alias_proc_)(void)				\
     {									\
 	static alias_descriptor_t desc = {				\
 	    old_library,						\
@@ -192,7 +192,7 @@
 			     binder)					\
     DECLARE_PROC_(storage_class, C_name);				\
     __attribute__((constructor))					\
-    static void CAT_(bind_proc_, __LINE__)(void)			\
+    static void UNIQ_IDENT(bind_proc_)(void)				\
     {									\
 	static proc_descriptor_t desc = {				\
 	    library,							\
@@ -292,19 +292,19 @@ typedef struct proc_descriptor proc_descriptor_t;
 typedef struct alias_descriptor alias_descriptor_t;
 
 struct proc_descriptor {
-    lib_t              *pd_library;
-    C_procedure_t      *pd_proc;
-    const wchar_t      *pd_name;
-    binder_t           *pd_binder;
-    proc_descriptor_t  *pd_next;
+    library_descriptor_t *pd_libdesc;
+    C_procedure_t        *pd_proc;
+    const wchar_t        *pd_name;
+    binder_t             *pd_binder;
+    proc_descriptor_t    *pd_next;
 };
 
 struct alias_descriptor {
-    lib_t              *ad_old_library;
-    const wchar_t      *ad_old_name;
-    lib_t              *ad_new_library;
-    const wchar_t      *ad_new_name;
-    alias_descriptor_t *ad_next;
+    library_descriptor_t *ad_old_libdesc;
+    const wchar_t        *ad_old_name;
+    library_descriptor_t *ad_new_libdesc;
+    const wchar_t        *ad_new_name;
+    alias_descriptor_t   *ad_next;
 };
 
 extern obj_t *FRAME;

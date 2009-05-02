@@ -61,7 +61,7 @@ static obj_t *eval_symbol(void)
 	if (block == NULL)
 	    return L"NULL";
 	/* XXX Move this code into env.c. */
-	obj_t *env = library_env(r6rs_base_library());
+	obj_t *env = library_env(r6rs_library());
 	obj_t *frame = pair_car(env);
 	while (frame) {
 	    obj_t *binding = pair_car(frame);
@@ -73,7 +73,6 @@ static obj_t *eval_symbol(void)
 	    }
 	    frame = pair_cdr(frame);
 	}
-
 	return L"<some-proc>";
     }
 
@@ -86,17 +85,18 @@ static obj_t *eval_symbol(void)
 	    C_procedure_t *cont = frame_get_continuation(fp);
 	    obj_t *subj = frame_get_subject(fp);
 	    printf("%s%ls", sep, block_name(cont));
-	    if (cont || subj) {
-		printf("[");
-		princ_stdout(subj);
-		printf("]");
-	    }
+	    if (cont || subj)
+		printf("[%O]", subj);
 	} 
 	printf("\n");
     }
 
     static void print_env(obj_t *env)
     {
+	if (!is_pair(env)) {
+	    printf("%O\n", env);
+	    return;
+	}
 	const char *sep = "";
 	while (env) {
 	    printf("%s", sep);
@@ -106,10 +106,7 @@ static obj_t *eval_symbol(void)
 		sep = "";
 		while (f) {
 		    obj_t *binding = pair_car(f);
-		    printf("%s", sep);
-		    princ_stdout(binding_name(binding));
-		    printf(": ");
-		    princ_stdout(binding_value(binding));
+		    printf("%s%O: %O", sep, binding_name(binding), binding_value(binding));
 		    f = pair_cdr(f);
 		    sep = ", ";
 		}
@@ -225,10 +222,8 @@ obj_t *eval(obj_t *expr, env_t *env)
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
 	print_stack("eval");
-	printf("   F_SUBJ => ");
-	print_stdout(F_SUBJ);
-	printf("   VALUE => ");
-	print_stdout(value);
+	printf("   F_SUBJ => %O\n", F_SUBJ);
+	printf("   VALUE => %O\n", value);
 	printf("   ENV => ");
 	print_env(F_ENV);
 	printf("\n");

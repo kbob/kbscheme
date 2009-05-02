@@ -11,6 +11,8 @@ DONE	    mem_fixvec should export non-virtual element accessors.
 DONE	    Rename bind.{h,c} to env.{h,c}.
 DONE	    Construct roots, init heap after main() is called.
 DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
+DONE	    Extend printf to output Scheme objects.
+	    Remove lib_t type, replace with obj_t.
 
 	nonrecursive eval
  DONE	    Define C procedure API.
@@ -36,7 +38,7 @@ DONE	full mem model
  DONE	    drop mem_init_op and mem_free_op.
  DONE	    Implement vectors.
  DONE	    Implement bytevectors.
-	    Implement other numeric types.
+	    Implement other numeric types (float, bignum, rational).
 
 	GC
  DONE	    stop and copy algorithm

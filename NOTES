@@ -476,3 +476,94 @@ Have a datum-sequence nonterminal which is made of data and
 datum-comments.  The actions discard the commented data.  Or have a
 parallel set of productions for commented data which don't build
 anything.  (I like the latter...)
+
+----------------------------------
+4/13/2009
+
+Libraries.
+
+It would be good to write the libraries (import statement processing,
+search path, etc.) in Scheme.  But we need to read a lot of code to
+bootstrap.
+
+There could be two import mechanisms, a simplified bootstrap method
+and the full-boat method.  I rejected that dichotomy for read, though.
+
+What does the import mechanism do?  Each library has a C file and a
+Scheme file with the same basename (foo.c and foo.scm).  The C file
+has a namespace declaration, something like this.
+
+    DEFINE_LIBRARY(L"(rnrs foo (6))");
+
+Then it has the usual function definitions.
+
+The Scheme file is wrapped in a (library ...) declaration.
+
+    (library (rnrs foo (6))
+      (export foo-fcn)
+      (import (rnrs base)
+              (rnrs xyzzy))
+      (define (foo-fcn) ...)
+    )
+
+Sometime during program initialization, we iterate through the
+declared libraries and try to load this file.
+
+    '%s/lib/%s.scm' % (dir_name(executable), lib_name)
+
+To load a file, use fopen() and make_file_instream(), then loop in
+read_stream().  Should fail gracefully.
+
+So the library special form has to be a built-in.
+
+There's some recursive magic where if foo imports bar, and bar imports
+baz, then baz has to be loaded first.  We should also duplicate
+Python's import once mechanism.
+
+Or, we "just" implement the I/O library (subset) which I think
+would include:
+    (get-datum)
+    (standard-input-port)
+
+pseudo-code main program.
+
+    load_std_libraries()
+    exec = argv.pop()
+    if argv:
+	load_file(argv[0], null_env)
+    else:
+	read_loop(stdin, r6rs_lib())
+
+----------------------------------
+5/2/2009
+
+Libraries again.
+
+Here's the R6RS example.
+
+    (library (hello)
+      (export hello-world)
+      (import (rnrs base)
+              (rnrs io simple))
+      (define (hello-world)
+        (display "Hello World")
+        (newline)))
+
+Here are the primitives for environments.
+
+    (eval <expr> <env>)
+    (environment <import-spec>)
+    (library
+      (export <export-spec> ...)
+      (import <import-spec> ...)
+      <library body>)
+
+I think each C source file should have a LIBRARY declaration like
+this.  LIBRARY(L"(rnrs base (6))") That defines a static variable,
+the current library.  I can't think of a reason why C sources would
+have dependencies.
+
+Each library may also have a Scheme source file which appends to the C
+definitions.  It's probably an error to have two Scheme file define
+the same library, but it's expected to have both Scheme and C files
+for the same library.

@@ -10,8 +10,8 @@
 #include "read.h"
 #include "roots.h"
 
-typedef int (*test_driver_t)(const test_case_t *);
-static test_case_t *test_cases;
+typedef int (*test_driver_t)(const test_case_descriptor_t *);
+static test_case_descriptor_t *test_case_descriptors;
 
 static char *phase_name(test_phase_t phase)
 {
@@ -23,50 +23,54 @@ static char *phase_name(test_phase_t phase)
     }
 }
 
-static int read_driver(const test_case_t *tc)
+static int read_driver(const test_case_descriptor_t *tc)
 {
     int err_count = 0;
-    //printf("%s:%d read %ls\n", tc->tc_file, tc->tc_lineno, tc->tc_input);
-    instream_t *in = make_string_instream(tc->tc_input, wcslen(tc->tc_input));
+    //printf("%s:%d read %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+    instream_t *in =
+	make_string_instream(tc->tcd_input, wcslen(tc->tcd_input));
     obj_t *obj;
     bool ok = read_stream(in, &obj);
     assert(ok);
+    delete_instream(in);
     const size_t out_size = 100;
     wchar_t actual[out_size + 1];
     outstream_t *out = make_string_outstream(actual, out_size);
     princ(obj, out);
-    if (wcscmp(actual, tc->tc_expected)) {
-	printf("%s:%d FAIL read test\n", tc->tc_file, tc->tc_lineno);
-	printf("    input    = %ls\n", tc->tc_input);
+    if (wcscmp(actual, tc->tcd_expected)) {
+	printf("%s:%d FAIL read test\n", tc->tcd_file, tc->tcd_lineno);
+	printf("    input    = %ls\n", tc->tcd_input);
         printf("    actual   = %ls\n", actual);
-	printf("    expected = %ls\n", tc->tc_expected);
+	printf("    expected = %ls\n", tc->tcd_expected);
 	printf("\n");
 	err_count++;
     }
     return err_count;
 }
 
-static int eval_driver(const test_case_t *tc)
+static int eval_driver(const test_case_descriptor_t *tc)
 {
     /* XXX give each test a fresh environment. */
 
     int err_count = 0;
-    //printf("%s:%d eval %ls\n", tc->tc_file, tc->tc_lineno, tc->tc_input);
-    instream_t *in = make_string_instream(tc->tc_input, wcslen(tc->tc_input));
+    //printf("%s:%d eval %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+    instream_t *in =
+	make_string_instream(tc->tcd_input, wcslen(tc->tcd_input));
     AUTO_ROOT(expr, NIL);
     AUTO_ROOT(value, NIL);
     while (read_stream(in, &expr))
-	value = eval(expr, library_env(r6rs_base_library()));
+	value = eval(expr, library_env(r6rs_library()));
     /* Compare the value of the last expression. */
     const size_t out_size = 100;
     wchar_t actual[out_size + 1];
     outstream_t *out = make_string_outstream(actual, out_size);
     princ(value, out);
-    if (wcscmp(actual, tc->tc_expected)) {
-	printf("%s:%d FAIL eval test\n", tc->tc_file, tc->tc_lineno);
-	printf("    input    = %ls\n", tc->tc_input);
+    delete_outstream(out);
+    if (wcscmp(actual, tc->tcd_expected)) {
+	printf("%s:%d FAIL eval test\n", tc->tcd_file, tc->tcd_lineno);
+	printf("    input    = %ls\n", tc->tcd_input);
         printf("    actual   = %ls\n", actual);
-	printf("    expected = %ls\n", tc->tc_expected);
+	printf("    expected = %ls\n", tc->tcd_expected);
 	printf("\n");
 	err_count++;
     }
@@ -78,9 +82,9 @@ static void test_all(test_phase_t phase, test_driver_t driver)
 {
     int err_count = 0;
     int test_count = 0;
-    test_case_t *tc;
-    for (tc = test_cases; tc; tc = tc->tc_next)
-	if (tc->tc_phase == phase) {
+    test_case_descriptor_t *tc;
+    for (tc = test_case_descriptors; tc; tc = tc->tcd_next)
+	if (tc->tcd_phase == phase) {
 	    test_count++;
 	    err_count += (*driver)(tc);
 	}
@@ -93,10 +97,10 @@ static void test_all(test_phase_t phase, test_driver_t driver)
 	       test_count, phase_name(phase), &"s"[test_count == 1]);
 }
 
-void register_test(test_case_t *tc)
+void register_test(test_case_descriptor_t *tc)
 {
-    tc->tc_next = test_cases;
-    test_cases = tc;
+    tc->tcd_next = test_case_descriptors;
+    test_case_descriptors = tc;
 }
 
 void self_test()

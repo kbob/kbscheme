@@ -3,9 +3,9 @@
 #include <assert.h>
 #include <stdio.h>
 
-//#define ENV_TRACE 1
-#ifdef ENV_TRACE
-#include "print.h"			/* XXX */
+#define ENV_TRACE 0
+#if ENV_TRACE
+#include "print.h"
 #endif
 #include "roots.h"
 #include "types.h"
@@ -38,20 +38,18 @@ obj_t *env_lookup(env_t *env, obj_t *var)
      */
 
     assert(is_symbol(var));
-#ifdef ENV_TRACE
-    printf("lookup(%ls)\n", string_value(symbol_name(var)));
+#if ENV_TRACE
+    printf("lookup(%ls, %O)\n", string_value(symbol_name(var)), env);
 #endif
     while (!is_null(env)) {
 	obj_t *frame = pair_car(env);
-#ifdef ENV_TRACE
+#if ENV_TRACE
 	if (pair_cdr(env)) {
 	    printf("   FRAME");
 	    obj_t *p = frame;
 	    while (p) {
-		printf(" ");
-		princ_stdout(binding_name(pair_car(p)));
-		printf(": ");
-		princ_stdout(binding_value(pair_car(p)));
+		printf(" %O: %O", binding_name(pair_car(p)),
+		                  binding_value(pair_car(p)));
 		p = pair_cdr(p);
 	    }
 	    printf("\n");
@@ -63,7 +61,7 @@ obj_t *env_lookup(env_t *env, obj_t *var)
 	    obj_t *binding = pair_car(frame);
 	    assert(is_binding(binding));
 	    if (binding_name(binding) == var) {
-#ifdef ENV_TRACE
+#if ENV_TRACE
 		printf("   found\n\n");
 #endif
 		return binding;

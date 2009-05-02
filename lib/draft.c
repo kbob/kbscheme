@@ -9,10 +9,10 @@
 #include "proc.h"
 #include "read.h"
 
+LIBRARY(L"(draft)") /* XXX These should be in an invisible namespace. */
+
 static instream_t  *in;
 static outstream_t *out;
-
-/* XXX These should be in an invisible namespace. */
 
 DEFINE_PROC(L"draft-read")
 {
@@ -38,7 +38,7 @@ DEFINE_PROC(L"draft-print")
 
 DEFINE_PROC(L"draft-environment")
 {
-    RETURN(library_env(r6rs_base_library()));
+    RETURN(library_env(r6rs_library()));
 }
 
 DEFINE_BLOCK(b_continue_mu)
@@ -81,7 +81,7 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	    assert(pair_car(form) == make_symbol(L"lambda"));
 	    obj_t *formals = pair_car(pair_cdr(form));
 	    obj_t *body = pair_cdr(pair_cdr(form));
-	    obj_t *lib = library_env(r6rs_base_library());
+	    obj_t *lib = library_env(r6rs_library());
 	    mu_expand = make_special_form_procedure(body, formals, lib);
 	}
     }

@@ -3,6 +3,8 @@
 #include "proc.h"
 #include "test.h"
 
+LIBRARY(L"(rnrs base (6))")
+
 /* 11.1.1.  Base types
  *
  *    boolean?		pair?
@@ -598,7 +600,8 @@ DEFINE_PROC(L"call-with-current-continuation")
     return eval_application(proc, args);
 }
 
-ALIAS_NAME(NIL, L"call-with-current-continuation", NIL, L"call/cc");
+ALIAS_NAME(&current_library_, L"call-with-current-continuation",
+	   &current_library_, L"call/cc");
 
 //TEST_EVAL(L"(call-with-current-continuation\n"
 //          L"  (lambda (exit)\n"

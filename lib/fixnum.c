@@ -3,7 +3,7 @@
 #include "proc.h"
 #include "test.h"
 
-//IMPLEMENT_LIBRARY(L"(rnrs arithmetic fixnums (6))");
+LIBRARY(L"(rnrs arithmetic fixnums (6))")
 
 DEFINE_PROC(L"fixnum?")
 {

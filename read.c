@@ -1,15 +1,15 @@
 #include "read.h"
 
+#include <assert.h>
+#include <limits.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include "io.h"
 #include "roots.h"
 #include "scan.h"
 #include "test.h"
 #include "types.h"
-
-#include <assert.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
 
 /*
  * This module is the Scheme reader (parser).  It recognizes all of
