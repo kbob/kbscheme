@@ -23,7 +23,7 @@ DONE	    Extend printf to output Scheme objects.
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
  DONE	    Add test cases from r6rs chapter 11.
-	    Speed up TAIL_EVAL by reusing frame?
+	    Speed up TAIL_EVAL by reusing frame?  (Might break call/cc.)
 
 DONE	full mem model
  DONE	    define obj ops.
@@ -62,11 +62,14 @@ DONE	full mem model
  DONE	    Recognize hex escapes in identifiers.
 	    Recognize all numbers.	
  DONE	    Rewrite for readability.
+	    Stop allocating identifiers on the stack.
 	    
 
 DONE	decentralize unit testing.
 
 	libraries
+DONE	    Implement a directory of libraries.
+	    Try to load Scheme library code.
 	    ???
 
 	macros

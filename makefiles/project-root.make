@@ -13,11 +13,13 @@ else
  $(error unknown libtype "$(libtype)")
 endif
 
-          DIRS := . makefiles
+          DIRS :=
       PROGRAMS :=
           LIBS :=
   TEST_SCRIPTS :=
  TEST_PROGRAMS :=
+
+          root :=
 
 include makefiles/functions.make
 include makefiles/templates.make
@@ -35,6 +37,7 @@ help:
 	@echo '    programs      - build all programs'
 	@echo '    libs          - build all libraries'
 	@echo '    tests         - build all tests'
+	@echo '    Makefiles     - make Makefiles in all subdirectories'
 	@echo '    clean         - remove generated files'
 	@echo ''
 	@echo 'Individual Programs'
@@ -57,7 +60,7 @@ test:	tests
 	    echo 'Test $(patsubst ./%,%,$t)'; \
 	    $t;)
 
-build:	libs programs tests
+build:	libs programs tests Makefiles
 
 programs: $(PROGRAMS)
 
@@ -65,16 +68,19 @@ libs:	$(LIBS)
 
 tests:	$(TESTS)
 
+Makefiles: $(patsubst ./%, %, $(DIRS:%=%/Makefile))
+
 junk := *~ *.o *.so *.a .*.d a.out core TAGS
 clean:
 	rm -f $(patsubst ./%,%,$(PROGRAMS))
 	rm -f $(patsubst ./%,%,$(LIBS))
 	rm -f $(patsubst ./%,%,$(TEST_PROGRAMS))
 	rm -f $(patsubst ./%,%,$(YFILES:.y=.c))
-	@echo '# junk = $(junk)'
+	@echo 'rm -f    $(junk)'; rm -f $(junk)
+	@echo '# junk = $(junk) Makefile'
 	@$(foreach d, $(DIRS), \
             echo 'rm -f [junk in $(subst ./,,$d)]'; \
-            rm -f $(subst ./,,$(foreach x, $(junk), $d/$x));)
+            rm -f $(subst ./,,$(foreach x, $(junk), $d/$x) $d/Makefile);)
 
 $(TEST_SCRIPTS): $(PROGRAMS)
 

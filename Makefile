@@ -11,7 +11,6 @@ scheme_cfiles := main.c env.c eval.c io.c lib.c obj.c print.c printf.c	\
                  obj_fixnum.c obj_string.c obj_symbol.c obj_pair.c	\
                  obj_procedure.c obj_frame.c obj_binding.c		\
                  obj_vector.c
-# scheme_yfiles := yread.y
   scheme_libs := librnrs
 scheme_ldlibs := -Wl,--no-whole-archive -lreadline -lunicode
 
