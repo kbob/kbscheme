@@ -5,6 +5,7 @@
 
 extern obj_t         *make_string(const wchar_t *value);
 extern bool           is_string(obj_t *);
+extern size_t         string_len(obj_t *);
 extern const wchar_t *string_value(obj_t *);
 
 #endif /* !OBJ_STRING_INCLUDED */

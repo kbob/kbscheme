@@ -31,6 +31,7 @@ extern env_t *library_namespec(lib_t *);
 
 extern void register_C_library(library_descriptor_t *);
 extern void register_libraries(void);
+extern void load_libraries(void);
 
 extern lib_t *r6rs_library(void);
 

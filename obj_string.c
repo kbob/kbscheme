@@ -41,6 +41,13 @@ bool is_string(obj_t *obj)
     return obj && OBJ_MEM_OPS(obj) == &string_ops;
 }
 
+size_t string_len(obj_t *string)
+{
+    assert_in_tospace(string);
+    assert(is_string(string));
+    return ((string_obj_t *)string)->string_len;
+}
+
 const wchar_t *string_value(obj_t *string)
 {
     assert_in_tospace(string);

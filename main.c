@@ -19,6 +19,7 @@ int main(int argc, char *argv[])
     init_roots();
     register_libraries();
     register_procs();
+    load_libraries();
     if (argc == 2 && !strcmp(argv[1], "-t"))
 	self_test();
     else {

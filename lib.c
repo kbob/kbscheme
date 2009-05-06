@@ -1,7 +1,10 @@
 #include "lib.h"
 
 #include <assert.h>
+#include <limits.h>
+#include <stdio.h>
 
+#include "eval.h"
 #include "io.h"
 #include "read.h"
 #include "roots.h"
@@ -73,12 +76,77 @@ void register_C_library(library_descriptor_t *desc)
     lib_descriptors = desc;
 }
 
-void register_libraries()
+void register_libraries(void)
 {
     library_descriptor_t *desc;
     for (desc = lib_descriptors; desc; desc = desc->ld_next)
 	/* builds library list as a side-effect. */
 	(void) find_library(desc->ld_namespec);
+}
+
+static const char *lib_path[] = {
+    ".",
+    "lib",
+    NULL,
+    NULL
+};
+
+void set_exec_path(const char *exec_path)
+{
+    lib_path[2] = exec_path;
+}
+
+static const wchar_t STD_LIBRARY[] = L"r6rs";
+
+static void eval_library_form(obj_t *form)
+{
+    // verify car is 'library'
+    // verify cadr is 'export'
+    // save export list.
+    // verify cddr is 'import'
+
+    // working env = [empty]
+    // process import list.
+    //    for each import,
+    //        find library
+    //        prepend library's export env to working env (as a new frame).
+    //        fail on complex import specs.
+    // given env, process library body.
+    // process export list.
+    //     export_env = [empty]
+    //     for each export,
+    //         immutably bind ext name to int name in export_env
+}
+
+static bool load_library(const wchar_t *libname)
+{
+#if 1
+    char filename[PATH_MAX + 1];
+    const char **dirp;
+    for (dirp = lib_path; *dirp; dirp++) {
+	if (snprintf(filename, sizeof filename, "%s/%ls.scm", *dirp, libname) >= sizeof filename)
+	    continue;
+	printf("filename=\"%s\"\n", filename);
+	FILE *f = fopen(filename, "r");
+	if (f == NULL)
+	    continue;
+	instream_t *in = make_file_instream(f);
+	obj_t *form;
+	while (read_stream(in, &form))
+	    eval_library_form(form);
+	delete_instream(in);
+	fclose(f);
+	return true;
+    }
+#endif
+    return false;
+}
+
+void load_libraries(void)
+{
+    register_libraries();
+    if (!load_library(STD_LIBRARY))
+	assert(false && "No std lib");
 }
 
 lib_t *r6rs_library(void)
