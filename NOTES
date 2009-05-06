@@ -564,6 +564,17 @@ the current library.  I can't think of a reason why C sources would
 have dependencies.
 
 Each library may also have a Scheme source file which appends to the C
-definitions.  It's probably an error to have two Scheme file define
+definitions.  It's probably an error to have two Scheme files define
 the same library, but it's expected to have both Scheme and C files
 for the same library.
+
+----------------------------------
+5/4/2009
+
+Need to partition the lib module into two pieces.  One implements the
+correct semantics of libraries.  The other reads files and parses
+(library ...) forms.
+
+Library semantics mean that each library has a namespace (an env)
+and symbols imported into it are bound immutably.  A library has
+an import list and an export list, both with rebindings.
