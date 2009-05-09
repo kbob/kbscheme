@@ -26,7 +26,7 @@ DEFINE_PROC(L"char?")
 
 DEFINE_PROC(L"number?")
 {
-    /* RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
+    /* XXX RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
     RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
 }
 
@@ -112,17 +112,29 @@ DEFINE_SPECIAL_FORM(L"define-syntax")
 TEST_EVAL(L"(define-syntax qot (lambda (x) x))\n"
 	  L"(qot (1 2))",		L"(1 2)");
 
+/* from r6rs */
+//TEST_EVAL(L"(let ()\n"
+//	  L"  (define even?\n"
+//	  L"    (lambda (x)\n"
+//	  L"	  (or (= x 0) (odd? (- x 1)))))\n"
+//	  L"  (define-syntax odd?\n"
+//	  L"    (syntax-rules ()\n"
+//	  L"      ((odd? x) (not (even? x)))))\n"
+//	  L"  (even? 10))",		L"#t");
+//TEST_EVAL(L"(let ()\n"
+//          L"  (define-syntax bind-to-zero\n"
+//          L"    (syntax-rules ()\n"
+//          L"      ((bind-to-zero id) (define id 0))))\n"
+//          L"  (bind-to-zero x)\n"
+//          L"  x)",			L"0");
+
+
 /* 11.4.1.  Quotation
  *
  * (quote <datum>)			# syntax
  */
 
-DEFINE_SPECIAL_FORM(L"quote")
-{
-    assert(is_null(pair_cdr(F_SUBJ)));
-    RETURN(pair_car(F_SUBJ));
-}
-
+/* XXX move these to wherever the Scheme unit tests will be. */
 TEST_EVAL(L"(quote ())",		L"()");
 TEST_EVAL(L"(quote (a b c))",		L"(a b c)");
 
@@ -301,7 +313,7 @@ DEFINE_PROC(L"eq?")
 
 /* from r6rs */
 TEST_EVAL(L"(eq? 'a 'a)",               L"#t");
-//TEST_EVAL(L"(eq? (list 'a) (list 'a))", L"#f");
+TEST_EVAL(L"(eq? (list 'a) (list 'a))", L"#f");
 TEST_EVAL(L"(eq? '() '())",             L"#t");
 TEST_EVAL(L"(eq? car car)",             L"#t");
 //TEST_EVAL(L"(let ((x '(a)))\n"
@@ -350,10 +362,10 @@ TEST_EVAL(L"(not +)",           L"#f");
 /* from r6rs */
 TEST_EVAL(L"(not #t)",          L"#f");
 TEST_EVAL(L"(not 3)",           L"#f");
-//TEST_EVAL(L"(not (list 3))",    L"f");
+TEST_EVAL(L"(not (list 3))",    L"#f");
 TEST_EVAL(L"(not #f)",          L"#t");
 TEST_EVAL(L"(not '())",         L"#f");
-//TEST_EVAL(L"(not (list))",      L"#f");
+TEST_EVAL(L"(not (list))",      L"#f");
 TEST_EVAL(L"(not 'nil)",        L"#f");
 
 DEFINE_PROC(L"boolean?")
@@ -584,6 +596,52 @@ TEST_EVAL(L"(define a '#(1 2 3))\n"
  *
  * (dynamic-wind before thunk after)	# procedure
  */
+
+DEFINE_PROC(L"apply")
+{
+    AUTO_ROOT(proc, pair_car(F_SUBJ));
+    AUTO_ROOT(args, pair_cdr(F_SUBJ));
+    AUTO_ROOT(arglist, NIL);
+    AUTO_ROOT(last_arg, NIL);
+    while (args) {
+	obj_t *arg;
+	if (pair_cdr(args))
+	    arg = make_pair(pair_car(args), NIL);
+	else
+	    arg = pair_car(args);
+	if (arglist)
+	    pair_set_cdr(last_arg, arg);
+	else
+	    arglist = arg;
+	last_arg = arg;
+	args = pair_cdr(args);
+    }
+    POP_FUNCTION_ROOTS();
+    return eval_application(proc, arglist);
+}
+
+TEST_EVAL(L"(apply + ())",		L"0");
+TEST_EVAL(L"(apply + '(2))",		L"2");
+TEST_EVAL(L"(apply + '(2 3))",		L"5");
+TEST_EVAL(L"(apply + 2 ())",		L"2");
+TEST_EVAL(L"(apply + 2 '(3 4))",	L"9");
+TEST_EVAL(L"(apply + 2 '(3 4))",	L"9");
+TEST_EVAL(L"(apply + 2 3 '(4 5))",	L"14");
+TEST_EVAL(L"(define compose\n"
+	  L"  (lambda (f g)\n"
+	  L"    (lambda args\n"
+	  L"      (f (apply g args)))))\n"
+	  L"((compose - *) 12 75)",	L"-900");
+
+/* from r6rs */
+TEST_EVAL(L"(apply + (list 3 4))",		L"7");
+//TEST_EVAL(L"((define compose\n"
+//	  L"  (lambda (f g)\n"
+//	  L"    lambda args\n"
+//	  L"      (f (apply g args)))))\n"
+//	  L"((compose sqrt *) 12 75)",	L"30");
+
+
 
 DEFINE_BLOCK(b_continue_callcc)
 {

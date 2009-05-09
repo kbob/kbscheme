@@ -15,7 +15,7 @@ scheme_cfiles := main.c env.c eval.c io.c lib.c obj.c print.c printf.c	\
 scheme_ldlibs := -Wl,--no-whole-archive -lreadline -lunicode
 
      CPPFLAGS := -D_GNU_SOURCE -I.
-       CFLAGS := -g -Wall -Werror
+       CFLAGS := -g -Wall -Werror -Wno-format
       LDFLAGS := -Wl,--whole-archive
       libtype := static
 

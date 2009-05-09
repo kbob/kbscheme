@@ -29,9 +29,10 @@ int main(int argc, char *argv[])
 	    exit(1);
 	}
 	instream_t *in = make_file_instream(fin);
-	obj_t *repl;
+	AUTO_ROOT(repl, NIL);
 	while (read_stream(in, &repl))
 	    eval(repl, library_env(r6rs_library()));
+	POP_ROOT(repl);
 	delete_instream(in);
 	printf("\n");
     }

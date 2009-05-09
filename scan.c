@@ -272,7 +272,9 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 			    assert(0 && "unterminated block comment");
 			if (w2 == L'|' && state == 0)
 			    state = 1;
-			else if (w2 == L'|' && state == 2) {
+			else if (w2 == L'|' && state == 1) {
+			    /* no change */
+			} else if (w2 == L'|' && state == 2) {
 			    state = 0;
 			    depth++;
 			} else if (w2 == L'#' && state == 0)
@@ -280,7 +282,8 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 			else if (w2 == L'#' && state == 1) {
 			    state = 0;
 			    --depth;
-			}
+			} else
+			    state = 0;
 		    }
 		}
 		continue;

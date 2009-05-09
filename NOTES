@@ -1,3 +1,11 @@
+These notes were, for the most part, written before the corresponding
+features were implemented.  So they're likely to be speculative and
+inaccurate.
+
+It's interesting (to me) to see the ideas become more refined.
+
+
+----------------------------------
 Definitions
 	'form' - a syntactic part of a program
 	"subr" - a built-in function
@@ -424,6 +432,8 @@ don't need macros.
 Trivial example: list.
 
 	(define (list . args) args)
+	; update 5/9/2009 - this is wrong.
+	; `list' returns a newly allocated list. (ref. r6rs 11.9)
 
 So I'm thinking I should start on a system of loading libraries from
 source files at startup.  That means defining a search path and a way
@@ -578,3 +588,10 @@ correct semantics of libraries.  The other reads files and parses
 Library semantics mean that each library has a namespace (an env)
 and symbols imported into it are bound immutably.  A library has
 an import list and an export list, both with rebindings.
+
+----------------------------------
+5/9/2009
+
+What about anonymous libraries?  Reachable from C but not from Scheme.
+Useful?  I may be trying too hard to avoid polluting Scheme's
+namespaces.

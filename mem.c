@@ -11,7 +11,7 @@
 #include <stdio.h>
 #endif /* DEBUG_HEAP */
 
-#define INITIAL_HEAP_WORDS 65536
+#define INITIAL_HEAP_WORDS 16384
 #define INITIAL_HEAP_BYTES (INITIAL_HEAP_WORDS * sizeof (word_t))
 
 /* A word_t is big enough to hold a pointer.  That's all we know. */

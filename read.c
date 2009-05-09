@@ -437,6 +437,8 @@ static inline char nonterminal(size_t nonterm_index)
  * details.
  */
 
+static exterminal_set_t first(const char *w);
+
 static void init_first(void)
 {
     size_t i, j;
