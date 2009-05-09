@@ -16,8 +16,6 @@
 	register_C_library(&current_library_);				\
     }
 
-typedef obj_t lib_t;
-
 typedef struct library_descriptor library_descriptor_t;
 
 struct library_descriptor {
@@ -26,13 +24,13 @@ struct library_descriptor {
 };
 
 extern obj_t *find_library_str(const wchar_t *namespec);
-extern env_t *library_env(lib_t *);
-extern env_t *library_namespec(lib_t *);
+extern env_t *library_env(obj_t *);
+extern env_t *library_namespec(obj_t *);
 
 extern void register_C_library(library_descriptor_t *);
 extern void register_libraries(void);
 extern void load_libraries(void);
 
-extern lib_t *r6rs_library(void);
+extern obj_t *r6rs_library(void);
 
 #endif /* !LIB_INCLUDED */

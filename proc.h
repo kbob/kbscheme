@@ -287,7 +287,7 @@
  */
 #define MAKE_CALL(target, ...) (make_short_frame(FRAME, (target), __VA_ARGS__))
 
-typedef void binder_t(C_procedure_t, lib_t *, const wchar_t *name);
+typedef void binder_t(C_procedure_t, obj_t *lib, const wchar_t *name);
 typedef struct proc_descriptor proc_descriptor_t;
 typedef struct alias_descriptor alias_descriptor_t;
 
@@ -318,9 +318,7 @@ extern void register_proc(proc_descriptor_t *desc);
 extern void register_procs(void);
 extern void register_alias(alias_descriptor_t *);
 
-extern void bind_proc(C_procedure_t, lib_t *library, const wchar_t *name);
-extern void bind_special_form(C_procedure_t,
-			      lib_t *library,
-			      const wchar_t *name);
+extern void bind_proc(C_procedure_t, obj_t *lib, const wchar_t *name);
+extern void bind_special_form(C_procedure_t, obj_t *lib, const wchar_t *name);
 
 #endif /* !PROC_INCLUDED */

@@ -1,7 +1,3 @@
-/*
- * Name bindings
- */
-
 #ifndef ENV_INCLUDED
 #define ENV_INCLUDED
 

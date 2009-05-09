@@ -32,7 +32,7 @@ static obj_t *parse_namespec(const wchar_t *namespec_str)
     return namespec_list;
 }
 
-static lib_t *make_library(obj_t *namespec)
+static obj_t *make_library(obj_t *namespec)
 {
     PUSH_ROOT(namespec);
     AUTO_ROOT(env, make_env(NIL));
@@ -41,7 +41,7 @@ static lib_t *make_library(obj_t *namespec)
     return lib;
 }
 
-env_t *library_env(lib_t *lib)
+env_t *library_env(obj_t *lib)
 {
     return pair_car(lib);
 }
@@ -219,7 +219,7 @@ void load_libraries(void)
 	assert(false && "No std lib");
 }
 
-lib_t *r6rs_library(void)
+obj_t *r6rs_library(void)
 {
     if (!r6rs_lib) {
 	AUTO_ROOT(sym, make_fixnum(6));
