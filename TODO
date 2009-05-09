@@ -13,6 +13,7 @@ DONE	    Construct roots, init heap after main() is called.
 DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
 DONE	    Extend printf to output Scheme objects.
 	    Remove lib_t type, replace with obj_t.
+	    Rename make_symbol() to find_symbol().
 
 	nonrecursive eval
  DONE	    Define C procedure API.

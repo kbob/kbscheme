@@ -10,9 +10,28 @@
 #include "roots.h"
 #include "types.h"
 
+/*
+ * An environment is currently implemented as a list of frames.  Each
+ * frame is a list of bindings.  A binding is a primitive object with
+ * three fields: a name (symbol), a value (object) and a mutability
+ * flag.
+ */
+
 env_t *make_env(env_t *parent)
 {
     return (env_t *) make_pair(NIL, parent);
+}
+
+obj_t *join_envs(env_t *an_env, env_t *other_env)
+{
+    PUSH_ROOT(an_env);
+    AUTO_ROOT(env, other_env);
+    while (an_env) {
+	other_env = make_pair(pair_car(an_env), other_env);
+	an_env = pair_cdr(an_env);
+    }
+    POP_FUNCTION_ROOTS();
+    return other_env;
 }
 
 void env_bind(env_t *env, obj_t *name, binding_type_t type, obj_t *value)

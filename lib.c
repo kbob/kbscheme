@@ -14,6 +14,24 @@ ROOT(library_list);
 ROOT(r6rs_lib);
 static library_descriptor_t *lib_descriptors;
 
+/*
+ * verbs
+ *    make - unconditionally create
+ *    lookup - get if existent
+ *    find - lookup or make
+ *    load - get or read from files.
+ */
+
+static obj_t *parse_namespec(const wchar_t *namespec_str)
+{
+    obj_t *namespec_list;
+    instream_t *in = make_string_instream(namespec_str, wcslen(namespec_str));
+    bool ok = read_stream(in, &namespec_list);
+    assert(ok);
+    delete_instream(in);
+    return namespec_list;
+}
+
 static lib_t *make_library(obj_t *namespec)
 {
     PUSH_ROOT(namespec);
@@ -51,23 +69,33 @@ static bool lists_are_equiv(obj_t *a, obj_t *b)
     return !a && !b;
 }
 
-obj_t *find_library(const wchar_t *namespec)
+static obj_t *lookup_library(obj_t *namespec)
 {
-    instream_t *in = make_string_instream(namespec, wcslen(namespec));
-    obj_t *namespec_list;
-    bool ok = read_stream(in, &namespec_list);
-    assert(ok);
-    delete_instream(in);
     obj_t *p;
     for (p = library_list; p; p = pair_cdr(p)) {
 	obj_t *lib = pair_car(p);
-	if (lists_are_equiv(namespec_list, library_namespec(lib)))
+	if (lists_are_equiv(namespec, library_namespec(lib)))
 	    return lib;
     }
-    AUTO_ROOT(lib, make_library(namespec_list));
-    library_list = make_pair(lib, library_list);
-    POP_ROOT(lib);
+    return NIL;
+}
+
+obj_t *find_library(obj_t *namespec_list)
+{
+    obj_t *lib = lookup_library(namespec_list);
+    if (!lib) {
+	lib = make_library(namespec_list);
+	PUSH_ROOT(lib);
+	library_list = make_pair(lib, library_list);
+	POP_ROOT(lib);
+    }
     return lib;
+}
+
+obj_t *find_library_str(const wchar_t *namespec_str)
+{
+    obj_t *namespec_list = parse_namespec(namespec_str);
+    return find_library(namespec_list);
 }
 
 void register_C_library(library_descriptor_t *desc)
@@ -81,7 +109,7 @@ void register_libraries(void)
     library_descriptor_t *desc;
     for (desc = lib_descriptors; desc; desc = desc->ld_next)
 	/* builds library list as a side-effect. */
-	(void) find_library(desc->ld_namespec);
+	(void) find_library_str(desc->ld_namespec);
 }
 
 static const char *lib_path[] = {
@@ -98,35 +126,78 @@ void set_exec_path(const char *exec_path)
 
 static const wchar_t STD_LIBRARY[] = L"r6rs";
 
-static void eval_library_form(obj_t *form)
+bool is_valid_library_form(obj_t *form)
 {
     // verify car is 'library'
-    // verify cadr is 'export'
-    // save export list.
-    // verify cddr is 'import'
+    // verify caaddr is 'export'
+    // verify caadddr is 'import'
+    if (!is_pair(form))
+	return false;
+    if (pair_car(form) != make_symbol(L"library"))
+	return false;
+    obj_t *cdr = pair_cdr(form);
+    if (!is_pair(cdr))
+	return false;
+    obj_t *cddr = pair_cdr(cdr);
+    obj_t *caddr = pair_car(cddr);
+    if (!is_pair(caddr))
+	return false;
+    if (pair_car(caddr) != make_symbol(L"export"))
+	return false;
+    obj_t *cdddr = pair_cdr(cddr);
+    obj_t *cadddr = pair_car(cdddr);
+    if (pair_car(cadddr) != make_symbol(L"import"))
+	return false;
+    return true;
+}
 
-    // working env = [empty]
-    // process import list.
-    //    for each import,
-    //        find library
-    //        prepend library's export env to working env (as a new frame).
-    //        fail on complex import specs.
-    // given env, process library body.
-    // process export list.
-    //     export_env = [empty]
-    //     for each export,
-    //         immutably bind ext name to int name in export_env
+static void eval_library_form(obj_t *form)
+{
+    PUSH_ROOT(form);
+    bool ok = is_valid_library_form(form);
+    assert(ok);
+
+    AUTO_ROOT(working_env, NIL);
+    AUTO_ROOT(import_list, pair_cdadddr(form));
+    while (import_list) {
+	/*
+         * Not implementing full import matching - import spec must
+         * exactly match library name, and full namespace is imported.
+         */
+	obj_t *namespec = pair_car(import_list);
+	obj_t *lib = lookup_library(namespec);
+	assert(lib);
+	working_env = join_envs(library_env(lib), working_env);
+	import_list = pair_cdr(import_list);
+    }
+    POP_ROOT(import_list);
+    AUTO_ROOT(body, pair_cddddr(form));
+    while (body) {
+	(void) eval(pair_car(body), working_env);
+	body = pair_cdr(body);
+    }
+    POP_ROOT(body);
+    obj_t *namespec = pair_cadr(form);
+    AUTO_ROOT(new_lib, find_library(namespec));
+    AUTO_ROOT(export_list, pair_cdaddr(form));
+    while (export_list) {
+	obj_t *name = pair_car(export_list);
+	obj_t *binding = env_lookup(working_env, name);
+	obj_t *value = binding_value(binding);
+	env_bind(library_env(new_lib), name, BINDING_IMMUTABLE, value);
+	export_list = pair_cdr(export_list);
+    }
+    POP_FUNCTION_ROOTS();
 }
 
 static bool load_library(const wchar_t *libname)
 {
-#if 1
     char filename[PATH_MAX + 1];
     const char **dirp;
     for (dirp = lib_path; *dirp; dirp++) {
-	if (snprintf(filename, sizeof filename, "%s/%ls.scm", *dirp, libname) >= sizeof filename)
+	if (snprintf(filename, sizeof filename,
+		     "%s/%ls.scm", *dirp, libname) >= sizeof filename)
 	    continue;
-	printf("filename=\"%s\"\n", filename);
 	FILE *f = fopen(filename, "r");
 	if (f == NULL)
 	    continue;
@@ -138,7 +209,6 @@ static bool load_library(const wchar_t *libname)
 	fclose(f);
 	return true;
     }
-#endif
     return false;
 }
 
@@ -162,7 +232,7 @@ lib_t *r6rs_library(void)
 	AUTO_ROOT(env, library_env(r6rs_lib));
 	AUTO_ROOT(frame, NIL);
 	for (desc = lib_descriptors; desc; desc = desc->ld_next) {
-	    obj_t *lib = find_library(desc->ld_namespec);
+	    obj_t *lib = find_library_str(desc->ld_namespec);
 	    frame = pair_car(library_env(lib));
 	    for (; frame; frame = pair_cdr(frame)) {
 		obj_t *binding = pair_car(frame);

@@ -25,7 +25,7 @@ struct library_descriptor {
     library_descriptor_t *ld_next;
 };
 
-extern obj_t *find_library(const wchar_t *namespec);
+extern obj_t *find_library_str(const wchar_t *namespec);
 extern env_t *library_env(lib_t *);
 extern env_t *library_namespec(lib_t *);
 
