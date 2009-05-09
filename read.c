@@ -791,9 +791,9 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 	continue;
 
     abbrev:
-	tmp = make_pair(pair_car(pair_cdr(reg)), NIL);
+	tmp = make_pair(pair_cadr(reg), NIL);
 	tmp = make_pair(pair_car(reg), tmp);
-	reg = make_pair(tmp, pair_cdr(pair_cdr(reg)));
+	reg = make_pair(tmp, pair_cddr(reg));
 	continue;
 
     end_sequence:

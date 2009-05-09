@@ -105,7 +105,7 @@ DEFINE_BLOCK(b_define_syntax_continue)
 DEFINE_SPECIAL_FORM(L"define-syntax")
 {
     //AUTO_ROOT(keyword, pair_car(F_SUBJ));
-    AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
+    AUTO_ROOT(exp, pair_cadr(F_SUBJ));
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
 }
 
@@ -236,7 +236,7 @@ DEFINE_BLOCK(b_set_continue)
 DEFINE_SPECIAL_FORM(L"set!")
 {
     AUTO_ROOT(var, pair_car(F_SUBJ));
-    AUTO_ROOT(exp, pair_car(pair_cdr(F_SUBJ)));
+    AUTO_ROOT(exp, pair_cadr(F_SUBJ));
     EVAL_THEN_GOTO(exp, F_ENV, b_set_continue, var, F_ENV);
 }
 
@@ -295,7 +295,7 @@ TEST_EVAL(L"(define v2 ()) (set! v2 4)",    UNSPECIFIED_REPR);
 DEFINE_PROC(L"eq?")
 {
     obj_t *obj1 = pair_car(F_SUBJ);
-    obj_t *obj2 = pair_car(pair_cdr(F_SUBJ));
+    obj_t *obj2 = pair_cadr(F_SUBJ);
     RETURN(make_boolean(obj1 == obj2));
 }
 
@@ -422,7 +422,7 @@ TEST_EVAL(L"(pair? '())",           L"#f");
 DEFINE_PROC(L"cons")
 {
     RETURN(make_pair(pair_car(F_SUBJ),
-		     pair_car(pair_cdr(F_SUBJ))));
+		     pair_cadr(F_SUBJ)));
 }
 
 TEST_EVAL(L"(cons 1 2)",           L"(1 . 2)");
@@ -438,7 +438,7 @@ TEST_EVAL(L"(cons '(a b) 'c)",     L"((a b) . c)");
 
 DEFINE_PROC(L"car")
 {
-    RETURN(pair_car(pair_car(F_SUBJ)));
+    RETURN(pair_caar(F_SUBJ));
 }
 
 TEST_EVAL(L"(car (quote (1 2)))",  L"1");
@@ -451,7 +451,7 @@ TEST_EVAL(L"(car '(1 . 2))",       L"1");
 
 DEFINE_PROC(L"cdr")
 {
-    RETURN(pair_cdr(pair_car(F_SUBJ)));
+    RETURN(pair_cdar(F_SUBJ));
 }
 
 TEST_EVAL(L"(cdr (quote (1 2)))", L"(2)");
@@ -513,7 +513,7 @@ DEFINE_PROC(L"make-vector")
     size_t k = fixnum_value(pair_car(F_SUBJ));
     obj_t *fill = NIL;
     if (pair_cdr(F_SUBJ))
-	fill = pair_car(pair_cdr(F_SUBJ));
+	fill = pair_cadr(F_SUBJ);
     RETURN(make_vector(k, fill));
 }
 
@@ -539,7 +539,7 @@ TEST_EVAL(L"(vector-length '#(a b c))", L"3");
 DEFINE_PROC(L"vector-ref")
 {
     obj_t *vec = pair_car(F_SUBJ);
-    size_t index = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    size_t index = fixnum_value(pair_cadr(F_SUBJ));
     RETURN(vector_ref(vec, index));
 }
 
@@ -548,7 +548,7 @@ TEST_EVAL(L"(vector-ref '#(0 1 2) 1)",	L"1");
 DEFINE_PROC(L"vector-set!")
 {
     obj_t *vec = pair_car(F_SUBJ);
-    size_t index = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
+    size_t index = fixnum_value(pair_cadr(F_SUBJ));
     obj_t *elem = pair_car(pair_cdr(pair_cdr(F_SUBJ)));
     vector_set(vec, index, elem);
     RETURN(UNSPECIFIED);

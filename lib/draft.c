@@ -79,8 +79,8 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	    bool ok = read_stream(ins, &form);
 	    assert(ok);
 	    assert(pair_car(form) == make_symbol(L"lambda"));
-	    obj_t *formals = pair_car(pair_cdr(form));
-	    obj_t *body = pair_cdr(pair_cdr(form));
+	    obj_t *formals = pair_cadr(form);
+	    obj_t *body = pair_cddr(form);
 	    obj_t *lib = library_env(r6rs_library());
 	    mu_expand = make_special_form_procedure(body, formals, lib);
 	}

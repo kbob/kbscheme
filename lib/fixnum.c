@@ -134,16 +134,16 @@ DEFINE_PROC(L"*")
 DEFINE_PROC(L"div")
 {
     int dividend = fixnum_value(pair_car(F_SUBJ));
-    int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
-    assert(is_null(pair_cdr(pair_cdr(F_SUBJ))));
+    int divisor = fixnum_value(pair_cadr(F_SUBJ));
+    assert(is_null(pair_cddr(F_SUBJ)));
     RETURN(make_fixnum(dividend / divisor));
 }
 
 DEFINE_PROC(L"mod")
 {
     int dividend = fixnum_value(pair_car(F_SUBJ));
-    int divisor = fixnum_value(pair_car(pair_cdr(F_SUBJ)));
-    assert(is_null(pair_cdr(pair_cdr(F_SUBJ))));
+    int divisor = fixnum_value(pair_cadr(F_SUBJ));
+    assert(is_null(pair_cddr(F_SUBJ)));
     RETURN(make_fixnum(dividend % divisor));
 }
 
