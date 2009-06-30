@@ -1,5 +1,12 @@
 #include "test.h"
 
+#ifdef NOTEST
+
+void self_test()
+{}
+
+#else
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -108,3 +115,5 @@ void self_test()
     test_all(TP_READ, read_driver);
     test_all(TP_EVAL, eval_driver);
 }
+
+#endif /* !NOTEST */

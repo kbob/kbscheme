@@ -5,6 +5,13 @@
 
 #include "uniq.h"
 
+#ifdef NOTEST
+
+#define TEST_READ(input, expected)
+#define TEST_EVAL(input, expected)
+
+#else
+
 #define TEST_READ(input, expected) DEFINE_TEST_CASE_(TP_READ, input, expected)
 #define TEST_EVAL(input, expected) DEFINE_TEST_CASE_(TP_EVAL, input, expected)
 
@@ -40,5 +47,7 @@ struct test_case_descriptor {
 
 extern void register_test(test_case_descriptor_t *);
 extern void self_test();
+
+#endif /* !NOTEST */
 
 #endif /* !TEST_INCLUDED */
