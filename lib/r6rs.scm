@@ -9,7 +9,7 @@
 
 ;    cond				; r6rs 11.4.5 Derived conditionals
 ;    case
-  and
+;    and
 ;    or
 
     caar				; r6rs 11.9 Pairs and lists
@@ -59,7 +59,7 @@
 ; => auxiliary syntax
 ; => auxiliary syntax
 ;
-; (case <key> <case clause 1> <case clause 2> ...) # syntax
+; (case <key> <case clause 1> <case clause 2> ...)  # syntax
 ;
 ; (and <test1> ...)				    # syntax
 ;
@@ -96,9 +96,9 @@
 ;
 ; (let*-values <mv-bindings> <body>)	# syntax
 
-  (define-syntax let
-    (lambda (bindings body)
-      ...))
+;  (define-syntax let
+;    (lambda (bindings body)
+;      ...))
     
 
 
@@ -144,7 +144,7 @@
 
   (define (list . args)
     (if (null? args)
-	()
+	'()
 	(cons (car args) (apply list (cdr args)))))
 
 )

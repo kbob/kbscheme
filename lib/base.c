@@ -104,7 +104,6 @@ DEFINE_BLOCK(b_define_syntax_continue)
 
 DEFINE_SPECIAL_FORM(L"define-syntax")
 {
-    //AUTO_ROOT(keyword, pair_car(F_SUBJ));
     AUTO_ROOT(exp, pair_cadr(F_SUBJ));
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
 }
@@ -252,8 +251,8 @@ DEFINE_SPECIAL_FORM(L"set!")
     EVAL_THEN_GOTO(exp, F_ENV, b_set_continue, var, F_ENV);
 }
 
-TEST_EVAL(L"(define v1 ()) (set! v1 4) v1", L"4");
-TEST_EVAL(L"(define v2 ()) (set! v2 4)",    UNSPECIFIED_REPR);
+TEST_EVAL(L"(define v1 '()) (set! v1 4) v1", L"4");
+TEST_EVAL(L"(define v2 '()) (set! v2 4)",    UNSPECIFIED_REPR);
 
 /* from r6rs */
 //TEST_EVAL(L"(let ((x 2))\n"
@@ -423,7 +422,7 @@ DEFINE_PROC(L"pair?")
 
 TEST_EVAL(L"(pair? (quote (1 2)))", L"#t");
 TEST_EVAL(L"(pair? 12)",            L"#f");
-TEST_EVAL(L"(pair? ())",            L"#f");
+TEST_EVAL(L"(pair? '())",           L"#f");
 
 /* from r6rs */
 TEST_EVAL(L"(pair? '(a . b))",      L"#t");
@@ -439,7 +438,7 @@ DEFINE_PROC(L"cons")
 
 TEST_EVAL(L"(cons 1 2)",           L"(1 . 2)");
 TEST_EVAL(L"(cons '(1 2) '(3 4))", L"((1 2) 3 4)");
-TEST_EVAL(L"(cons 1 ())",          L"(1)");
+TEST_EVAL(L"(cons 1 '())",         L"(1)");
 
 /* from r6rs */
 TEST_EVAL(L"(cons 'a '())",        L"(a)");
@@ -478,7 +477,7 @@ DEFINE_PROC(L"null?")
     RETURN(make_boolean(is_null(pair_car(F_SUBJ))));
 }
 
-TEST_EVAL(L"(null? ())", L"#t");
+TEST_EVAL(L"(null? '())", L"#t");
 TEST_EVAL(L"(null? +)", L"#f");
 TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
@@ -620,10 +619,10 @@ DEFINE_PROC(L"apply")
     return eval_application(proc, arglist);
 }
 
-TEST_EVAL(L"(apply + ())",		L"0");
+TEST_EVAL(L"(apply + '())",		L"0");
 TEST_EVAL(L"(apply + '(2))",		L"2");
 TEST_EVAL(L"(apply + '(2 3))",		L"5");
-TEST_EVAL(L"(apply + 2 ())",		L"2");
+TEST_EVAL(L"(apply + 2 '())",		L"2");
 TEST_EVAL(L"(apply + 2 '(3 4))",	L"9");
 TEST_EVAL(L"(apply + 2 '(3 4))",	L"9");
 TEST_EVAL(L"(apply + 2 3 '(4 5))",	L"14");
@@ -686,7 +685,7 @@ ALIAS_NAME(&current_library_, L"call-with-current-continuation",
 
 TEST_EVAL(L"(call-with-current-continuation procedure?)", L"#t");
 
-TEST_EVAL(L"(define plus3 ())\n"
+TEST_EVAL(L"(define plus3 '())\n"
           L"(+ 3 (call/cc\n"
           L"      (lambda (exit)\n"
           L"        (set! plus3 exit)\n"

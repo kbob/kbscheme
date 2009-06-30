@@ -21,14 +21,12 @@ DECLARE_BLOCK(b_eval_sequence);
 
 static bool is_self_evaluating(obj_t *expr)
 {
-    return (is_null(expr) ||
-	    is_boolean(expr) ||
+    return (is_boolean(expr) ||
 	    is_fixnum(expr) ||
 	    is_character(expr) ||
 	    is_string(expr));
 }
 
-TEST_EVAL(L"()", L"()");
 TEST_EVAL(L"#t", L"#t");
 TEST_EVAL(L"#f", L"#f");
 TEST_EVAL(L"123", L"123");
@@ -158,6 +156,7 @@ obj_t *eval_application(obj_t *proc, obj_t *args)
 
 DEFINE_EXTERN_BLOCK(b_eval)
 {
+    assert(!is_null(F_SUBJ));
     if (is_self_evaluating(F_SUBJ))
 	RETURN(F_SUBJ);
     if (is_symbol(F_SUBJ))

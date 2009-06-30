@@ -24,7 +24,8 @@
  DONE	    Implement REBIND_PROC.
  DONE	    Debug call/cc.
  DONE	    Add test cases from r6rs chapter 11.
-	    Speed up TAIL_EVAL by reusing frame?  (Might break call/cc.)
+ drop	    Speed up TAIL_EVAL by reusing frame?  (Might break call/cc.)
+	    Make set! return zero values.  (See r6rs-rationale.)
 
 DONE	full mem model
  DONE	    define obj ops.
