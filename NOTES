@@ -595,3 +595,41 @@ an import list and an export list, both with rebindings.
 What about anonymous libraries?  Reachable from C but not from Scheme.
 Useful?  I may be trying too hard to avoid polluting Scheme's
 namespaces.
+
+----------------------------------
+6/25/2009
+
+Aboard Carnival Spirit.
+Macro expansion is complex.  There are some other expansion things
+that I'm not doing, such as splicing begin and let.  To handle
+all those things, I'd like to be using Scheme.  The problem is that
+I don't know what the best subset to implement is.  Ideally, there
+would be a C core which is just enough to implement the full language.
+
+Maybe I should relax the rules, implement the let family and anything
+else that seems useful, and get on with it.  Then when I've written
+syntax-rules using full Scheme, I can go back and figure out what it
+could do without and reimplement some bits in Scheme.
+
+And I still don't quite understand why multiple expansion levels
+are necessary.  R6RS Section 7.2 tries to explain it.
+
+I'm getting the feeling that Scheme is just circular, that Scheme
+is the only language for implementing Scheme.
+
+I have a feeling that the next thing to implement is syntax objects,
+and that they will be a primitive type.
+
+Does the standard provide a way to extend the numerical tower?
+
+Reading list: 1.4-1.10, 3, 7.2, 9, 10.
+
+Some previously unstated goals:
+
+    Follow the standard whenever possible -- don't improvise.
+
+    Non-heap memory use is constant.  No malloc() and no unbounded
+    recursion in C.
+
+    It should be possible to build the interpreter with good old
+    "./configure && make && make install".
