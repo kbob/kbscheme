@@ -1,5 +1,6 @@
 #include <assert.h>
 
+#include "expand.h"
 #include "proc.h"
 #include "test.h"
 
@@ -50,7 +51,7 @@ DEFINE_BLOCK(b_define_continue)
     RETURN(UNSPECIFIED);
 }
 
-DEFINE_SPECIAL_FORM(L"define")
+DEFINE_EXTERN_SPECIAL_FORM(define, L"define")
 {
     AUTO_ROOT(var, pair_car(F_SUBJ));
     AUTO_ROOT(rest, pair_cdr(F_SUBJ));
@@ -102,7 +103,7 @@ DEFINE_BLOCK(b_define_syntax_continue)
     RETURN(UNSPECIFIED);
 }
 
-DEFINE_SPECIAL_FORM(L"define-syntax")
+DEFINE_EXTERN_SPECIAL_FORM(define_syntax, L"define-syntax")
 {
     AUTO_ROOT(exp, pair_cadr(F_SUBJ));
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
@@ -294,6 +295,22 @@ TEST_EVAL(L"(define v2 '()) (set! v2 4)",    UNSPECIFIED_REPR);
  * (begin <expression> <expression> ...) # syntax
  */
 
+DEFINE_BLOCK(b_continue_begin)
+{
+    if (F_SUBJ)
+	EVAL_THEN_GOTO(pair_car(F_SUBJ), F_ENV,
+		       b_continue_begin, pair_cdr(F_SUBJ), F_ENV);
+    else
+	RETURN(UNSPECIFIED);
+    
+}
+
+DEFINE_EXTERN_PROC(begin, L"begin")
+{
+    EVAL_THEN_GOTO(pair_car(F_SUBJ), F_ENV,
+		   b_continue_begin, pair_cdr(F_SUBJ), F_ENV);
+}
+
 /* 11.5.  Equivalence
  *
  * (eqv? obj1 obj2)			# procedure
@@ -312,7 +329,7 @@ DEFINE_PROC(L"eq?")
 
 /* from r6rs */
 TEST_EVAL(L"(eq? 'a 'a)",               L"#t");
-TEST_EVAL(L"(eq? (list 'a) (list 'a))", L"#f");
+TEST_EVAL(L"(eq? (list 'a) (list 'a))",	L"#f");
 TEST_EVAL(L"(eq? '() '())",             L"#t");
 TEST_EVAL(L"(eq? car car)",             L"#t");
 //TEST_EVAL(L"(let ((x '(a)))\n"
