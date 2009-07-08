@@ -9,8 +9,10 @@
 
 ;    cond				; r6rs 11.4.5 Derived conditionals
 ;    case
-;    and
+  and
 ;    or
+
+    let					;r6rs 11.4.6 Binding constructs
 
     caar				; r6rs 11.9 Pairs and lists
     cadr
@@ -59,7 +61,7 @@
 ; => auxiliary syntax
 ; => auxiliary syntax
 ;
-; (case <key> <case clause 1> <case clause 2> ...)  # syntax
+; (case <key> <case clause 1> <case clause 2> ...) # syntax
 ;
 ; (and <test1> ...)				    # syntax
 ;
@@ -96,16 +98,28 @@
 ;
 ; (let*-values <mv-bindings> <body>)	# syntax
 
-;  (define-syntax let
-;    (lambda (bindings body)
-;      ...))
-    
 
+  (define-syntax let
+    (lambda let-expr
+      (define (get-vars bindings)
+	(if (null? bindings)
+	    ()
+	    (cons (caar bindings) (get-vars (cdr bindings)))))
 
+      (define (get-exprs bindings)
+	(if (null? bindings)
+	    ()
+	    (cons (cadar bindings) (get-exprs (cdr bindings)))))
+
+      (define (get-bindings let-expr) (car let-expr))
+      (define (get-body let-expr) (cdr let-expr))
+      (draft-print (apply lambda (get-vars (get-bindings let-expr))
+			  (get-body let-expr)))
+      ))
 
 ;  (define-syntax (or . tests) ())
 
-  ; someday I'll rewrite these with a macro.
+  ; someday I could rewrite these with a macro.
   (define (caar pair) (car (car pair)))
   (define (cadr pair) (car (cdr pair)))
   (define (cdar pair) (cdr (car pair)))
@@ -144,7 +158,7 @@
 
   (define (list . args)
     (if (null? args)
-	'()
+	()
 	(cons (car args) (apply list (cdr args)))))
 
 )
