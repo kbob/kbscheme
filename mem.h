@@ -25,13 +25,12 @@
 
 #define OBJ_MARK_MASK 0x1
 
-#define OBJ_OPS_WORD(obj) (((obj_header_t *)obj)->ob_ops_)
+#define OBJ_OPS_WORD(obj)     (((obj_header_t *)obj)->ob_ops_)
 
-#define OBJ_MEM_OPS(obj) ((mem_ops_t *)(OBJ_OPS_WORD(obj)))
+#define OBJ_MEM_OPS(obj)      ((mem_ops_t *)(OBJ_OPS_WORD(obj)))
 
-//#define OBJ_IS_FWD(obj) ((intptr_t)(obj) & OBJ_MARK_MASK)
-#define OBJ_IS_FWD(obj) (OBJ_OPS_WORD(obj) & OBJ_MARK_MASK)
-#define OBJ_FWD_PTR(obj) ((obj_t *)(~OBJ_OPS_WORD(obj)))
+#define OBJ_IS_FWD(obj)       (OBJ_OPS_WORD(obj) & OBJ_MARK_MASK)
+#define OBJ_FWD_PTR(obj)      ((obj_t *)(~OBJ_OPS_WORD(obj)))
 #define OBJ_SET_FWD(obj, fwd) (OBJ_OPS_WORD(obj) = ~(intptr_t)(fwd))
 
 typedef struct mem_ops mem_ops_t;
