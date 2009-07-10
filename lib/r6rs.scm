@@ -158,7 +158,7 @@
 
   (define (list . args)
     (if (null? args)
-	()
+	'()
 	(cons (car args) (apply list (cdr args)))))
 
 )
