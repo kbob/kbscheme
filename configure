@@ -1,0 +1,4 @@
+#!/bin/sh
+# Every project needs a configure script.
+
+echo "If this is x86 Linux w/ GNU tools, you're golden.  Else you're on your own."
