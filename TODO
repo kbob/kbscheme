@@ -52,7 +52,7 @@ DONE	full mem model
  DONE	    Write test suite.
  DONE	    Rename yyread to a better name.
  DONE	    Protect against gc.
-	    Recognize characters.
+ DONE	    Recognize characters.
 	    Recognize strings.
  DONE	    Recognize vectors.
  DONE	    Recognize bytevectors.
