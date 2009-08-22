@@ -2,6 +2,8 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <unicode.h>
+#include <wctype.h>
 
 #include "obj_binding.h"
 #include "types.h"
@@ -30,6 +32,47 @@ static void print_pair(obj_t *obj, outstream_t *out)
     outstream_putwc(L'(', out);
     print_list_interior(obj, L"", out);
     outstream_putwc(L')', out);
+}
+
+static inline bool is_printing(wchar_t wc)
+{
+    if (wc < 128)
+	return wc > L' ' && wc < L'\177';
+    else
+	switch ((int)unicode_general_category(wc))
+	case UGC_OTHER_PRIVATE_USE:
+	case UGC_LETTER_LOWERCASE:
+	case UGC_LETTER_MODIFIER:
+	case UGC_LETTER_OTHER:
+	case UGC_LETTER_TITLECASE:
+	case UGC_LETTER_UPPERCASE:
+	case UGC_MARK_SPACING_COMBINING:
+	case UGC_MARK_ENCLOSING:
+	case UGC_MARK_NONSPACING:
+	case UGC_NUMBER_DECIMAL_DIGIT:
+	case UGC_NUMBER_LETTER:
+	case UGC_NUMBER_OTHER:
+	case UGC_PUNCTUATION_CONNECTOR:
+	case UGC_PUNCTUATION_DASH:
+	case UGC_PUNCTUATION_OTHER:
+	case UGC_SYMBOL_CURRENCY:
+	case UGC_SYMBOL_MODIFIER:
+	case UGC_SYMBOL_MATH:
+	case UGC_SYMBOL_OTHER:
+	    return true;
+    return false;
+}
+
+static void print_char(obj_t *chobj, outstream_t *out)
+{
+    wchar_t wc = character_value(chobj);
+
+    if (wc == L' ')
+	outstream_printf(out, L"#\\space");
+    else if (is_printing(wc))
+	outstream_printf(out, L"#\\%lc", wc);
+    else
+	outstream_printf(out, L"#\\x%04x", wc);
 }
 
 static void print_procedure(obj_t *obj, outstream_t *out)
@@ -88,8 +131,7 @@ static void print_form(obj_t *obj, outstream_t *out)
     } else if (is_fixnum(obj)) {
 	outstream_printf(out, L"%d", fixnum_value(obj));
     } else if (is_character(obj)) {
-	/* implement me */
-	assert(false && "can't print characters yet");
+	print_char(obj, out);
     } else if (is_string(obj)) {
 	/* implement me */
 	assert(false && "can't print strings yet");

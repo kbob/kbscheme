@@ -10,6 +10,8 @@
 #define TEST_READ(input, expected)
 #define TEST_EVAL(input, expected)
 
+extern void self_test();
+
 #else
 
 #define TEST_READ(input, expected) DEFINE_TEST_CASE_(TP_READ, input, expected)
@@ -44,6 +46,12 @@ struct test_case_descriptor {
     int                     tcd_lineno;
     test_case_descriptor_t *tcd_next;
 };
+
+typedef const wchar_t test_exception_t;
+
+extern test_exception_t exception;
+extern test_exception_t syntax;
+extern test_exception_t lexical;
 
 extern void register_test(test_case_descriptor_t *);
 extern void self_test();

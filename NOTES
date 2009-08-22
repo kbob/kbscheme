@@ -633,3 +633,172 @@ Some previously unstated goals:
 
     It should be possible to build the interpreter with good old
     "./configure && make && make install".
+
+----------------------------------
+~7/1/2009 - 8/19/2009
+
+I upgraded my workstation from Ubuntu 8.04 to 9.04.  When I finished,
+libunicode was gone.  Removed from the repository!  I turns out
+that libunicode has been deprecated for several years, and it was a
+poor choice to use it.  So I've been unable to compile Scheme for
+a while now.
+
+So I've been researching Unicode libraries, and also learning more
+about Unicode itself.  It's HUGE!  We humans have had thousands of
+years to design writing systems, and up until about 1980, there was no
+thought about making them easy for computers to work with.  So
+right now I'm reading the Unicode spec and R6RS very carefully to
+understand what I actually need.
+
+I'm thinking about implementing my own Unicode library, derived
+directly from the published UnicodeData.txt and related files.
+
+There are lots of terms, and I don't know exactly what they mean yet.
+
+  - Character
+
+  - Code Point
+        U+0000 through U+10FFFF.
+
+  - Glyph
+
+  - Property
+
+  - Category(?)
+        aka the General_Category property
+
+  - "Unicode scalar value" (from R6RS 11.11)  Same as a code point?
+        R6RS says that a scalar value is a code point outside the
+	surrogate range (U+D800 .. U+DFFF).
+
+Then there are encoding and decoding.  But I'm still planning to use
+glibc for that (for now).  Internally, it's all UTF-32.
+
+Unicode defines four normalization forms.  R6RS has four procedures
+that do normalization: string-normalize-nfd, string-normalize-nfkd,
+string-normalize-nfc, and string-normalize-nfkc.
+
+Normalization Forms D and KD decompose characters.  A-umlaut becomes
+A followed by Umlaut.
+
+Normalization Forms C and KC compose characters.
+
+Normalization Forms KC and KD are compatibility forms.  I don't know
+what that means.  Unicode, section 5.3:
+
+    "Compatibility.  The decomposition may remove some information
+    (typically formatting information) that is important to preserve
+    in particular contexts.)"
+
+I still don't know what that means.  From the Python documentation
+(module unicodedata):
+
+    In addition to these two forms, there are two additional normal
+    forms based on compatibility equivalence. In Unicode, certain
+    characters are supported which normally would be unified with
+    other characters. For example, U+2160 (ROMAN NUMERAL ONE) is
+    really the same thing as U+0049 (LATIN CAPITAL LETTER I). However,
+    it is supported in Unicode for compatibility with existing
+    character sets (e.g. gb2312).
+
+I think the only features Scheme needs are:
+
+    general category
+    comparison
+    case-independent comparison
+    char-upcase (simple uppercase mapping)
+    char-downcase (simple lowercase mapping)
+    char-titlecase (simple titlecase mapping)
+    tolower
+    toupper
+    totitle
+    case folding (both simple and complex).
+    normalization
+
+Python's str type and unicodedata module implement all of those.
+
+R6RS-lib claims that all the properties are available from these files.
+
+    UnicodeData.txt
+    SpecialCasing.txt
+    WordBreakProperty.txt
+    CaseFolding.txt
+
+We need...
+
+    general category: UnicodeData.txt column 2 (zero-based)
+
+    comparison: compare code point values
+
+    case-independent comparison: case-fold then compare code point values
+
+    char-upcase: UnicodeData.txt column 12
+
+    char-downcase: UnicodeData.txt column 13
+
+    char-titlecase: UnicodeData.txt column 14
+
+    char-foldcase: if not Turkic I,
+		       if CaseFolding.txt column 1 in {C, S},
+		           CaseFolding.txt column 2
+
+    char-alphabetic?: Alphabetic property from DerivedCoreProperties.txt
+
+    char-numeric?: 
+
+    char-whitespace?: White_Space property from PropList.txt
+
+    char-upper-case?: Uppercase property from DerivedCoreProperties.txt
+
+    char-lower-case?: Lowercase property from DerivedCoreProperties.txt
+
+    char-title-case?: general category == Lt
+
+    string-upcase: SpecialCasing.txt column 3 or UnicodeData.txt column 12
+
+    string-downcase: SpecialCasing.txt column 1 or UnicodeData.txt column 13
+
+    string-titlecase: SpecialCasing.txt column 2 or UnicodeData.txt column 14
+
+    string-foldcase: if CaseFolding.txt column 1 in {C, F},
+		         CaseFolding.txt column 2
+
+    normalization: See http://www.unicode.org/reports/tr15/Normalizer.java
+
+----------------------------------
+8/21/2009
+
+The above summarizes what we need.  Let's do the simplest possible
+thing.  A table with 0x110000 entries in it, and each entry looks
+like this.
+
+    typedef enum unicode_type_bit {
+    	ut_alphabetic = 1 << 0,
+    	ut_numeric    = 1 << 1,
+    	ut_whitespace = 1 << 2,
+    	ut_upper_case = 1 << 3,
+    	ut_lower_case = 1 << 4,
+    	ut_title_case = 1 << 5,
+    } unicode_type_bit_t;
+
+    typedef struct unicode_data {
+    	enum general_category_t  ud_general_category;
+    	bool 			 ut_alphabetic:1,
+    	bool 			 ut_numeric:1,
+    	bool 			 ut_whitespace:1,
+    	bool 			 ut_upper_case:1,
+    	bool 			 ut_lower_case:1,
+    	bool 			 ut_title_case:1,
+	wchar_t 		 ud_simple_upcase;
+	wchar_t 		 ud_simple_downcase;
+	wchar_t 		 ud_simple_titlecase;
+	wchar_t 		 ud_simple_foldcase;
+	wchar_t 	       	*ud_full_upcase;
+	wchar_t 	        *ud_full_downcase;
+	wchar_t 		*ud_full_titlecase;
+	wchar_t 		*ud_full_foldcase;
+    } unicode_data_t;
+
+That wastes a ton of space but it's the simplest thing.  Write a
+Python script to generate the table; the runtime functions are
+obvious.

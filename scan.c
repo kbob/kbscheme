@@ -1,22 +1,49 @@
 #include "scan.h"
 
+#include <alloca.h>			/* XXX */
 #include <assert.h>
 #include <string.h>
-#include <unicode.h>
 #include <wctype.h>
 
 #include "test.h"
 #include "types.h"
+#include "unicode.h"
+
+typedef struct char_name_map {
+    wchar_t *cn_name;
+    wchar_t  cn_char;
+} char_name_map_t;
+
+static char_name_map_t char_names[] = {
+    { L"alarm",     L'\a'   },
+    { L"backspace", L'\b'   },
+    { L"delete",    L'\177' },
+    { L"esc",       L'\33'  },
+    { L"linefeed",  L'\n'   },
+    { L"newline",   L'\n'   },		/* deprecated */
+    { L"nul",       L'\0'   },
+    { L"page",      L'\f'   },
+    { L"return",    L'\r'   },
+    { L"space",     L' '    },
+    { L"tab",       L'\t'   },
+    { L"vtab",      L'\v'   },
+};
+
+static size_t char_name_count = sizeof char_names / sizeof *char_names;
 
 static inline bool is_whitespace(wchar_t wc)
 {
-    switch (unicode_type(wc)) {
-    case UNICODE_LINE_SEPARATOR:
-    case UNICODE_SPACE_SEPARATOR:
-    case UNICODE_PARAGRAPH_SEPARATOR:
+    switch ((int)unicode_general_category(wc))
+    case UGC_SEPARATOR_LINE:
+    case UGC_SEPARATOR_SPACE:
+    case UGC_SEPARATOR_PARAGRAPH:
 	return true;
-    }
     return (bool)wcschr(L"\t\n\v\f\r\x85", wc);
+}
+
+static inline bool is_delimiter(wc)
+{
+    return (bool)wcschr(L"()[]\";#", wc) || is_whitespace(wc);
 }
 
 static inline bool is_line_ending(wchar_t wc)
@@ -42,26 +69,23 @@ static inline bool is_ident_initial(wchar_t wc)
     if (wc < 128)
 	return iswalpha(wc) || wcschr(L"!$%&*/:<=>?^_~", wc);
     else
-	switch (unicode_type(wc))
-	case UNICODE_PRIVATE_USE:
-	case UNICODE_LOWERCASE_LETTER:
-	case UNICODE_MODIFIER_LETTER:
-	case UNICODE_OTHER_LETTER:
-	case UNICODE_TITLECASE_LETTER:
-	case UNICODE_UPPERCASE_LETTER:
-	case UNICODE_COMBINING_MARK:
-	case UNICODE_ENCLOSING_MARK:
-	case UNICODE_NON_SPACING_MARK:
-	case UNICODE_DECIMAL_NUMBER:
-	case UNICODE_LETTER_NUMBER:
-	case UNICODE_OTHER_NUMBER:
-	case UNICODE_CONNECT_PUNCTUATION:
-	case UNICODE_DASH_PUNCTUATION:
-	case UNICODE_OTHER_PUNCTUATION:
-	case UNICODE_CURRENCY_SYMBOL:
-	case UNICODE_MODIFIER_SYMBOL:
-	case UNICODE_MATH_SYMBOL:
-	case UNICODE_OTHER_SYMBOL:
+	switch ((int)unicode_general_category(wc))
+	case UGC_OTHER_PRIVATE_USE:
+	case UGC_LETTER_LOWERCASE:
+	case UGC_LETTER_MODIFIER:
+	case UGC_LETTER_OTHER:
+	case UGC_LETTER_TITLECASE:
+	case UGC_LETTER_UPPERCASE:
+	case UGC_MARK_NONSPACING:
+	case UGC_NUMBER_LETTER:
+	case UGC_NUMBER_OTHER:
+	case UGC_PUNCTUATION_CONNECTOR:
+	case UGC_PUNCTUATION_DASH:
+	case UGC_PUNCTUATION_OTHER:
+	case UGC_SYMBOL_CURRENCY:
+	case UGC_SYMBOL_MODIFIER:
+	case UGC_SYMBOL_MATH:
+	case UGC_SYMBOL_OTHER:
 	    return true;
     return false;
 }
@@ -70,10 +94,10 @@ static inline bool is_ident_subsequent(wchar_t wc)
 {
     if (is_ident_initial(wc) || wcschr(L"+-.@", wc))
 	return true;
-    switch (unicode_type(wc)) {
-    case UNICODE_DECIMAL_NUMBER:
-    case UNICODE_COMBINING_MARK:
-    case UNICODE_ENCLOSING_MARK:
+    switch ((int)unicode_general_category(wc)) {
+    case UGC_NUMBER_DECIMAL_DIGIT:
+    case UGC_MARK_SPACING_COMBINING:
+    case UGC_MARK_ENCLOSING:
 	return true;
     }
     return false;
@@ -89,26 +113,21 @@ static int digit_value(wchar_t wc)
     return wc - L'A' + 0xA;
 }
 
-static wchar_t inline_hex_escape(instream_t *in)
+static bool inline_hex_scalar(instream_t *in, wchar_t *xchr, wchar_t end)
 {
     int xval = 0;
     wchar_t wc;
     while ((wc = instream_getwc(in)) != WEOF && is_xdigit(wc))
 	xval = 0x10 * xval + digit_value(wc);
-    assert(wc == L';');
-    return (wchar_t)xval;
-}
-
-static token_type_t scan_number(int sign, obj_t **lvalp, instream_t *in)
-{
-    wchar_t wc;
-    int ival = 0;
-    while ((wc = instream_getwc(in)) != WEOF && is_digit(wc))
-	ival = 10 * ival + (wc & 0xF);
-    if (wc != WEOF)
+    if (end) {
+	if (wc == WEOF || wc != end)
+	    return false;
+    } else if (wc != WEOF)
 	instream_ungetwc(wc, in);
-    *lvalp = make_fixnum(sign * ival);
-    return TOK_EXACT_NUMBER;
+    if (xval > 0x10ffff || (xval >= 0xd800 && xval <= 0xdfff))
+	return false;
+    *xchr = (wchar_t)xval;
+    return true;
 }
 
 static token_type_t scan_ident(const wchar_t *prefix,
@@ -128,7 +147,8 @@ static token_type_t scan_ident(const wchar_t *prefix,
 	if (wc == L'\\') {
 	    wc = instream_getwc(in);
 	    if (wc == L'x' || wc == L'X') {
-		wc = inline_hex_escape(in);
+		if (!inline_hex_scalar(in, &wc, L';'))
+		    assert(false && "bad hex scalar");
 	    } else if (wc != WEOF) {
 		instream_ungetwc(wc, in);
 		break;
@@ -149,6 +169,79 @@ static token_type_t scan_ident(const wchar_t *prefix,
 	instream_ungetwc(wc, in);
     *lvalp = make_symbol(buf);
     return TOK_SIMPLE;
+}
+
+static bool scan_character(obj_t **lvalp, instream_t *in)
+{
+    /* Accumulate [A-Za-z0-9]* up to delimiter.  */
+    wint_t wc = instream_getwc(in);
+    wchar_t wchr;
+    if (wc == WEOF)
+	return false;
+    if (wc == L'x') {
+	wint_t w2 = instream_getwc(in);
+	instream_ungetwc(w2, in);
+	if (iswxdigit(w2)) {
+	    if (!inline_hex_scalar(in, &wchr, 0))
+		return false;
+	    w2 = instream_getwc(in);
+	    if (w2 != WEOF) {
+		if (!is_delimiter(w2))
+		    return false;
+		instream_ungetwc(w2, in);
+	    }
+	    *lvalp = make_character(wchr);
+	    return true;
+	}
+    }
+    /* XXX replace alloca w/ vu8 */
+    size_t len = 16, pos = 0;
+    wchar_t *buf = alloca(len * sizeof *buf);
+    while (true) {
+	buf[pos++] = wc;
+	wc = instream_getwc(in);
+	if (wc == WEOF)
+	    break;
+	if (is_delimiter(wc)) {
+	    instream_ungetwc(wc, in);
+	    break;
+	}
+	if (pos >= len - 1) {
+	    int nbytes = (len *= 2) * sizeof *buf;
+	    wchar_t *tmp = alloca(nbytes);
+	    assert(tmp);
+	    memmove(tmp, buf, nbytes);
+	    buf = tmp;
+	}
+    }    
+    if (pos == 1)
+	wchr = buf[0];
+    else {
+	buf[pos] = L'\0';
+	size_t i;
+	for (i = 0; ; i++) {
+	    if (i == char_name_count)
+		return false;
+	    if (!wcscmp(buf, char_names[i].cn_name)) {
+		wchr = char_names[i].cn_char;
+		break;
+	    }
+	}
+    }
+    *lvalp = make_character(wchr);
+    return true;
+}
+
+static token_type_t scan_number(int sign, obj_t **lvalp, instream_t *in)
+{
+    wchar_t wc;
+    int ival = 0;
+    while ((wc = instream_getwc(in)) != WEOF && is_digit(wc))
+	ival = 10 * ival + (wc & 0xF);
+    if (wc != WEOF)
+	instream_ungetwc(wc, in);
+    *lvalp = make_fixnum(sign * ival);
+    return TOK_EXACT_NUMBER;
 }
 
 extern token_type_t yylex(obj_t **lvalp, instream_t *in)
@@ -183,6 +276,7 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 	    /* . is a token.
              * ... is an identifier.
              * Anything else is an error. */
+	    /* XXX .foo is legal.  '.' is category Po. */
 	    int n = 1;
 	    while ((w2 = instream_getwc(in)) == L'.')
 		n++;
@@ -218,9 +312,6 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 	}
 	if (wc == L'#') {
 	    /* #t #f #( #vu8( #| #; #' #` #, #,@ #!r6rs */
-	    /* XXX implement #\<any character> */
-	    /* XXX implement #\<character name> */
-	    /* XXX implement #\x<hex scalar value> */
 	    /* XXX implement #i... and #e... */
 	    wc = instream_getwc(in);
 	    switch (wc) {
@@ -254,7 +345,7 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		    is_ident_initial(w2)) {
 		    instream_ungetwc(w2, in);
 		    obj_t *unused;
-		    scan_ident(L"#!", &unused, in);
+		    (void)scan_ident(L"#!", &unused, in);
 		    continue;
 		}
 		instream_ungetwc(w2, in);
@@ -308,9 +399,14 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		instream_ungetwc(w2, in);
 		*lvalp = make_symbol(L"unsyntax");
 		return TOK_ABBREV;
+
+	    case L'\\':			/* #\<character> */
+		if (scan_character(lvalp, in))
+		    return TOK_SIMPLE;
+		wc = instream_getwc(in);
+		break;			/* fall through to degeneracy */
 	    }
 	    /* fall through to failure. */
-	    instream_ungetwc(wc, in);
 	    wc = L'#';
 	}
 	if (wc == L'-') {
@@ -355,8 +451,10 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 	}
 	if (wc == L'\\') {
 	    w2 = instream_getwc(in);
-	    if (w2 == L'x' || w2 == L'X') {
-		wchar_t prefix[2] = { inline_hex_escape(in), L'\0' };
+	    wchar_t w3;
+	    if ((w2 == L'x' || w2 == L'X') &&
+		inline_hex_scalar(in, &w3, L';'))
+	    {	wchar_t prefix[2] = { w3, L'\0' };
 		return scan_ident(prefix, lvalp, in);
 	    } else if (w2 != WEOF)
 		instream_ungetwc(w2, in);
@@ -489,7 +587,7 @@ TEST_READ(L"(->)",			L"(->)");
 TEST_READ(L"\\x61;",			L"a");
 TEST_READ(L"\\X61;\\X3BB;",		L"a\x3bb");
 
-/*from r6rs section 4.2.4 */
+/* from r6rs section 4.2.4 */
 TEST_IDENT(lambda);
 TEST_IDENT(q);
 TEST_IDENT(soup);
@@ -502,10 +600,55 @@ TEST_IDENT(->-);
 TEST_IDENT(the-word-recursion-has-many-meanings);
 TEST_READ(L"\\x3BB;",			L"\x3bb");
 
+/* characters */
+#define TEST_CHAR(input, expected)					\
+    TEST_READ(L"#\\" input, expected);					\
+    TEST_EVAL(L"(char? '#\\" input L")", L"#t");
+#define TEST_LEXICAL_EXCEPTION(input) TEST_READ(L"#\\" input, &lexical)
+
+/* from r6rs section 4.2.6 */
+TEST_CHAR(L"a",				L"#\\a");
+TEST_CHAR(L"A",				L"#\\A");
+TEST_CHAR(L"(",				L"#\\(");
+TEST_CHAR(L" ",				L"#\\space");
+TEST_CHAR(L"nul",			L"#\\x0000");
+TEST_CHAR(L"alarm",			L"#\\x0007");
+TEST_CHAR(L"backspace",			L"#\\x0008");
+TEST_CHAR(L"tab",			L"#\\x0009");
+TEST_CHAR(L"linefeed",			L"#\\x000a");
+TEST_CHAR(L"newline",			L"#\\x000a");
+TEST_CHAR(L"vtab",			L"#\\x000b");
+TEST_CHAR(L"page",			L"#\\x000c");
+TEST_CHAR(L"return",			L"#\\x000d");
+TEST_CHAR(L"esc",			L"#\\x001b");
+TEST_CHAR(L"space",			L"#\\space");
+TEST_CHAR(L"delete",			L"#\\x007f");
+TEST_CHAR(L"xFF",			L"#\\\x00ff");
+TEST_CHAR(L"x03BB",			L"#\\\x03bb");
+TEST_CHAR(L"x00006587",			L"#\\\x6587");
+TEST_CHAR(L"\x03bb",			L"#\\\x03bb");
+TEST_LEXICAL_EXCEPTION(L"x0001z");
+TEST_LEXICAL_EXCEPTION(L"\x03bbx");
+TEST_LEXICAL_EXCEPTION(L"alarmx");
+TEST_READ(L"#\\alarm x",		L"#\\x0007");
+TEST_LEXICAL_EXCEPTION(L"Alarm");
+TEST_LEXICAL_EXCEPTION(L"alert");
+TEST_CHAR(L"xA",			L"#\\x000a");
+TEST_CHAR(L"xFF",			L"#\\\x00ff");
+TEST_CHAR(L"xff",			L"#\\\x00ff");
+TEST_READ(L"#\\x ff",			L"#\\x");
+TEST_READ(L"#\\x(ff)",			L"#\\x");
+TEST_LEXICAL_EXCEPTION(L"(x)");
+TEST_LEXICAL_EXCEPTION(L"(x");
+TEST_READ(L"#\\((x)",			L"#\\(");
+TEST_LEXICAL_EXCEPTION(L"x00110000");
+TEST_CHAR(L"x000000001",		L"#\\x0001");
+TEST_LEXICAL_EXCEPTION(L"xD800");
+
 /* numbers */
 
 #define TEST_NUMBER(input, expected)					\
-    TEST_READ(L ## #input, L ## #expected);					\
+    TEST_READ(L ## #input, L ## #expected);				\
     TEST_EVAL(L"(number? " L ## #expected L")", L"#t");
 TEST_NUMBER(0,       0);
 TEST_NUMBER(+12,    12);
