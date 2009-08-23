@@ -802,3 +802,38 @@ like this.
 That wastes a ton of space but it's the simplest thing.  Write a
 Python script to generate the table; the runtime functions are
 obvious.
+
+----------------------------------
+8/23/2009
+
+The Unicode problem is resolved for now.  I didn't implement the full
+solution listed above, but I have the minimal subset to remove
+dependencies from libunicode.  So Scheme builds again.  w00t.
+
+And the framework is there to implement the rest of the Unicode
+dependencies.
+
+But let's get back to macros.
+
+A while ago, I created an experimental special form called mu.  mu is
+the successor to lambda.  The Scheme spec calls for some rewriting as
+a lambda form is evaluated, which my lambda evaluator doesn't do.
+
+mu, however, passes the incoming form to a Scheme procedure to
+transform it, then creates a procedure from the transformed form.
+
+I just now implemented "let" through mu.  Observe.
+
+    ~/scheme> ./scheme
+    > (define f (mu () (let ((v0 i0) (v1 i1)) (+ v0 v1))))
+    > (define i0 3)
+    > (define i1 4)
+    > (f)
+    7
+    > (procedure? f)
+    #t
+    > f
+    (lambda () ((lambda (v0 v1) (+ v0 v1)) i0 i1))
+    > 
+
+So that's a start.
