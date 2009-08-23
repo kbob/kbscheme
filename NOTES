@@ -807,7 +807,7 @@ obvious.
 8/23/2009
 
 The Unicode problem is resolved for now.  I didn't implement the full
-solution listed above, but I have the minimal subset to remove
+solution outlined above, but I have the minimal subset to remove
 dependencies from libunicode.  So Scheme builds again.  w00t.
 
 And the framework is there to implement the rest of the Unicode
