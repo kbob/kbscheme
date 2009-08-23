@@ -2,7 +2,7 @@
      programs := scheme
  test_scripts := selftest.sh
 
-scheme_cfiles := main.c env.c eval.c expand.c io.c lib.c obj.c print.c	\
+scheme_cfiles := main.c env.c eval.c io.c lib.c obj.c print.c		\
 		 printf.c proc.c read.c roots.c scan.c test.c unicode.c	\
 									\
                  mem.c mem_scalar.c mem_fixvec.c mem_mixvec.c		\

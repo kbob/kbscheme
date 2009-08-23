@@ -48,6 +48,36 @@ DONE	full mem model
  DONE	    Create run-time parameter to run debug code.
 	    alternate algorithms!
 
+	Unicode
+ DONE	    character general category
+	    char-upcase
+	    char-downcase
+	    char-titlecase
+	    char-foldcase
+	    char-ci=?
+	    char-ci<?
+	    char-ci>?
+	    char-ci<=?
+	    char-ci>=?
+	    char-alphabetic?
+	    char-whitespace?
+	    char-upper-case?
+	    char-lower-case?
+	    char-title-case?
+	    string-upcase
+	    string-downcase
+	    string-titlecase
+	    string-foldcase
+	    string-ci=?
+	    string-ci<?
+	    string-ci>?
+	    string-ci<=?
+	    string-ci>=?
+	    string-normalize-nfd
+	    string-normalize-nfkd
+	    string-normalize-nfc
+	    string-normalize-nfkc
+
 	full reader
  DONE	    Write test suite.
  DONE	    Rename yyread to a better name.

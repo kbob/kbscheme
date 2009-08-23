@@ -5,14 +5,14 @@
 (library
  (rnrs base (6))
  (export
-  quote					; r6rs 11.4.1 Quotation
+;  quote				; r6rs 11.4.1 Quotation
 
 ;    cond				; r6rs 11.4.5 Derived conditionals
 ;    case
-  and
+;  and
 ;    or
 
-    let					;r6rs 11.4.6 Binding constructs
+;   let					;r6rs 11.4.6 Binding constructs
 
     caar				; r6rs 11.9 Pairs and lists
     cadr
@@ -52,8 +52,8 @@
 ;
 ; (quote <datum>)			# syntax
 
- (define-syntax quote
-   (lambda (datum) datum))
+; (define-syntax quote
+;   (lambda (datum) datum))
 
 ; 11.4.5.  Derived conditionals
 ;
@@ -74,14 +74,14 @@
   ; (and a) => a
   ; (and a b) => (if a b #f)
   ; (and a b c) => (if a (if b c #f) #f)
-  (define-syntax and
-    (lambda tests
-;      (draft-print tests)
-      (if (null? tests)
-	  #t
-	  (if (null? (cdr tests))
-		     (car tests)
-		     (list 'if (car tests) (and (cdr tests)) #f)))))
+;  (define-syntax and
+;    (lambda tests
+;;      (draft-print tests)
+;      (if (null? tests)
+;	  #t
+;	  (if (null? (cdr tests))
+;		     (car tests)
+;		     (list 'if (car tests) (and (cdr tests)) #f)))))
 
 
 ; 11.4.6.  Binding constructs
@@ -98,25 +98,24 @@
 ;
 ; (let*-values <mv-bindings> <body>)	# syntax
 
-
-  (define-syntax let
-    (lambda let-expr
+  #;(define-syntax let
+    (lambda wrapped-syntax-object
       (define (get-vars bindings)
 	(if (null? bindings)
-	    ()
-	    (cons (caar bindings) (get-vars (cdr bindings)))))
-
+	  '()
+	  (cons (caar bindings) (get-vars (cdr bindings)))))
       (define (get-exprs bindings)
 	(if (null? bindings)
-	    ()
-	    (cons (cadar bindings) (get-exprs (cdr bindings)))))
-
-      (define (get-bindings let-expr) (car let-expr))
-      (define (get-body let-expr) (cdr let-expr))
-      (draft-print (apply lambda (get-vars (get-bindings let-expr))
-			  (get-body let-expr)))
-      ))
-
+	  '()
+	  (cons (cadar bindings) (get-vars (cdr bindings)))))
+      (draft-print form)
+      (if (pair? (car form))
+	  (cons (cons 'lambda
+		      (cons (get-vars (car form))
+			    body))
+		(get-exprs (car form)))
+	  (raise &syntax))))		; named let unimplemented
+    
 ;  (define-syntax (or . tests) ())
 
   ; someday I could rewrite these with a macro.

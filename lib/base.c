@@ -92,6 +92,7 @@ TEST_EVAL(L"(define first car)\n"
  * (define-syntax <keyword> <expression>) # syntax
  */
 
+#if 0
 DEFINE_BLOCK(b_define_syntax_continue)
 {
     obj_t *proc = VALUE;
@@ -127,12 +128,17 @@ TEST_EVAL(L"(define-syntax qot (lambda (x) x))\n"
 //          L"      ((bind-to-zero id) (define id 0))))\n"
 //          L"  (bind-to-zero x)\n"
 //          L"  x)",			L"0");
-
+#endif
 
 /* 11.4.1.  Quotation
  *
  * (quote <datum>)			# syntax
  */
+
+DEFINE_SPECIAL_FORM(L"quote")
+{
+    RETURN(pair_car(F_SUBJ));
+}
 
 /* XXX move these to wherever the Scheme unit tests will be. */
 TEST_EVAL(L"(quote ())",		L"()");
@@ -185,7 +191,7 @@ TEST_EVAL(L"(define reverse-subtract\n"
 //	  L"  (let ((x 4))\n"
 //	  L"    (lambda (y) (+ x y))))\n"
 //	  L"(add4 6)",				L"10");
-//
+
 
 TEST_EVAL(L"((lambda x x) 3 4 5 6)",		L"(3 4 5 6)");
 TEST_EVAL(L"((lambda (x y . z) z)\n"
@@ -505,8 +511,161 @@ TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
 /* 11.11.  Characters
  *
- * ...
+ * (char? obj)				# procedure
+ *
+ * (char->integer char)			# procedure
+ * (integer->char sv)			# procedure
+ *
+ * (char=? char1 char2 char3 ...)	# procedure
+ * (char<? char1 char2 char3 ...)	# procedure
+ * (char>? char1 char2 char3 ...)	# procedure
+ * (char<=? char1 char2 char3 ...)	# procedure
+ * (char>=? char1 char2 char3 ...)	# procedure
  */
+
+DEFINE_PROC(L"integer->char")
+{
+    int i = fixnum_value(pair_car(F_SUBJ));
+    RETURN(make_character((wchar_t)i));
+}
+
+DEFINE_PROC(L"char->integer")
+{
+    wchar_t wc = character_value(pair_car(F_SUBJ));
+    RETURN(make_fixnum(wc));
+}
+
+/* from r6rs */
+TEST_EVAL(L"(integer->char 32)",	L"#\\space");
+TEST_EVAL(L"(char->integer (integer->char 5000))",
+					L"5000");
+
+DEFINE_PROC(L"char=?")
+{
+    obj_t *p = F_SUBJ;
+    wchar_t lc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    wchar_t rc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    while (true) {
+	if (!(lc == rc)) {
+	    RETURN(make_boolean(false));
+	}
+	if (!p)
+	    break;
+	lc = rc;
+	rc = character_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"char<?")
+{
+    obj_t *p = F_SUBJ;
+    wchar_t lc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    wchar_t rc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    while (true) {
+	if (!(lc < rc)) {
+	    RETURN(make_boolean(false));
+	}
+	if (!p)
+	    break;
+	lc = rc;
+	rc = character_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"char>?")
+{
+    obj_t *p = F_SUBJ;
+    wchar_t lc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    wchar_t rc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    while (true) {
+	if (!(lc > rc)) {
+	    RETURN(make_boolean(false));
+	}
+	if (!p)
+	    break;
+	lc = rc;
+	rc = character_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"char<=?")
+{
+    obj_t *p = F_SUBJ;
+    wchar_t lc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    wchar_t rc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    while (true) {
+	if (!(lc <= rc)) {
+	    RETURN(make_boolean(false));
+	}
+	if (!p)
+	    break;
+	lc = rc;
+	rc = character_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"char>=?")
+{
+    obj_t *p = F_SUBJ;
+    wchar_t lc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    wchar_t rc = character_value(pair_car(p));
+    p = pair_cdr(p);
+    while (true) {
+	if (!(lc >= rc)) {
+	    RETURN(make_boolean(false));
+	}
+	if (!p)
+	    break;
+	lc = rc;
+	rc = character_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(char=? #\\b #\\a)",	L"#f");
+TEST_EVAL(L"(char=? #\\b #\\b)",	L"#t");
+TEST_EVAL(L"(char=? #\\b #\\c)",	L"#f");
+
+TEST_EVAL(L"(char=? #\\a #\\a #\\a)",	L"#t");
+TEST_EVAL(L"(char=? #\\a #\\a #\\b)",	L"#f");
+
+TEST_EVAL(L"(char<? #\\b #\\a)",	L"#f");
+TEST_EVAL(L"(char<? #\\b #\\b)",	L"#f");
+TEST_EVAL(L"(char<? #\\b #\\c)",	L"#t");
+
+TEST_EVAL(L"(char>? #\\b #\\a)",	L"#t");
+TEST_EVAL(L"(char>? #\\b #\\b)",	L"#f");
+TEST_EVAL(L"(char>? #\\b #\\c)",	L"#f");
+
+TEST_EVAL(L"(char<=? #\\b #\\a)",	L"#f");
+TEST_EVAL(L"(char<=? #\\b #\\b)",	L"#t");
+TEST_EVAL(L"(char<=? #\\b #\\c)",	L"#t");
+
+TEST_EVAL(L"(char>=? #\\b #\\a)",	L"#t");
+TEST_EVAL(L"(char>=? #\\b #\\b)",	L"#t");
+TEST_EVAL(L"(char>=? #\\b #\\c)",	L"#f");
+
+/* from r6rs */
+TEST_EVAL(L"(char<? #\\z #\\\xdf)",	L"#t");
+TEST_EVAL(L"(char<? #\\z #\\Z)",	L"#f");
 
 /* 11.12.  Strings
  *
@@ -592,7 +751,7 @@ TEST_EVAL(L"(define a '#(1 2 3))\n"
 //TEST_EVAL(L"(list ((vec (vector 0 '(2 2 2 2) \"Anna\")))\n"
 //	  L"  (vector-set! vec 1 '(\"Sue\" \"Sue\"))\n"
 //	  L"  vec)",			L"#(0 (\"Sue\" \"Sue\") \"Anna\")");
-//TEST_EVAL(L"(vector-set! '#(0 1 2) 1 "doe")\n", L"&assertion");
+//TEST_EVAL(L"(vector-set! '#(0 1 2) 1 \"doe\")\n", L"&assertion");
 
 /* 11.14.  Errors and violations
  *

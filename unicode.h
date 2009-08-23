@@ -5,7 +5,7 @@
 
 typedef enum unicode_general_category_t {
 
-    UGC_LETTER_UPPERCASE = 0,		/* Lu */
+    UGC_LETTER_UPPERCASE,		/* Lu */
     UGC_LETTER_LOWERCASE,		/* Ll */
     UGC_LETTER_TITLECASE,		/* Lt */
     UGC_LETTER_MODIFIER,		/* Lm */
@@ -45,5 +45,7 @@ typedef enum unicode_general_category_t {
 } unicode_general_category_t;
 
 unicode_general_category_t unicode_general_category(wchar_t);
+
+const wchar_t *unicode_gc_short_name(unicode_general_category_t);
 
 #endif /* !UNICODE_INCLUDED */
