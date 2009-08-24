@@ -30,7 +30,7 @@ static bool is_self_evaluating(obj_t *expr)
 TEST_EVAL(L"#t", L"#t");
 TEST_EVAL(L"#f", L"#f");
 TEST_EVAL(L"123", L"123");
-//TEST_EVAL(L"\\A", L"\\A");
+TEST_EVAL(L"#\\A", L"#\\A");
 //TEST_EVAL(L"\"ABC\"", L"\"ABC\"");
 
 static bool is_application(obj_t *expr)
@@ -46,7 +46,7 @@ static obj_t *eval_symbol(void)
 
 #if EVAL_TRACE
 
-    const wchar_t *block_name(C_procedure_t *block)
+    static const wchar_t *block_name(C_procedure_t *block)
     {
 	if (block == b_eval)
 	    return L"b_eval";
@@ -74,7 +74,7 @@ static obj_t *eval_symbol(void)
 	return L"<some-proc>";
     }
 
-    void print_stack(const char *label)
+    static void print_stack(const char *label)
     {
 	printf("%s: stack = ", label);
 	const char *sep = "";

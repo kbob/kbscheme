@@ -6,36 +6,6 @@
 
 LIBRARY(L"(rnrs base (6))")
 
-/* 11.1.1.  Base types
- *
- *    boolean?		pair?
- *    symbol?		number?
- *    char?		string?
- *    vector?		procedure?
- *    null?
- */
-
-DEFINE_PROC(L"symbol?")
-{
-    RETURN(make_boolean(is_symbol(pair_car(F_SUBJ))));
-}
-
-DEFINE_PROC(L"char?")
-{
-    RETURN(make_boolean(is_character(pair_car(F_SUBJ))));
-}
-
-DEFINE_PROC(L"number?")
-{
-    /* XXX RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
-    RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
-}
-
-DEFINE_PROC(L"string?")
-{
-    RETURN(make_boolean(is_string(pair_car(F_SUBJ))));
-}
-
 /* 11.2.1.  Variable definitions
  *
  * (define <variable> <expression>)	  # syntax
@@ -362,6 +332,154 @@ TEST_EVAL(L"(procedure? '(lambda (x) (* x x)))", L"#f");
  * ...
  */
 
+DEFINE_PROC(L"number?")
+{
+    /* XXX RETURN(make_boolean(is_number(pair_car(F_SUBJ)))); */
+    RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
+}
+
+DEFINE_PROC(L"integer?")
+{
+    /* XXX RETURN(make_boolean(is_integer(pair_car(F_SUBJ)))); */
+    RETURN(make_boolean(is_fixnum(pair_car(F_SUBJ))));
+}
+
+DEFINE_PROC(L"=")
+{
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    while (!is_null(p)) {
+	if (fixnum_value(pair_car(p)) != x)
+	    RETURN(make_boolean(false));
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"<")
+{
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
+	if (!(x < y))
+	    RETURN(make_boolean(false));
+	x = y;
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L">")
+{
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
+	if (!(x > y))
+	    RETURN(make_boolean(false));
+	x = y;
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"<=")
+{
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
+	if (!(x <= y))
+	    RETURN(make_boolean(false));
+	x = y;
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L">=")
+{
+    obj_t *p = F_SUBJ;
+    int x = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    while (!is_null(p)) {
+	int y = fixnum_value(pair_car(p));
+	if (!(x >= y))
+	    RETURN(make_boolean(false));
+	x = y;
+	p = pair_cdr(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+DEFINE_PROC(L"+")
+{
+    obj_t *p = F_SUBJ;
+    int sum = 0;
+    while (!is_null(p)) {
+	sum += fixnum_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_fixnum(sum));
+}
+
+TEST_EVAL(L"+",                   L"#<proc-C>");
+TEST_EVAL(L"(+)",                 L"0");
+TEST_EVAL(L"(+ 3)",               L"3");
+TEST_EVAL(L"(+ 3 4)",             L"7");
+TEST_EVAL(L"(+ (+ 1 2) (+ 3 4))", L"10");
+
+DEFINE_PROC(L"-")
+{
+    obj_t *p = F_SUBJ;
+    int diff = fixnum_value(pair_car(p));
+    p = pair_cdr(p);
+    if (is_null(p))
+	RETURN(make_fixnum(-diff));
+    while (!is_null(p)) {
+	diff -= fixnum_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_fixnum(diff));
+}
+
+DEFINE_PROC(L"*")
+{
+    obj_t *p = F_SUBJ;
+    int prod = 1;
+    while (!is_null(p)) {
+	prod *= fixnum_value(pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(make_fixnum(prod));
+}
+
+DEFINE_PROC(L"div")
+{
+    int dividend = fixnum_value(pair_car(F_SUBJ));
+    int divisor = fixnum_value(pair_cadr(F_SUBJ));
+    assert(is_null(pair_cddr(F_SUBJ)));
+    RETURN(make_fixnum(dividend / divisor));
+}
+
+DEFINE_PROC(L"mod")
+{
+    int dividend = fixnum_value(pair_car(F_SUBJ));
+    int divisor = fixnum_value(pair_cadr(F_SUBJ));
+    assert(is_null(pair_cddr(F_SUBJ)));
+    RETURN(make_fixnum(dividend % divisor));
+}
+
+DEFINE_PROC(L"abs")
+{
+    assert(is_null(pair_cdr(F_SUBJ)));
+    int x = fixnum_value(pair_car(F_SUBJ));
+    RETURN(make_fixnum(x < 0 ? -x : x));
+}
 /* 11.8.  Booleans
  *
  * (not obj)				# procedure
@@ -506,8 +624,26 @@ TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
 /* 11.10.  Symbols
  *
- * ...
+ * (symbol? obj)			# procedure
+ *
+ * symbol->string symbol)		# procedure
+ *
+ * (symbol=? symbol1 symbol2 symbol3 ...) # procedure
+ *
+ * (string->symbol string)		# procedure
  */
+
+DEFINE_PROC(L"symbol?")
+{
+    RETURN(make_boolean(is_symbol(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(symbol? 'foo)",		L"#t");
+TEST_EVAL(L"(symbol? (car '(a b)))",	L"#t");
+//TEST_EVAL(L"(symbol? \"bar\")",	L"#f");
+TEST_EVAL(L"(symbol? 'nil)",		L"#t");
+TEST_EVAL(L"(symbol? '())",		L"#f");
+TEST_EVAL(L"(symbol? #f)",		L"#f");
 
 /* 11.11.  Characters
  *
@@ -523,16 +659,21 @@ TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
  * (char>=? char1 char2 char3 ...)	# procedure
  */
 
-DEFINE_PROC(L"integer->char")
+DEFINE_PROC(L"char?")
 {
-    int i = fixnum_value(pair_car(F_SUBJ));
-    RETURN(make_character((wchar_t)i));
+    RETURN(make_boolean(is_character(pair_car(F_SUBJ))));
 }
 
 DEFINE_PROC(L"char->integer")
 {
     wchar_t wc = character_value(pair_car(F_SUBJ));
     RETURN(make_fixnum(wc));
+}
+
+DEFINE_PROC(L"integer->char")
+{
+    int i = fixnum_value(pair_car(F_SUBJ));
+    RETURN(make_character((wchar_t)i));
 }
 
 /* from r6rs */
@@ -669,8 +810,40 @@ TEST_EVAL(L"(char<? #\\z #\\Z)",	L"#f");
 
 /* 11.12.  Strings
  *
- * ...
+ * (string? obj)			# procedure
+ *
+ * (make-string k)			# procedure
+ * (make-string k char)			# procedure
+ *
+ * (string char ...)			# procedure
+ *
+ * (string-length string)		# procedure
+ *
+ * (string-ref string k)		# procedure
+ *
+ * (string=? string1 string2 string3 ...) # procedure
+ *
+ * (string<?  string1 string2 string3 ...) # procedure
+ * (string>?  string1 string2 string3 ...) # procedure
+ * (string<=?  string1 string2 string3 ...) # procedure
+ * (string>=?  string1 string2 string3 ...) # procedure
+ *
+ * (substring string start end)		# procedure
+ *
+ * (string-append string ...)		# procedure
+ *
+ * (string->list string)		# procedure
+ * (list->string list)			# procedure
+ *
+ * (string-for-each proc string1 string2 ...) # procedure
+ *
+ * (string-copy string)			# procedure
  */
+
+DEFINE_PROC(L"string?")
+{
+    RETURN(make_boolean(is_string(pair_car(F_SUBJ))));
+}
 
 /* 11.13.  Vectors
  *
@@ -695,6 +868,15 @@ TEST_EVAL(L"(char<? #\\z #\\Z)",	L"#f");
  * (vector-for-each proc vector1 vector2 ...) # procedure
  */
 
+DEFINE_PROC(L"vector?")
+{
+    RETURN(make_boolean(is_vector(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(vector? '(3 4))",	L"#f");
+TEST_EVAL(L"(vector? '())",	L"#f");
+TEST_EVAL(L"(vector? '#(3))",	L"#t");
+
 DEFINE_PROC(L"make-vector")
 {
     size_t k = fixnum_value(pair_car(F_SUBJ));
@@ -706,15 +888,6 @@ DEFINE_PROC(L"make-vector")
 
 TEST_EVAL(L"(make-vector 3)",	L"#(() () ())");
 TEST_EVAL(L"(make-vector 3 4)",	L"#(4 4 4)");
-
-DEFINE_PROC(L"vector?")
-{
-    RETURN(make_boolean(is_vector(pair_car(F_SUBJ))));
-}
-
-TEST_EVAL(L"(vector? '(3 4))",	L"#f");
-TEST_EVAL(L"(vector? '())",	L"#f");
-TEST_EVAL(L"(vector? '#(3))",	L"#t");
 
 DEFINE_PROC(L"vector-length")
 {
@@ -755,7 +928,9 @@ TEST_EVAL(L"(define a '#(1 2 3))\n"
 
 /* 11.14.  Errors and violations
  *
- * ...
+ * (error who message irritant1 ...)	# procedure
+ *
+ * (assert <expression>)		# syntax
  */
 
 /* 11.15. Control features
@@ -869,22 +1044,31 @@ TEST_EVAL(L"(define plus3 '())\n"
           L"(plus3 5)",			L"8");
 
 
-/* 11.16.  Iteration
- *
- * ...
- */
-
 /* 11.17.  Quasiquotation
  *
- * ...
+ * (quasiquote <qq-template>)		# syntax
+ * unquote				# auxiliary syntax
+ * unquote-splicing			# auxiliary syntax
  */
 
 /* 11.18.  Binding constructs for syntactic keywords
  *
- * ...
+ * (let-syntax <bindings> <form> ...)	# syntax
+ *
+ * (letrec-syntax <bindings> <form> ...) # syntax
  */
 
 /* 11.19. Macro transformers
  *
- * ...
+ * (syntax-rules (<literal> ...) <syntax rule> ...)
+ *					# syntax (expand)
+ * _					# auxiliary syntax (expand)
+ * ...					# auxiliary syntax (expand)
+ *
+ * (identifier-syntax <template>)	# syntax (expand)
+ * (identifier-syntax			# syntax (expand)
+ *   (<id1> <template1>)
+ *   ((set! <id2> <pattern)
+ *    <template2))
+ * set!					# auxiliary syntax (expand)
  */

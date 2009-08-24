@@ -3,6 +3,7 @@
 
 #include "env.h"
 #include "obj.h"
+#include "uniq.h"
 
 #define LIBRARY(namespec)						\
     static library_descriptor_t current_library_ = {			\

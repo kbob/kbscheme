@@ -78,6 +78,9 @@ DONE	full mem model
 	    string-normalize-nfc
 	    string-normalize-nfkc
 
+	numerics
+	    implement the rest of the tower
+
 	full reader
  DONE	    Write test suite.
  DONE	    Rename yyread to a better name.

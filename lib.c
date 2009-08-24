@@ -221,27 +221,7 @@ void load_libraries(void)
 
 obj_t *r6rs_library(void)
 {
-    if (!r6rs_lib) {
-	AUTO_ROOT(sym, make_fixnum(6));
-	AUTO_ROOT(p, make_pair(sym, NIL));
-	p = make_pair(p, NIL);
-	sym = make_symbol(L"rnrs");
-	p = make_pair(sym, p);
-	r6rs_lib = make_library(p);
-	library_descriptor_t *desc;
-	AUTO_ROOT(env, library_env(r6rs_lib));
-	AUTO_ROOT(frame, NIL);
-	for (desc = lib_descriptors; desc; desc = desc->ld_next) {
-	    obj_t *lib = find_library_str(desc->ld_namespec);
-	    frame = pair_car(library_env(lib));
-	    for (; frame; frame = pair_cdr(frame)) {
-		obj_t *binding = pair_car(frame);
-		env_bind(env, binding_name(binding),
-			      binding_type(binding),
-			      binding_value(binding));
-	    }
-	}
-	POP_FUNCTION_ROOTS();
-    }
+    if (!r6rs_lib)
+	r6rs_lib = find_library_str(L"(rnrs (6))");
     return r6rs_lib;
 }
