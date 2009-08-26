@@ -45,7 +45,7 @@ define lib_template
 
   # libfoo's static link rule
   $(2).a: $$($(2)_ofiles)
-	$$(AR) crv $$@ $$?
+	$$(AR) cr $$@ $$?
 
  else ifeq "$$(libtype)" "dynamic"
 

@@ -24,7 +24,9 @@ static bool is_self_evaluating(obj_t *expr)
     return (is_boolean(expr) ||
 	    is_fixnum(expr) ||
 	    is_character(expr) ||
-	    is_string(expr));
+	    is_string(expr) ||
+	    is_vector(expr) ||
+	    is_bytevector(expr));
 }
 
 TEST_EVAL(L"#t", L"#t");

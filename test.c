@@ -7,6 +7,8 @@ void self_test()
 
 #else
 
+#define TEST_TRACE 0
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -37,7 +39,9 @@ static char *phase_name(test_phase_t phase)
 static int read_driver(const test_case_descriptor_t *tc)
 {
     int err_count = 0;
-    //printf("%s:%d read %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+#if TEST_TRACE
+    printf("%s:%d read %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+#endif
     if (tc->tcd_expected == &lexical) {
 	return err_count;	    /* XXX exceptions unimplemented */
     }
@@ -67,7 +71,9 @@ static int eval_driver(const test_case_descriptor_t *tc)
     /* XXX give each test a fresh environment. */
 
     int err_count = 0;
-    //printf("%s:%d eval %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+#if TEST_TRACE
+    printf("%s:%d eval %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);
+#endif
     instream_t *in =
 	make_string_instream(tc->tcd_input, wcslen(tc->tcd_input));
     AUTO_ROOT(expr, NIL);

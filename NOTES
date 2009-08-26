@@ -765,6 +765,10 @@ We need...
 
     normalization: See http://www.unicode.org/reports/tr15/Normalizer.java
 
+Update 8/25
+    The bytecode chapter specified encoding/decoding of utf-8, utf-16,
+    and utf32.  And the I/O ports chapter specifies those plus latin-1.
+
 ----------------------------------
 8/21/2009
 

@@ -722,9 +722,10 @@ static obj_t *build_vector(obj_t *list)
     PUSH_ROOT(list);
     obj_t *p = list;
     size_t i, size = 0;
-    do
+    while (p) {
 	size++;
-    while ((p = pair_cdr(p)));
+	p = pair_cdr(p);
+    }
     AUTO_ROOT(vec, make_vector(size, NIL));
     for (i = 0, p = list; i < size; i++) {
 	vector_set(vec, i, pair_car(p));
@@ -740,9 +741,10 @@ static obj_t *build_bytevec(obj_t *list)
     PUSH_ROOT(list);
     obj_t *p = list;
     size_t i, size = 0;
-    do
+    while (p) {
 	size++;
-    while ((p = pair_cdr(p)));
+	p = pair_cdr(p);
+    }
     AUTO_ROOT(bvec, make_bytevector(size, 0));
     for (i = 0, p = list; i < size; i++) {
 	bytevector_set(bvec, i, fixnum_value(pair_car(p)));
@@ -841,6 +843,7 @@ TEST_READ(L"#(a (b c))",		L"#(a (b c))");
 TEST_READ(L"#(a #(b c))",		L"#(a #(b c))");
 
 /* bytevectors */
+TEST_READ(L"#vu8()",			L"#vu8()");
 TEST_READ(L"#vu8(1 2)",			L"#vu8(1 2)");
 
 /* abbreviations */
