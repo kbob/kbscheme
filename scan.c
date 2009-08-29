@@ -1,10 +1,10 @@
 #include "scan.h"
 
-#include <alloca.h>			/* XXX */
 #include <assert.h>
 #include <string.h>
 #include <wctype.h>
 
+#include "roots.h"			/* XXX */
 #include "test.h"
 #include "types.h"
 #include "unicode.h"
@@ -135,11 +135,11 @@ static token_type_t scan_ident(const wchar_t *prefix,
 			       instream_t *in)
 {
     wchar_t wc;
-    size_t len = 16, pos = wcslen(prefix);
+    size_t i, len = 16, pos = wcslen(prefix);
     assert(pos < len);
-    /* XXX move this buffer into the heap.  (Requires byte vectors.) */
-    wchar_t *buf = alloca(len * sizeof *buf);
-    wcscpy(buf, prefix);
+    obj_t *buf = make_string(len, L'\0');
+    for (i = 0; i < pos; i++)
+	string_set_char(buf, i, prefix[i]);
     while (true) {
 	wc = instream_getwc(in);
 	if (wc == WEOF)
@@ -155,19 +155,20 @@ static token_type_t scan_ident(const wchar_t *prefix,
 	    }
 	} else if (!is_ident_subsequent(wc))
 	    break;
-	if (pos >= len - 1) {
-	    int nbytes = (len *= 2) * sizeof *buf;
-	    wchar_t *tmp = alloca(nbytes);
-	    assert(tmp);
-	    memmove(tmp, buf, nbytes);
+	if (pos >= len) {
+	    len *= 2;
+	    PUSH_ROOT(buf);
+	    obj_t *tmp = make_string(len, L'\0');
+	    POP_ROOT(buf);
+	    for (i = 0; i < pos; i++)
+		string_set_char(tmp, i, string_value(buf)[i]);
 	    buf = tmp;
 	}
-	buf[pos++] = wc;
+	string_set_char(buf, pos++, wc);
     }
-    buf[pos] = L'\0';
     if (wc != WEOF)
 	instream_ungetwc(wc, in);
-    *lvalp = make_symbol(buf);
+    *lvalp = make_symbol(string_value(buf));
     return TOK_SIMPLE;
 }
 
@@ -194,11 +195,10 @@ static bool scan_character(obj_t **lvalp, instream_t *in)
 	    return true;
 	}
     }
-    /* XXX replace alloca w/ vu8 */
     size_t len = 16, pos = 0;
-    wchar_t *buf = alloca(len * sizeof *buf);
+    obj_t *buf = make_string(len, L'\0');
     while (true) {
-	buf[pos++] = wc;
+	string_set_char(buf, pos++, wc);
 	wc = instream_getwc(in);
 	if (wc == WEOF)
 	    break;
@@ -206,23 +206,26 @@ static bool scan_character(obj_t **lvalp, instream_t *in)
 	    instream_ungetwc(wc, in);
 	    break;
 	}
-	if (pos >= len - 1) {
-	    int nbytes = (len *= 2) * sizeof *buf;
-	    wchar_t *tmp = alloca(nbytes);
-	    assert(tmp);
-	    memmove(tmp, buf, nbytes);
+	if (pos >= len) {
+	    len *= 2;
+	    PUSH_ROOT(buf);
+	    obj_t *tmp = make_string(len, L'\0');
+	    POP_ROOT(buf);
+	    int i;
+	    for (i = 0; i < pos; i++)
+		string_set_char(tmp, i, string_value(buf)[i]);
 	    buf = tmp;
 	}
     }    
     if (pos == 1)
-	wchr = buf[0];
+	wchr = string_value(buf)[0];
     else {
-	buf[pos] = L'\0';
+	string_set_char(buf, pos, L'\0');
 	size_t i;
 	for (i = 0; ; i++) {
 	    if (i == char_name_count)
 		return false;
-	    if (!wcscmp(buf, char_names[i].cn_name)) {
+	    if (!wcscmp(string_value(buf), char_names[i].cn_name)) {
 		wchr = char_names[i].cn_char;
 		break;
 	    }
