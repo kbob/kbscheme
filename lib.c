@@ -133,7 +133,7 @@ bool is_valid_library_form(obj_t *form)
     // verify caadddr is 'import'
     if (!is_pair(form))
 	return false;
-    if (pair_car(form) != make_symbol(L"library"))
+    if (pair_car(form) != make_symbol_from_C_str(L"library"))
 	return false;
     obj_t *cdr = pair_cdr(form);
     if (!is_pair(cdr))
@@ -142,11 +142,11 @@ bool is_valid_library_form(obj_t *form)
     obj_t *caddr = pair_car(cddr);
     if (!is_pair(caddr))
 	return false;
-    if (pair_car(caddr) != make_symbol(L"export"))
+    if (pair_car(caddr) != make_symbol_from_C_str(L"export"))
 	return false;
     obj_t *cdddr = pair_cdr(cddr);
     obj_t *cadddr = pair_car(cdddr);
-    if (pair_car(cadddr) != make_symbol(L"import"))
+    if (pair_car(cadddr) != make_symbol_from_C_str(L"import"))
 	return false;
     return true;
 }

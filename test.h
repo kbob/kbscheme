@@ -22,9 +22,10 @@ __attribute__((constructor))						\
 static void UNIQ_IDENT(register_##phase##_test_)(void)			\
 {									\
     static test_case_descriptor_t tc = {				\
-	phase,								\
-	input,								\
-	expected,							\
+	(phase),							\
+	(input),							\
+	(expected),							\
+	sizeof (expected) / sizeof *(expected) - 1,			\
 	__FILE__,							\
 	__LINE__,							\
 	NULL								\
@@ -42,6 +43,7 @@ struct test_case_descriptor {
     test_phase_t            tcd_phase;
     const wchar_t          *tcd_input;
     const wchar_t          *tcd_expected;
+    size_t                  tcd_expected_len;
     const char             *tcd_file;
     int                     tcd_lineno;
     test_case_descriptor_t *tcd_next;

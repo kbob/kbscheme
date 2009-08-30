@@ -75,6 +75,25 @@ static void print_char(obj_t *chobj, outstream_t *out)
 	outstream_printf(out, L"#\\x%04x", wc);
 }
 
+static void print_string(obj_t *string, outstream_t *out)
+{
+    size_t i, len = string_len(string);
+    const wchar_t *value = string_value(string);
+    outstream_putwc(L'"', out);
+    for (i = 0; i < len; i++)
+	outstream_putwc(value[i], out);
+    outstream_putwc(L'"', out);
+}
+
+static void print_symbol(obj_t *obj, outstream_t *out)
+{
+    obj_t *string = symbol_name(obj);
+    const wchar_t *value = string_value(string);
+    size_t i, len = string_len(string);
+    for (i = 0; i < len; i++)
+	outstream_putwc(value[i], out);
+}
+
 static void print_procedure(obj_t *obj, outstream_t *out)
 {
     if (procedure_is_special_form(obj) || procedure_is_C(obj)) {
@@ -133,10 +152,9 @@ static void print_form(obj_t *obj, outstream_t *out)
     } else if (is_character(obj)) {
 	print_char(obj, out);
     } else if (is_string(obj)) {
-	/* implement me */
-	assert(false && "can't print strings yet");
+	print_string(obj, out);
     } else if (is_symbol(obj)) {
-	outstream_printf(out, L"%ls", string_value(symbol_name(obj)));
+	print_symbol(obj, out);
     } else if (is_procedure(obj)) {
 	print_procedure(obj, out);
     } else if (is_binding(obj)) {

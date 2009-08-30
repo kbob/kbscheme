@@ -21,7 +21,7 @@ DEFINE_PROC(L"draft-read")
 	if (!in)
 	    in = make_readline_instream();
 	if (!read_stream(in, &obj))
-	    obj = make_symbol(L"exit");
+	    obj = make_symbol_from_C_str(L"exit");
     }
     RETURN(obj);
 }
@@ -78,7 +78,7 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	    obj_t *form;
 	    bool ok = read_stream(ins, &form);
 	    assert(ok);
-	    assert(pair_car(form) == make_symbol(L"lambda"));
+	    assert(pair_car(form) == make_symbol_from_C_str(L"lambda"));
 	    obj_t *formals = pair_cadr(form);
 	    obj_t *body = pair_cddr(form);
 	    obj_t *lib = library_env(r6rs_library());

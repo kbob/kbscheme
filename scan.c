@@ -4,7 +4,7 @@
 #include <string.h>
 #include <wctype.h>
 
-#include "roots.h"			/* XXX */
+#include "charbuf.h"
 #include "test.h"
 #include "types.h"
 #include "unicode.h"
@@ -135,11 +135,8 @@ static token_type_t scan_ident(const wchar_t *prefix,
 			       instream_t *in)
 {
     wchar_t wc;
-    size_t i, len = 16, pos = wcslen(prefix);
-    assert(pos < len);
-    obj_t *buf = make_string(len, L'\0');
-    for (i = 0; i < pos; i++)
-	string_set_char(buf, i, prefix[i]);
+    charbuf_t buf;
+    init_charbuf(&buf, prefix);
     while (true) {
 	wc = instream_getwc(in);
 	if (wc == WEOF)
@@ -155,20 +152,11 @@ static token_type_t scan_ident(const wchar_t *prefix,
 	    }
 	} else if (!is_ident_subsequent(wc))
 	    break;
-	if (pos >= len) {
-	    len *= 2;
-	    PUSH_ROOT(buf);
-	    obj_t *tmp = make_string(len, L'\0');
-	    POP_ROOT(buf);
-	    for (i = 0; i < pos; i++)
-		string_set_char(tmp, i, string_value(buf)[i]);
-	    buf = tmp;
-	}
-	string_set_char(buf, pos++, wc);
+	charbuf_append_char(&buf, wc);
     }
     if (wc != WEOF)
 	instream_ungetwc(wc, in);
-    *lvalp = make_symbol(string_value(buf));
+    *lvalp = make_symbol(charbuf_make_string(&buf));
     return TOK_SIMPLE;
 }
 
@@ -195,10 +183,10 @@ static bool scan_character(obj_t **lvalp, instream_t *in)
 	    return true;
 	}
     }
-    size_t len = 16, pos = 0;
-    obj_t *buf = make_string(len, L'\0');
+    charbuf_t buf;
+    init_charbuf(&buf, L"");
     while (true) {
-	string_set_char(buf, pos++, wc);
+	charbuf_append_char(&buf, wc);
 	wc = instream_getwc(in);
 	if (wc == WEOF)
 	    break;
@@ -206,26 +194,15 @@ static bool scan_character(obj_t **lvalp, instream_t *in)
 	    instream_ungetwc(wc, in);
 	    break;
 	}
-	if (pos >= len) {
-	    len *= 2;
-	    PUSH_ROOT(buf);
-	    obj_t *tmp = make_string(len, L'\0');
-	    POP_ROOT(buf);
-	    int i;
-	    for (i = 0; i < pos; i++)
-		string_set_char(tmp, i, string_value(buf)[i]);
-	    buf = tmp;
-	}
     }    
-    if (pos == 1)
-	wchr = string_value(buf)[0];
+    if (charbuf_length(&buf) == 1)
+	wchr = charbuf_C_str(&buf)[0];
     else {
-	string_set_char(buf, pos, L'\0');
 	size_t i;
 	for (i = 0; ; i++) {
 	    if (i == char_name_count)
 		return false;
-	    if (!wcscmp(string_value(buf), char_names[i].cn_name)) {
+	    if (!wcscmp(charbuf_C_str(&buf), char_names[i].cn_name)) {
 		wchr = char_names[i].cn_char;
 		break;
 	    }
@@ -289,28 +266,28 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		if (n == 1)
 		    return TOK_PERIOD;
 		if (n == 3) {
-		    *lvalp = make_symbol(L"...");
+		    *lvalp = make_symbol_from_C_str(L"...");
 		    return TOK_SIMPLE;
 		}
 	    }
 	    /* fall through to ignominy. */
 	}
 	if (wc == L'\'') {
-	    *lvalp = make_symbol(L"quote");
+	    *lvalp = make_symbol_from_C_str(L"quote");
 	    return TOK_ABBREV;
 	}
 	if (wc == L'`') {
-	    *lvalp = make_symbol(L"quasiquote");
+	    *lvalp = make_symbol_from_C_str(L"quasiquote");
 	    return TOK_ABBREV;
 	}
 	if (wc == L',') {
 	    w2 = instream_getwc(in);
 	    if (w2 == L'@') {
-		*lvalp = make_symbol(L"unquote-splicing");
+		*lvalp = make_symbol_from_C_str(L"unquote-splicing");
 		return TOK_ABBREV;
 	    }
 	    instream_ungetwc(w2, in);
-	    *lvalp = make_symbol(L"unquote");
+	    *lvalp = make_symbol_from_C_str(L"unquote");
 	    return TOK_ABBREV;
 	}
 	if (wc == L'#') {
@@ -386,21 +363,21 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		return TOK_COMMENT;
 
 	    case L'\'':
-		*lvalp = make_symbol(L"syntax");
+		*lvalp = make_symbol_from_C_str(L"syntax");
 		return TOK_ABBREV;
 
 	    case L'`':
-		*lvalp = make_symbol(L"quasisyntax");
+		*lvalp = make_symbol_from_C_str(L"quasisyntax");
 		return TOK_ABBREV;
 
 	    case L',':
 		w2 = instream_getwc(in);
 		if (w2 == L'@') {
-		    *lvalp = make_symbol(L"unsyntax-splicing");
+		    *lvalp = make_symbol_from_C_str(L"unsyntax-splicing");
 		    return TOK_ABBREV;
 		}
 		instream_ungetwc(w2, in);
-		*lvalp = make_symbol(L"unsyntax");
+		*lvalp = make_symbol_from_C_str(L"unsyntax");
 		return TOK_ABBREV;
 
 	    case L'\\':			/* #\<character> */
@@ -424,7 +401,7 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 	    if (w2 != WEOF)
 		instream_ungetwc(w2, in);
 	    if (w2 == WEOF || !is_ident_subsequent(w2)) {
-		*lvalp = make_symbol(L"-");
+		*lvalp = make_symbol_from_C_str(L"-");
 		return TOK_SIMPLE;
 	    }
 	    if (w2 == L'.' || is_digit(w2))
@@ -435,12 +412,12 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 	if (wc == L'+') {
 	    w2 = instream_getwc(in);
 	    if (w2 == EOF) {
-		*lvalp = make_symbol(L"+");
+		*lvalp = make_symbol_from_C_str(L"+");
 		return TOK_SIMPLE;
 	    }
 	    if (!is_ident_subsequent(w2)) {
 		instream_ungetwc(w2, in);
-		*lvalp = make_symbol(L"+");
+		*lvalp = make_symbol_from_C_str(L"+");
 		return TOK_SIMPLE;
 	    }
 	    if (is_digit(w2)) {
@@ -589,6 +566,7 @@ TEST_IDENT(->abc);
 TEST_READ(L"(->)",			L"(->)");
 TEST_READ(L"\\x61;",			L"a");
 TEST_READ(L"\\X61;\\X3BB;",		L"a\x3bb");
+TEST_READ(L"\\X61;\\X00;\\X3BB;",	L"a\0\x3bb");
 
 /* from r6rs section 4.2.4 */
 TEST_IDENT(lambda);

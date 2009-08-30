@@ -74,7 +74,7 @@ DEFINE_PROC(L"char-general-category")
     wchar_t c = character_value(pair_car(F_SUBJ));
     unicode_general_category_t cat = unicode_general_category(c);
     const wchar_t *short_name = unicode_gc_short_name(cat);
-    RETURN(make_symbol(short_name));
+    RETURN(make_symbol_from_C_str(short_name));
 }
 
 /* from r6rs */

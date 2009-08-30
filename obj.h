@@ -10,7 +10,7 @@ typedef struct object obj_t; /* obj_t is abstract and never defined */
 #define NIL        ((obj_t *)0)
 
 #define UNSPECIFIED_NAME L"undef"
-#define UNSPECIFIED      (make_symbol(UNSPECIFIED_NAME))
+#define UNSPECIFIED      (make_symbol_from_C_str(UNSPECIFIED_NAME))
 #define UNSPECIFIED_REPR UNSPECIFIED_NAME
 
 extern bool is_null(const obj_t *);

@@ -10,6 +10,7 @@ void self_test()
 #define TEST_TRACE 0
 
 #include <assert.h>
+#include <string.h>
 #include <stdlib.h>
 
 #include "eval.h"
@@ -55,11 +56,21 @@ static int read_driver(const test_case_descriptor_t *tc)
     wchar_t actual[out_size + 1];
     outstream_t *out = make_string_outstream(actual, out_size);
     princ(obj, out);
-    if (wcscmp(actual, tc->tcd_expected)) {
+    size_t expected_bytes = sizeof (wchar_t) * (tc->tcd_expected_len + 1);
+    if (memcmp(actual, tc->tcd_expected, expected_bytes)) {
+	int i;
+
 	printf("%s:%d FAIL read test\n", tc->tcd_file, tc->tcd_lineno);
-	printf("    input    = %ls\n", tc->tcd_input);
-        printf("    actual   = %ls\n", actual);
-	printf("    expected = %ls\n", tc->tcd_expected);
+	printf("    input        = %ls\n", tc->tcd_input);
+        printf("    actual       = %ls = {", actual);
+        for (i = 0; i <= tc->tcd_expected_len; i++)
+	    printf("\\x%02x, ", actual[i]);
+        printf("};\n");
+	printf("    expected     = %ls = {", tc->tcd_expected);
+        for (i = 0; i <= tc->tcd_expected_len; i++)
+	    printf("\\x%02x, ", tc->tcd_expected[i]);
+        printf("};\n");
+	printf("    expected_len = %d\n", tc->tcd_expected_len);
 	printf("\n");
 	err_count++;
     }

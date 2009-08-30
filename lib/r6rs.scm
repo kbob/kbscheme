@@ -314,7 +314,7 @@
   ; map
   ; for-each
     symbol?				; r6rs 11.10 Symbols
-  ; symbol->string
+    symbol->string
   ; symbol=?
   ; string->symbol
     char?				; r6rs 11.11 Characters

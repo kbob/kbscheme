@@ -12,33 +12,33 @@ static mem_ops_t symbol_ops;
 
 ROOT(all_symbols_list);
 
-static obj_t *find_symbol(const wchar_t *name)
+static obj_t *find_symbol(obj_t *name)
 {
     obj_t *p, *sym;
     obj_t *sym_name;
 
+    assert(is_string(name));
     for (p = all_symbols_list; !is_null(p); p = pair_cdr(p)) {
 	assert(is_pair(p));
 	sym = pair_car(p);
 	assert(is_symbol(sym));
 	sym_name = symbol_name(sym);
 	assert(is_string(sym_name));
-	/* XXX use a Scheme function instead of wcscmp(). */
-	if (wcscmp(string_value(sym_name), name) == 0) {
+	if (strings_are_equal(sym_name, name)) {
 	    return sym;
 	}
     }
     return NIL;
 }
 
-extern obj_t *make_symbol(const wchar_t *name)
+extern obj_t *make_symbol(obj_t *name)
 {
     obj_t *symbol = find_symbol(name);
     if (is_null(symbol)) {
 	/* Not found.  Create one. */
 	if (!symbol_ops.mo_super)
 	    mem_fixvec_create_ops(&symbol_ops, L"symbol", 1);
-	symbol = alloc_fixvec1(&symbol_ops, make_string(name));
+	symbol = alloc_fixvec1(&symbol_ops, name);
 	PUSH_ROOT(symbol);
 	/* with lock */ {
 	    /* verify symbol still absent. */
@@ -47,6 +47,12 @@ extern obj_t *make_symbol(const wchar_t *name)
 	POP_ROOT(symbol);
     }
     return symbol;
+}
+
+extern obj_t *make_symbol_from_C_str(const wchar_t *C_name)
+{
+    obj_t *name = make_string_from_chars(C_name, wcslen(C_name));
+    return make_symbol(name);
 }
 
 bool is_symbol(obj_t *obj)

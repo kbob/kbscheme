@@ -645,6 +645,17 @@ TEST_EVAL(L"(symbol? 'nil)",		L"#t");
 TEST_EVAL(L"(symbol? '())",		L"#f");
 TEST_EVAL(L"(symbol? #f)",		L"#f");
 
+DEFINE_PROC(L"symbol->string")
+{
+    RETURN(symbol_name(pair_car(F_SUBJ)));
+}
+
+TEST_EVAL(L"(symbol->string 'flying-fish)",	L"\"flying-fish\"");
+TEST_EVAL(L"(symbol->string 'Martin)",		L"\"Martin\"");
+//TEST_EVAL(L"(symbol->string\n"
+//	  L"  string->symbol \"Malvina\"))",	L"\"Malvina\"");
+
+
 /* 11.11.  Characters
  *
  * (char? obj)				# procedure
