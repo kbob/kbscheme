@@ -1,14 +1,53 @@
 #include "print.h"
 
-#include <assert.h>
-#include <limits.h>
-#include <unicode.h>
 #include <wctype.h>
+#include <unicode.h>
 
 #include "obj_binding.h"
 #include "types.h"
 
 /* XXX Reimplement this in Scheme. */
+
+static inline bool is_ident_initial(wchar_t wc)
+{
+    /* Ruthless elision of braces is fun! */
+    if (wc < 128)
+	return iswalpha(wc) || wcschr(L"!$%&*/:<=>?^_~.+-", wc);
+    else
+	switch ((int)unicode_general_category(wc))
+	case UGC_OTHER_PRIVATE_USE:
+	case UGC_LETTER_LOWERCASE:
+	case UGC_LETTER_MODIFIER:
+	case UGC_LETTER_OTHER:
+	case UGC_LETTER_TITLECASE:
+	case UGC_LETTER_UPPERCASE:
+	case UGC_MARK_NONSPACING:
+	case UGC_NUMBER_LETTER:
+	case UGC_NUMBER_OTHER:
+	case UGC_PUNCTUATION_CONNECTOR:
+	case UGC_PUNCTUATION_DASH:
+	case UGC_PUNCTUATION_OTHER:
+	case UGC_SYMBOL_CURRENCY:
+	case UGC_SYMBOL_MODIFIER:
+	case UGC_SYMBOL_MATH:
+	case UGC_SYMBOL_OTHER:
+	    return true;
+    return false;
+}
+
+/* XXX this function duplicates one in scan.c. */
+static inline bool is_ident_subsequent(wchar_t wc)
+{
+    if (is_ident_initial(wc) || wcschr(L"+-.@", wc))
+	return true;
+    switch ((int)unicode_general_category(wc)) {
+    case UGC_NUMBER_DECIMAL_DIGIT:
+    case UGC_MARK_SPACING_COMBINING:
+    case UGC_MARK_ENCLOSING:
+	return true;
+    }
+    return false;
+}
 
 static void print_form(obj_t *, outstream_t *);
 
@@ -90,8 +129,13 @@ static void print_symbol(obj_t *obj, outstream_t *out)
     obj_t *string = symbol_name(obj);
     const wchar_t *value = string_value(string);
     size_t i, len = string_len(string);
-    for (i = 0; i < len; i++)
-	outstream_putwc(value[i], out);
+    for (i = 0; i < len; i++) {
+	wchar_t wc = value[i];
+	if ((i ? is_ident_subsequent :  is_ident_initial)(wc))
+	    outstream_putwc(value[i], out);
+	else
+	    outstream_printf(out, L"\\%x;", wc);
+    }
 }
 
 static void print_procedure(obj_t *obj, outstream_t *out)
