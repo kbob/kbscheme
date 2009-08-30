@@ -580,10 +580,10 @@
   ; &i/o				; r6rs-lib 8.1, I/O Condition types
   ; make-i/o-error
   ; i/o-error?
-  ; i/o-read
+  ; &i/o-read
   ; make-i/o-read-error
   ; i/o-read-error?
-  ; i/o-write
+  ; &i/o-write
   ; make-i/o-write-error
   ; i/o-write-error?
   ; &i/o-invalid-position
@@ -617,8 +617,11 @@
   ; utf-8-codec
   ; utf-16-codec
   ; eol-style
-  ; native eol-style
+  ; native-eol-style
   ; &i/o-decoding
+  ; make-i/o-decoding-error
+  ; i/o-decoding-error?
+  ; &i/o-encoding
   ; make-i/o-encoding-error
   ; i/o-encoding-error?
   ; i/o-encoding-error-char
@@ -713,7 +716,7 @@
   ; write
 
     ; From (rnrs files (6))
-  ; file-exists?				; r6rs-lib 9, File system
+  ; file-exists?			; r6rs-lib 9, File system
   ; delete-file
 
     ; From (rnrs programs (6))
