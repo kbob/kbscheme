@@ -5,6 +5,7 @@
 #include <assert.h>
 
 #include "io.h"
+#include "obj_eof.h"
 #include "print.h"
 #include "proc.h"
 #include "read.h"
@@ -21,7 +22,7 @@ DEFINE_PROC(L"draft-read")
 	if (!in)
 	    in = make_readline_instream();
 	if (!read_stream(in, &obj))
-	    obj = make_symbol_from_C_str(L"exit");
+	    obj = make_eof();
     }
     RETURN(obj);
 }

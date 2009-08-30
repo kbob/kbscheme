@@ -1,5 +1,6 @@
 #include "proc.h"
 #include "test.h"
+#include "obj_eof.h"
 
 LIBRARY(L"(rnrs io ports (6))");
 
@@ -107,6 +108,18 @@ LIBRARY(L"(rnrs io ports (6))");
  *
  * (eof-object? obj)					# procedure
  */
+
+DEFINE_PROC(L"eof-object")
+{
+    RETURN(make_eof());
+}
+
+DEFINE_PROC(L"eof-object?")
+{
+    RETURN(make_boolean(is_eof(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(eof-object? (eof-object))", L"#t");
 
 /*
  * r6rs-lib 8.2.6, Input and output ports

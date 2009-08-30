@@ -13,8 +13,8 @@
  DONE	    Define UNDEFINED_OBJECT and use it instead of NIL.
  DONE	    Extend printf to output Scheme objects.
  DONE	    Remove lib_t type, replace with obj_t.
-	    Rename make_symbol() to find_symbol().
-	    Replace "exit" with (eof-object) in REPL.
+ drop	    Rename make_symbol() to find_symbol().
+ DONE	    Replace "exit" with (eof-object) in REPL.
 	    Some accessors are called foo_len, others are called foo_length.
 
 	nonrecursive eval

@@ -5,14 +5,14 @@
 (library
  (rnrs base (6))
  (export
-;  quote				; r6rs 11.4.1 Quotation
+  ; quote				; r6rs 11.4.1 Quotation
 
-;    cond				; r6rs 11.4.5 Derived conditionals
-;    case
-;  and
-;    or
+  ; cond				; r6rs 11.4.5 Derived conditionals
+  ; case
+  ; and
+  ; or
 
-;   let					;r6rs 11.4.6 Binding constructs
+  ; let					; r6rs 11.4.6 Binding constructs
 
     caar				; r6rs 11.9 Pairs and lists
     cadr
@@ -633,8 +633,8 @@
   ; transcoder-error-handling-mode
   ; bytevector->string
   ; string->bytevector
-  ; eof-object				; r6rs-lib 8.2.5, End-of-file object
-  ; eof-object?
+    eof-object				; r6rs-lib 8.2.5, End-of-file object
+    eof-object?
   ; port?			       ; r6rs-lib 8.2.6, Input and output ports
   ; port-transcoder
   ; textual-port?
@@ -939,7 +939,7 @@
 	; (rnrs records procedural (6))
 	; (rnrs exceptions (6))
 	; (rnrs conditions (6))
-	; (rnrs io ports (6))
+	  (rnrs io ports (6))
 	; (rnrs io simple (6))
 	  (rnrs arithmetic fixnums (6))
 	  (rnrs eval (6))
