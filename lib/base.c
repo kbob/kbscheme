@@ -119,7 +119,7 @@ TEST_EVAL(L"(quote a)",			L"a");
 TEST_EVAL(L"(quote #(a b c))",		L"#(a b c)");
 TEST_EVAL(L"(quote (+ 1 2))",		L"(+ 1 2)");
 
-//TEST_EVAL(L"'\"abc\"",		L"\"abc\"");
+TEST_EVAL(L"'\"abc\"",			L"\"abc\"");
 TEST_EVAL(L"'145932",			L"145932");
 TEST_EVAL(L"'a",			L"a");
 TEST_EVAL(L"'#(a b c)",			L"#(a b c)");
@@ -584,7 +584,7 @@ TEST_EVAL(L"(cons 1 '())",         L"(1)");
 /* from r6rs */
 TEST_EVAL(L"(cons 'a '())",        L"(a)");
 TEST_EVAL(L"(cons '(a) '(b c d))", L"((a) b c d)");
-//TEST_EVAL(L"(cons \"a\" '(b c))",  L"(\"a\" b c)");
+TEST_EVAL(L"(cons \"a\" '(b c))",  L"(\"a\" b c)");
 TEST_EVAL(L"(cons 'a 3)",          L"(a . 3)");
 TEST_EVAL(L"(cons '(a b) 'c)",     L"((a b) . c)");
 
@@ -638,23 +638,56 @@ DEFINE_PROC(L"symbol?")
     RETURN(make_boolean(is_symbol(pair_car(F_SUBJ))));
 }
 
-TEST_EVAL(L"(symbol? 'foo)",		L"#t");
-TEST_EVAL(L"(symbol? (car '(a b)))",	L"#t");
-//TEST_EVAL(L"(symbol? \"bar\")",	L"#f");
-TEST_EVAL(L"(symbol? 'nil)",		L"#t");
-TEST_EVAL(L"(symbol? '())",		L"#f");
-TEST_EVAL(L"(symbol? #f)",		L"#f");
+/* from r6rs */
+TEST_EVAL(L"(symbol? 'foo)",			L"#t");
+TEST_EVAL(L"(symbol? (car '(a b)))",		L"#t");
+TEST_EVAL(L"(symbol? \"bar\")",			L"#f");
+TEST_EVAL(L"(symbol? 'nil)",			L"#t");
+TEST_EVAL(L"(symbol? '())",			L"#f");
+TEST_EVAL(L"(symbol? #f)",			L"#f");
 
 DEFINE_PROC(L"symbol->string")
 {
     RETURN(symbol_name(pair_car(F_SUBJ)));
 }
 
+/* from r6rs */
 TEST_EVAL(L"(symbol->string 'flying-fish)",	L"\"flying-fish\"");
 TEST_EVAL(L"(symbol->string 'Martin)",		L"\"Martin\"");
-//TEST_EVAL(L"(symbol->string\n"
-//	  L"  string->symbol \"Malvina\"))",	L"\"Malvina\"");
+TEST_EVAL(L"(symbol->string\n"
+	  L"  (string->symbol \"Malvina\"))",	L"\"Malvina\"");
 
+DEFINE_PROC(L"symbol=?")
+{
+    obj_t *sym = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p))
+	if (sym != pair_car(p))
+	    RETURN(make_boolean(false));
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(symbol=? 'a 'a)",			L"#t");
+TEST_EVAL(L"(symbol=? 'a 'b)",			L"#f");
+TEST_EVAL(L"(symbol=? 'a 'a 'a 'b)",		L"#f");
+
+DEFINE_PROC(L"string->symbol")
+{
+    RETURN(make_symbol(pair_car(F_SUBJ)));
+}
+
+TEST_EVAL(L"(symbol? (string->symbol \"a\"))",		L"#t");
+
+/* from r6rs */
+TEST_EVAL(L"(eq? 'mISSISSIppi 'mississippi)",	 	L"#f");
+TEST_EVAL(L"(string->symbol \"mISSISSIppi\")",	 	L"mISSISSIppi");
+TEST_EVAL(L"(eq? 'bitBlt (string->symbol \"bitBlt\"))", L"#t");
+TEST_EVAL(L"(eq? 'JollyWog\n"
+	  L"     (string->symbol\n"
+	  L"       (symbol->string 'JollyWog)))",	L"#t");
+TEST_EVAL(L"(string=? \"K. Harper, M.D.\"\n"
+	  L"          (symbol->string\n"
+          L"            (string->symbol \"K. Harper, M.D.\")))", L"#t");
 
 /* 11.11.  Characters
  *
@@ -856,6 +889,24 @@ DEFINE_PROC(L"string?")
     RETURN(make_boolean(is_string(pair_car(F_SUBJ))));
 }
 
+TEST_EVAL(L"(string? \"foo\")",			L"#t");
+TEST_EVAL(L"(string? (car '(\"a\" b)))",	L"#t");
+TEST_EVAL(L"(string? 'bar)",			L"#f");
+TEST_EVAL(L"(string? '())",			L"#f");
+TEST_EVAL(L"(string? #f)",			L"#f");
+
+DEFINE_PROC(L"string=?")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p))
+	if (!strings_are_equal(str, pair_car(p)))
+	    RETURN(make_boolean(false));
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(string=? \"Stra\xdf" L"e\" \"Strasse\")", L"#f");
+
 /* 11.13.  Vectors
  *
  * (make-vector k)			# procedure
@@ -930,7 +981,7 @@ TEST_EVAL(L"(define a '#(1 2 3))\n"
 	  L"a",				L"#(1 x 3)");
 
 /* from r6rs */
-//TEST_EVAL(L"'#(0 (2 2 2 2) \"Anna\")",	L"#(0 (2 2 2 2) \"Anna\")");
+TEST_EVAL(L"'#(0 (2 2 2 2) \"Anna\")",	L"#(0 (2 2 2 2) \"Anna\")");
 //TEST_EVAL(L"(vector 'a 'b 'c)",		L"#(a b c)");
 //TEST_EVAL(L"(list ((vec (vector 0 '(2 2 2 2) \"Anna\")))\n"
 //	  L"  (vector-set! vec 1 '(\"Sue\" \"Sue\"))\n"

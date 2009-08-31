@@ -11,7 +11,7 @@ typedef struct charbuf {
 
 extern void           init_charbuf       (charbuf_t *, const wchar_t *prefix);
 extern void           charbuf_append_char(charbuf_t *, wchar_t);
-extern size_t         charbuf_length     (const charbuf_t *);
+extern size_t         charbuf_len        (const charbuf_t *);
 extern const wchar_t *charbuf_C_str      (const charbuf_t *);
 extern obj_t         *charbuf_make_string(charbuf_t *);
 

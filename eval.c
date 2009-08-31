@@ -33,7 +33,7 @@ TEST_EVAL(L"#t", L"#t");
 TEST_EVAL(L"#f", L"#f");
 TEST_EVAL(L"123", L"123");
 TEST_EVAL(L"#\\A", L"#\\A");
-//TEST_EVAL(L"\"ABC\"", L"\"ABC\"");
+TEST_EVAL(L"\"ABC\"", L"\"ABC\"");
 
 static bool is_application(obj_t *expr)
 {

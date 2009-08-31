@@ -31,6 +31,11 @@ static char_name_map_t char_names[] = {
 
 static size_t char_name_count = sizeof char_names / sizeof *char_names;
 
+static inline bool is_intraline_whitespace(wchar_t wc)
+{
+    return wc == '\t' || unicode_general_category(wc) == UGC_SEPARATOR_SPACE;
+}
+
 static inline bool is_whitespace(wchar_t wc)
 {
     switch ((int)unicode_general_category(wc))
@@ -195,7 +200,7 @@ static bool scan_character(obj_t **lvalp, instream_t *in)
 	    break;
 	}
     }    
-    if (charbuf_length(&buf) == 1)
+    if (charbuf_len(&buf) == 1)
 	wchr = charbuf_C_str(&buf)[0];
     else {
 	size_t i;
@@ -230,7 +235,6 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 
     *lvalp = NIL;
     while ((wc = instream_getwc(in)) != WEOF) {
-	/* XXX implement " <string element>* " */
 	if (is_whitespace(wc))
 	    continue;
 	if (wc == L';') {
@@ -425,6 +429,55 @@ extern token_type_t yylex(obj_t **lvalp, instream_t *in)
 		return scan_number(+1, lvalp, in);
 	    }
 	}
+	if (wc == L'"') {
+	    charbuf_t buf;
+	    init_charbuf(&buf, L"");
+	    while (true) {
+		w2 = instream_getwc(in);
+		if (w2 == WEOF)
+		    assert(false && "unterminated string");
+		if (w2 == L'"')
+		    break;
+		if (w2 == L'\\') {
+		    w2 = instream_getwc(in);
+		    switch (w2) {
+		    case L'a': w2 = L'\a';  break;
+		    case L'b': w2 = L'\b';  break;
+		    case L't': w2 = L'\t';  break;
+		    case L'n': w2 = L'\n';  break;
+		    case L'v': w2 = L'\v';  break;
+		    case L'f': w2 = L'\f';  break;
+		    case L'r': w2 = L'\r';  break;
+		    case L'"': w2 = L'"';   break;
+		    case L'\\': w2 = L'\\'; break;
+		    case L'x': 
+		    case L'X':
+			if (!inline_hex_scalar(in, (wchar_t *)&w2, L';'))
+			    assert(false && "bad hex escape");
+			break;
+		    default:
+			while (is_intraline_whitespace(w2)) {
+			    w2 = instream_getwc(in);
+			    if (w2 == WEOF)
+				assert(false && "unterminated string");
+			}
+			if (!is_line_ending(w2))
+			    assert(false && "bad backslash escape");
+			w2 = instream_getwc(in);
+			while (is_intraline_whitespace(w2)) {
+			    w2 = instream_getwc(in);
+			    if (w2 == WEOF)
+				assert(false && "unterminated string");
+			}
+			instream_ungetwc(w2, in);
+			continue;
+		    }
+		}
+		charbuf_append_char(&buf, w2);
+	    }
+	    *lvalp = charbuf_make_string(&buf);
+	    return TOK_SIMPLE;
+	}
 	if (is_digit(wc)) {
 	    instream_ungetwc(wc, in);
 	    return scan_number(+1, lvalp, in);
@@ -585,7 +638,7 @@ TEST_READ(L"\\x3BB;",			L"\x3bb");
 #define TEST_CHAR(input, expected)					\
     TEST_READ(L"#\\" input, expected);					\
     TEST_EVAL(L"(char? '#\\" input L")", L"#t");
-#define TEST_LEXICAL_EXCEPTION(input) TEST_READ(L"#\\" input, &lexical)
+#define TEST_CHAR_LEXICAL_EXCEPTION(input) TEST_READ(L"#\\" input, &lexical)
 
 /* from r6rs section 4.2.6 */
 TEST_CHAR(L"a",				L"#\\a");
@@ -608,29 +661,54 @@ TEST_CHAR(L"xFF",			L"#\\\x00ff");
 TEST_CHAR(L"x03BB",			L"#\\\x03bb");
 TEST_CHAR(L"x00006587",			L"#\\\x6587");
 TEST_CHAR(L"\x03bb",			L"#\\\x03bb");
-TEST_LEXICAL_EXCEPTION(L"x0001z");
-TEST_LEXICAL_EXCEPTION(L"\x03bbx");
-TEST_LEXICAL_EXCEPTION(L"alarmx");
+TEST_CHAR_LEXICAL_EXCEPTION(L"x0001z");
+TEST_CHAR_LEXICAL_EXCEPTION(L"\x03bbx");
+TEST_CHAR_LEXICAL_EXCEPTION(L"alarmx");
 TEST_READ(L"#\\alarm x",		L"#\\x0007");
-TEST_LEXICAL_EXCEPTION(L"Alarm");
-TEST_LEXICAL_EXCEPTION(L"alert");
+TEST_CHAR_LEXICAL_EXCEPTION(L"Alarm");
+TEST_CHAR_LEXICAL_EXCEPTION(L"alert");
 TEST_CHAR(L"xA",			L"#\\x000a");
 TEST_CHAR(L"xFF",			L"#\\\x00ff");
 TEST_CHAR(L"xff",			L"#\\\x00ff");
 TEST_READ(L"#\\x ff",			L"#\\x");
 TEST_READ(L"#\\x(ff)",			L"#\\x");
-TEST_LEXICAL_EXCEPTION(L"(x)");
-TEST_LEXICAL_EXCEPTION(L"(x");
+TEST_CHAR_LEXICAL_EXCEPTION(L"(x)");
+TEST_CHAR_LEXICAL_EXCEPTION(L"(x");
 TEST_READ(L"#\\((x)",			L"#\\(");
-TEST_LEXICAL_EXCEPTION(L"x00110000");
+TEST_CHAR_LEXICAL_EXCEPTION(L"x00110000");
 TEST_CHAR(L"x000000001",		L"#\\x0001");
-TEST_LEXICAL_EXCEPTION(L"xD800");
+TEST_CHAR_LEXICAL_EXCEPTION(L"xD800");
+
+/* strings */
+#define TEST_STRING(input, expected)					\
+    TEST_READ(L ## input, L ## expected);				\
+    TEST_EVAL(L"(string? " L ## input L")", L"#t");
+#define TEST_STRING_LEXICAL_EXCEPTION(input) TEST_READ(L ## input, &lexical)
+
+TEST_STRING("\"foo\"", "\"foo\"");
+TEST_STRING("\"\"", "\"\"");
+TEST_STRING("\"\\a\\b\\t\\n\\v\\f\\r\\\"\\\\\"", "\"\a\b\t\n\v\f\r\"\\\"");
+TEST_STRING("\"a\\x3bb;b\"", "\"a\x03bb" L"b\"");
+TEST_STRING("\"a \\ \n b\"", "\"a b\"");
+
+/* from r6rs section 4.2.7 */
+TEST_STRING("\"abc\"",			"\"abc\"");
+TEST_STRING("\"\\x41;bc\"",		"\"Abc\"");
+TEST_STRING("\"\\x41; bc\"",		"\"A bc\"");
+TEST_STRING("\"\\x41bc;\"",		"\"\x41bc\"");
+TEST_STRING_LEXICAL_EXCEPTION("\"\\x41\"");
+TEST_STRING_LEXICAL_EXCEPTION("\"\\x;\"");
+TEST_STRING_LEXICAL_EXCEPTION("\"\\x41bx;\"");
+TEST_STRING("\"\\x00000041;\"",		"\"A\"");
+TEST_STRING("\"\\x0010ffff;\"",		"\"\x10ffff\"");
+TEST_STRING_LEXICAL_EXCEPTION("\"\\x00000001\"");
+TEST_STRING_LEXICAL_EXCEPTION("\"\\xD800;\"");
+TEST_STRING("\"A\nbc\"",			"\"A\nbc\"");
 
 /* numbers */
-
 #define TEST_NUMBER(input, expected)					\
     TEST_READ(L ## #input, L ## #expected);				\
-    TEST_EVAL(L"(number? " L ## #expected L")", L"#t");
+    TEST_EVAL(L"(number? " L ## #input L")", L"#t");
 TEST_NUMBER(0,       0);
 TEST_NUMBER(+12,    12);
 TEST_NUMBER(-23,   -23);

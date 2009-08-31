@@ -32,7 +32,7 @@ void charbuf_append_char(charbuf_t *cbp, wchar_t wc)
     string_set_char(cbp->cb_buf, cbp->cb_pos++, wc);
 }
 
-size_t charbuf_length(const charbuf_t *cbp)
+size_t charbuf_len(const charbuf_t *cbp)
 {
     return cbp->cb_pos;
 }

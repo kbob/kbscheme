@@ -315,8 +315,8 @@
   ; for-each
     symbol?				; r6rs 11.10 Symbols
     symbol->string
-  ; symbol=?
-  ; string->symbol
+    symbol=?
+    string->symbol
     char?				; r6rs 11.11 Characters
     char->integer
     integer->char
@@ -330,7 +330,7 @@
   ; string
   ; string-length
   ; string-ref
-  ; string=?
+    string=?
   ; string<?
   ; string>?
   ; string<=?

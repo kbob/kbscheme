@@ -134,7 +134,7 @@ static void print_symbol(obj_t *obj, outstream_t *out)
 	if ((i ? is_ident_subsequent :  is_ident_initial)(wc))
 	    outstream_putwc(value[i], out);
 	else
-	    outstream_printf(out, L"\\%x;", wc);
+	    outstream_printf(out, L"\\x%x;", wc);
     }
 }
 
