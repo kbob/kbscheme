@@ -34,7 +34,7 @@ DEFINE_PROC(L"draft-print")
 	    out = make_file_outstream(stdout);
     }
     print(pair_car(F_SUBJ), out);
-    RETURN(NIL);
+    RETURN(UNSPECIFIED);
 }
 
 DEFINE_PROC(L"draft-environment")

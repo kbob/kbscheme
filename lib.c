@@ -128,12 +128,18 @@ static const wchar_t STD_LIBRARY[] = L"r6rs";
 
 bool is_valid_library_form(obj_t *form)
 {
-    // verify car is 'library'
-    // verify caaddr is 'export'
-    // verify caadddr is 'import'
+    /* verify car is 'library'
+     * verify caaddr is 'export'
+     * verify caadddr is 'import'
+     */
+    PUSH_ROOT(form);
+    AUTO_ROOT(library_sym, make_symbol_from_C_str(L"library"));
+    AUTO_ROOT(export_sym,  make_symbol_from_C_str(L"export"));
+    AUTO_ROOT(import_sym,  make_symbol_from_C_str(L"import"));
+    POP_FUNCTION_ROOTS();
     if (!is_pair(form))
 	return false;
-    if (pair_car(form) != make_symbol_from_C_str(L"library"))
+    if (pair_car(form) != library_sym)
 	return false;
     obj_t *cdr = pair_cdr(form);
     if (!is_pair(cdr))
@@ -142,11 +148,11 @@ bool is_valid_library_form(obj_t *form)
     obj_t *caddr = pair_car(cddr);
     if (!is_pair(caddr))
 	return false;
-    if (pair_car(caddr) != make_symbol_from_C_str(L"export"))
+    if (pair_car(caddr) != export_sym)
 	return false;
     obj_t *cdddr = pair_cdr(cddr);
     obj_t *cadddr = pair_car(cdddr);
-    if (pair_car(cadddr) != make_symbol_from_C_str(L"import"))
+    if (pair_car(cadddr) != import_sym)
 	return false;
     return true;
 }

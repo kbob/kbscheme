@@ -15,7 +15,11 @@ extern void           string_set_substring  (obj_t         *string,
 					     size_t         pos,
 					     size_t         len,
 					     const wchar_t *substring);
-extern bool strings_are_equal               (obj_t *str1, obj_t *str2);
+extern int            strings_cmp           (obj_t *str1, obj_t *str2);
 
+static inline bool    strings_are_equal     (obj_t *str1, obj_t *str2)
+{
+    return strings_cmp(str1, str2) == 0;
+}
 
 #endif /* !OBJ_STRING_INCLUDED */

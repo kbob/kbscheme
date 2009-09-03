@@ -110,7 +110,6 @@ DEFINE_SPECIAL_FORM(L"quote")
     RETURN(pair_car(F_SUBJ));
 }
 
-/* XXX move these to wherever the Scheme unit tests will be. */
 TEST_EVAL(L"(quote ())",		L"()");
 TEST_EVAL(L"(quote (a b c))",		L"(a b c)");
 
@@ -271,21 +270,26 @@ TEST_EVAL(L"(define v2 '()) (set! v2 4)",    UNSPECIFIED_REPR);
  * (begin <expression> <expression> ...) # syntax
  */
 
-DEFINE_BLOCK(b_continue_begin)
+DEFINE_EXTERN_SPECIAL_FORM(begin, L"begin")
 {
-    if (F_SUBJ)
-	EVAL_THEN_GOTO(pair_car(F_SUBJ), F_ENV,
-		       b_continue_begin, pair_cdr(F_SUBJ), F_ENV);
+    if (pair_cdr(F_SUBJ)) {
+	AUTO_ROOT(first, pair_car(F_SUBJ));
+	EVAL_THEN_GOTO(first, F_ENV,
+		       begin, pair_cdr(F_SUBJ), F_ENV);
+    }
     else
-	RETURN(UNSPECIFIED);
-    
+	TAIL_EVAL(pair_car(F_SUBJ));
 }
 
-DEFINE_EXTERN_PROC(begin, L"begin")
-{
-    EVAL_THEN_GOTO(pair_car(F_SUBJ), F_ENV,
-		   b_continue_begin, pair_cdr(F_SUBJ), F_ENV);
-}
+TEST_EVAL(L"(begin 0 1)",  L"1");
+TEST_EVAL(L"(define x 'one)\n"
+	  L"(begin\n"
+	  L"  (set! x 'two)\n"
+	  L"  x)",				L"two");
+TEST_EVAL(L"(begin\n"
+	  L"  (define x 'one)\n"
+	  L"  (set! x 'two)\n"
+	  L"  x)",				L"two");
 
 /* 11.5.  Equivalence
  *
@@ -569,7 +573,7 @@ TEST_EVAL(L"(pair? '())",           L"#f");
 TEST_EVAL(L"(pair? '(a . b))",      L"#t");
 TEST_EVAL(L"(pair? '(a b c))",      L"#t");
 TEST_EVAL(L"(pair? '())",           L"#f");
-//TEST_EVAL(L"(pair? '#(a b))",       L"#f");
+TEST_EVAL(L"(pair? '#(a b))",       L"#f");
 
 DEFINE_PROC(L"cons")
 {
@@ -599,7 +603,7 @@ TEST_EVAL(L"(car (quote (1 2)))",  L"1");
 TEST_EVAL(L"(car '(a b c))",       L"a");
 TEST_EVAL(L"(car '((a) b c d))",   L"(a)");
 TEST_EVAL(L"(car '(1 . 2))",       L"1");
-//TEST_EVAL(L"(car '())",            L"&exception");
+//TEST_EVAL(L"(car '())",            &exception);
 
 DEFINE_PROC(L"cdr")
 {
@@ -611,7 +615,7 @@ TEST_EVAL(L"(cdr (quote (1 2)))", L"(2)");
 /* from r6rs */
 TEST_EVAL(L"(cdr '((a) b c d))",   L"(b c d)");
 TEST_EVAL(L"(cdr '(1 . 2))",       L"2");
-//TEST_EVAL(L"(cdr '())",            L"&exception");
+//TEST_EVAL(L"(cdr '())",            &exception);
 
 DEFINE_PROC(L"null?")
 {
@@ -895,17 +899,224 @@ TEST_EVAL(L"(string? 'bar)",			L"#f");
 TEST_EVAL(L"(string? '())",			L"#f");
 TEST_EVAL(L"(string? #f)",			L"#f");
 
+DEFINE_PROC(L"make-string")
+{
+    int len = fixnum_value(pair_car(F_SUBJ));
+    obj_t *cdr = pair_cdr(F_SUBJ);
+    wchar_t wc = cdr ? character_value(pair_car(cdr)) : L'\0';
+    RETURN(make_string(len, wc));
+}
+
+TEST_EVAL(L"(make-string 3 #\\a)",		L"\"aaa\"");
+
+static size_t list_len(obj_t *list)
+{
+    size_t len = 0;
+    while (list) {
+	len++;
+	list = pair_cdr(list);
+    }
+    return len;
+}
+
+DEFINE_PROC(L"string")
+{
+    size_t i, len = list_len(F_SUBJ);
+    AUTO_ROOT(p, F_SUBJ);
+    obj_t *str = make_string(len, L'\0');
+    for (p = F_SUBJ, i = 0; p; p = pair_cdr(p), i++) {
+	wchar_t wc = character_value(pair_car(p));
+	string_set_char(str, i, wc);
+    }
+    POP_ROOT(p);
+    RETURN(str);
+}
+
+TEST_EVAL(L"(string #\\a #\\b #\\c)",		L"\"abc\"");
+TEST_EVAL(L"(string)",				L"\"\"");
+
+DEFINE_PROC(L"string-length")
+{
+    RETURN(make_fixnum(string_len(pair_car(F_SUBJ))));
+}
+
+TEST_EVAL(L"(string-length \"abc\")",		L"3");
+
+DEFINE_PROC(L"string-ref")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    int index = fixnum_value(pair_cadr(F_SUBJ));
+    assert(0 <= index && index < string_len(str));
+    wchar_t wc = string_value(str)[index];
+    RETURN(make_character(wc));
+}
+
+TEST_EVAL(L"(string-ref \"cat\" 2)", L"#\\t");
+
 DEFINE_PROC(L"string=?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p))
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
 	if (!strings_are_equal(str, pair_car(p)))
 	    RETURN(make_boolean(false));
+	str = pair_car(p);
+    }
     RETURN(make_boolean(true));
 }
 
+/* from r6rs */
 TEST_EVAL(L"(string=? \"Stra\xdf" L"e\" \"Strasse\")", L"#f");
+
+DEFINE_PROC(L"string<?")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+	if (strings_cmp(str, pair_car(p)) >= 0)
+	    RETURN(make_boolean(false));
+	str = pair_car(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(string<? \"ab\" \"abc\")",		L"#t");
+TEST_EVAL(L"(string<? \"a\" \"b\" \"c\")",	L"#t");
+TEST_EVAL(L"(string<? \"b\" \"b\" \"c\")",	L"#f");
+TEST_EVAL(L"(string<? \"a\" \"b\" \"b\")",	L"#f");
+
+/* from r6rs */
+TEST_EVAL(L"(string<? \"z\" \"\xdf\")",		L"#t");
+TEST_EVAL(L"(string<? \"z\" \"zz\")",		L"#t");
+TEST_EVAL(L"(string<? \"z\" \"Z\")",		L"#f");
+
+DEFINE_PROC(L"string>?")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+	if (strings_cmp(str, pair_car(p)) <= 0)
+	    RETURN(make_boolean(false));
+	str = pair_car(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(string>? \"c\" \"b\" \"a\")",	L"#t");
+TEST_EVAL(L"(string>? \"b\" \"b\" \"a\")",	L"#f");
+TEST_EVAL(L"(string>? \"c\" \"b\" \"b\")",	L"#f");
+
+DEFINE_PROC(L"string<=?")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+	if (strings_cmp(str, pair_car(p)) > 0)
+	    RETURN(make_boolean(false));
+	str = pair_car(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(string<=? \"a\" \"b\" \"c\")",	L"#t");
+TEST_EVAL(L"(string<=? \"b\" \"b\" \"c\")",	L"#t");
+TEST_EVAL(L"(string<=? \"a\" \"b\" \"a\")",	L"#f");
+
+DEFINE_PROC(L"string>=?")
+{
+    obj_t *str = pair_car(F_SUBJ);
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+	if (strings_cmp(str, pair_car(p)) < 0)
+	    RETURN(make_boolean(false));
+	str = pair_car(p);
+    }
+    RETURN(make_boolean(true));
+}
+
+TEST_EVAL(L"(string>=? \"c\" \"b\" \"a\")",	L"#t");
+TEST_EVAL(L"(string>=? \"b\" \"b\" \"a\")",	L"#t");
+TEST_EVAL(L"(string>=? \"c\" \"b\" \"c\")",	L"#f");
+
+DEFINE_PROC(L"substring")
+{
+    AUTO_ROOT(str, pair_car(F_SUBJ));
+    int start = fixnum_value(pair_cadr(F_SUBJ));
+    int end = fixnum_value(pair_caddr(F_SUBJ));
+    assert(0 <= start && start <= end && end <= string_len(str));
+    obj_t *substr = make_string(end - start, '\0');
+    int i;
+    for (i = start; i < end; i++)
+	string_set_char(substr, i - start, string_value(str)[i]);
+    POP_ROOT(str);
+    RETURN(substr);
+}
+
+TEST_EVAL(L"(substring \"abcde\" 1 3)",		L"\"bc\"");
+TEST_EVAL(L"(substring \"abcde\" 1 1)",		L"\"\"");
+
+DEFINE_PROC(L"string-append")
+{
+    obj_t *p;
+    size_t len = 0;
+    for (p = F_SUBJ; p; p = pair_cdr(p))
+	len += string_len(pair_car(p));
+    obj_t *str = make_string(len, L'\0');
+    size_t pos = 0;
+    for (p = F_SUBJ; p; p = pair_cdr(p)) {
+	obj_t *sub = pair_car(p);
+	size_t sub_len = string_len(sub);
+	string_set_substring(str, pos, sub_len, string_value(sub));
+	pos += sub_len;
+    }
+    RETURN(str);
+}
+
+TEST_EVAL(L"(string-append \"abc\" \"d\" \"ef\")", L"\"abcdef\"");
+TEST_EVAL(L"(string-append \"\" \"\" \"\")",	   L"\"\"");
+
+DEFINE_PROC(L"string->list")
+{
+    AUTO_ROOT(str, pair_car(F_SUBJ));
+    AUTO_ROOT(list, NIL);
+    AUTO_ROOT(chr, NIL);
+    size_t pos;
+    for (pos = string_len(str); pos; --pos) {
+	chr = make_character(string_value(str)[pos - 1]);
+	list = make_pair(chr, list);
+    }
+    RETURN(list);
+}
+
+TEST_EVAL(L"(string->list \"abc\")",	L"(#\\a #\\b #\\c)");
+
+DEFINE_PROC(L"list->string")
+{
+    size_t len = list_len(pair_car(F_SUBJ));
+    obj_t *str = make_string(len, L'\0');
+    obj_t *p;
+    size_t pos;
+    for (p = pair_car(F_SUBJ), pos = 0; p; p = pair_cdr(p), pos++)
+	string_set_char(str, pos, character_value(pair_car(p)));
+    RETURN(str);
+}
+
+TEST_EVAL(L"(list->string '(#\\a #\\b #\\c))",	L"\"abc\"");
+
+DEFINE_PROC(L"string-copy")
+{
+    size_t len = string_len(pair_car(F_SUBJ));
+    obj_t *str = make_string(len, L'\0');
+    string_set_substring(str, 0, len, string_value(pair_car(F_SUBJ)));
+    RETURN(str);
+}
+
+TEST_EVAL(L"(define s \"asdf\")\n"
+	  L"(define t (string-copy s))\n"
+	  L"t",					L"\"asdf\"");
+TEST_EVAL(L"(define s \"asdf\")\n"
+	  L"(define t (string-copy s))\n"
+	  L"(eq? s t)",				L"#f");
 
 /* 11.13.  Vectors
  *

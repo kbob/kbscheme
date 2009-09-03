@@ -5,16 +5,102 @@
 (library
  (rnrs base (6))
  (export
-  ; quote				; r6rs 11.4.1 Quotation
-
+   ; From (rnrs base (6))
+;;;;define				; r6rs 11.2 Definitions
+  ; define-syntax
+;;;;quote				; r6rs 11.4.1 Quotation
+;;;;lambda				; r6rs 11.4.2 Procedures
+;;;;if					; r6rs 11.4.3 Conditionals
+;;;;set!				; r6rs 11.4.4 Assignments
   ; cond				; r6rs 11.4.5 Derived conditionals
   ; case
   ; and
   ; or
-
   ; let					; r6rs 11.4.6 Binding constructs
-
-    caar				; r6rs 11.9 Pairs and lists
+  ; let*
+  ; letrec
+  ; letrec*
+  ; let-values
+  ; let*-values
+;;;;begin				; r6rs 11.4.7 Sequencing
+  ; eqv?				; r6rs 11.5 Equivalence predicates
+;;;;eq?
+  ; equal?
+;;;;procedure?				; r6rs 11.6 Procedure predicate
+;;;;number?				; r6rs 11.7.4 Numerical operations
+  ; complex?
+  ; real?
+  ; rational?
+;;;;integer?
+  ; real-valued?
+  ; rational-valued?
+  ; integer-valued?
+  ; exact?
+  ; inexact?
+  ; inexact
+  ; exact
+;;;;=
+;;;;<
+;;;;>
+;;;;<=
+;;;;>=
+  ; zero?
+  ; positive?
+  ; negative?
+  ; odd?
+  ; even?
+  ; finite?
+  ; infinite?
+  ; nan?
+  ; max
+  ; min
+;;;;+
+;;;;*
+;;;;-
+  ; /
+;;;;abs
+  ; div-and-mod
+;;;;div
+;;;;mod
+  ; div0-and-mod0
+  ; div0
+  ; mod0
+  ; gcd
+  ; lcm
+  ; numerator
+  ; denominator
+  ; floor
+  ; ceiling
+  ; truncate
+  ; round
+  ; rationalize
+  ; exp
+  ; log
+  ; sin
+  ; cos
+  ; tan
+  ; asin
+  ; acos
+  ; atan
+  ; sqrt
+  ; not
+  ; exact-integer-sqrt
+  ; expt
+  ; make-rectangular
+  ; make-polar
+  ; real-part
+  ; imag-part
+  ; magnitude
+  ; angle
+  ; number->string
+  ; string->number
+;;;;not					; r6rs 11.8 Booleans
+;;;;boolean?
+;;;;pair?				; r6rs 11.9 Pairs and lists
+;;;;cons
+;;;;car
+;;;;cdr
+    caar
     cadr
     cdar
     cddr
@@ -42,10 +128,69 @@
     cddadr
     cdddar
     cddddr
+;;;;null?
     list?
     list
     length
+  ; append
     reverse
+  ; list-tail
+  ; list-ref
+  ; map
+    for-each
+;;;;symbol?				; r6rs 11.10 Symbols
+;;;;symbol->string
+;;;;symbol=?
+;;;;string->symbol
+;;;;char?				; r6rs 11.11 Characters
+;;;;char->integer
+;;;;integer->char
+;;;;char=?
+;;;;char<?
+;;;;char>?
+;;;;char<=?
+;;;;char>=?
+;;;;string?				; r6rs 11.12 Strings
+;;;;make-string
+;;;;string
+;;;;string-length
+;;;;string-ref
+;;;;string=?
+;;;;string<?
+;;;;string>?
+;;;;string<=?
+;;;;string>=?
+;;;;substring
+;;;;string-append
+;;;;string->list
+;;;;list->string
+    string-for-each
+  ; string-copy
+;;;;vector?				; r6rs 11.13 Vectors
+;;;;make-vector
+;;;;vector-length
+;;;;vector-ref
+;;;;vector-set!
+  ; vector->list
+  ; list->vector
+  ; vector-fill!
+  ; vector-map
+  ; vector-for-each
+  ; error				; r6rs 11.14 Errors and violations
+  ; assert
+;;;;apply				; r6rs 11.15 Control features
+;;;;call-with-current-continuation
+;;;;call/cc
+  ; values
+  ; call-with-values
+  ; dynamic-wind
+  ; quasiquote				; r6rs 11.17 Quasiquotation
+  ; unquote
+  ; unquote-splicing
+  ; let-syntax				; r6rs 11.18 Binding constructs
+  ; letrec-syntax			; for syntactic keywords
+  ; syntax-rules			; r6rs 11.19 Macro transformers
+  ; identifier-syntax
     )
 
  (import (draft) (rnrs base (6)))
@@ -174,13 +319,44 @@
           (rr (cdr list) (cons (car list) tail))))
     (rr list '()))
 
+  (define (for-each proc . lists)
+    (define (cars lists)
+      (if (null? lists)
+	  '()
+	  (cons (caar lists) (cars (cdr lists)))))
+    (define (cdrs lists)
+      (if (null? lists)
+	  '()
+	  (cons (cdar lists) (cdrs (cdr lists)))))
+    (if (null? (car lists))
+	(if #f #f)
+	(begin
+	  (apply proc (cars lists))
+	  (apply for-each proc (cdrs lists)))))
+
+  (define (string-for-each proc . strings)
+    (define str (car strings))
+    (define (chars index strings)
+      (if (null? strings)
+	  '()
+	  (cons
+	   (string-ref (car strings) index)
+	   (chars index (cdr strings)))))
+    (define (sfeh index)
+      (if (>= index (string-length str))
+	  (if #f #f)
+	  (begin
+	    (apply proc (chars index strings))
+	    (sfeh (+ index 1)))))
+    (sfeh 0))
+
 )
 
 (library
  (rnrs (6))
  (export
 
-    ; (rnrs base (6))
+    ; From (rnrs base (6))
     define				; r6rs 11.2 Definitions
   ; define-syntax
     quote				; r6rs 11.4.1 Quotation
@@ -312,7 +488,7 @@
   ; list-tail
   ; list-ref
   ; map
-  ; for-each
+    for-each
     symbol?				; r6rs 11.10 Symbols
     symbol->string
     symbol=?
@@ -326,21 +502,21 @@
     char<=?
     char>=?
     string?				; r6rs 11.12 Strings
-  ; make-string
-  ; string
-  ; string-length
-  ; string-ref
+    make-string
+    string
+    string-length
+    string-ref
     string=?
-  ; string<?
-  ; string>?
-  ; string<=?
-  ; string>=?
-  ; substring
-  ; string-append
-  ; string->list
-  ; list->string
-  ; string-for-each
-  ; string-copy
+    string<?
+    string>?
+    string<=?
+    string>=?
+    substring
+    string-append
+    string->list
+    list->string
+    string-for-each
+    string-copy
     vector?				; r6rs 11.13 Vectors
     make-vector
     vector-length
@@ -364,7 +540,7 @@
   ; unquote-splicing
   ; let-syntax				; r6rs 11.18 Binding constructs
   ; letrec-syntax			; for syntactic keywords
-  ; syntax-rules    			; r6rs 11.19 Macro transformers
+  ; syntax-rules			; r6rs 11.19 Macro transformers
   ; identifier-syntax
 
     ; From (rnrs unicode (6))

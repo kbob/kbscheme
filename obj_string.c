@@ -81,6 +81,8 @@ void string_set_substring(obj_t         *string,
 			  size_t         len,
 			  const wchar_t *substring)
 {
+    assert_in_tospace(string);
+    assert(is_string(string));
     string_obj_t *sp = (string_obj_t *)string;
     assert(pos + len <= sp->string_len);
     size_t i;
@@ -90,20 +92,17 @@ void string_set_substring(obj_t         *string,
     assert(sp->string_value[sp->string_len] == '\0');
 }
 
-bool strings_are_equal(obj_t *str1, obj_t *str2)
+int strings_cmp(obj_t *str1, obj_t *str2)
 {
     assert(is_string(str1));
     assert(is_string(str2));
     size_t len1 = string_len(str1);
     size_t len2 = string_len(str2);
-    if (len1 != len2)
-	return false;
     const wchar_t *val1 = string_value(str1);
     const wchar_t *val2 = string_value(str2);
     size_t i;
-    for (i = 0; i < len1; i++)
+    for (i = 0; i < len1 && i < len2; i++)
 	if (val1[i] != val2[i])
-	    return false;
-    return true;
+	    return val1[i] - val2[i];
+    return len1 - len2;
 }
-

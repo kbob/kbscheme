@@ -842,3 +842,31 @@ I just now implemented "let" through mu.  Observe.
     > 
 
 So that's a start.
+
+----------------------------------
+9/2/2009
+
+I'm feeling the need to rewrite the evaluator.  This is partly
+from reading the book, "Scheme 9 from Empty Space".
+
+http://www.t3x.org/nmh/book-pdfs/scheme-9-from-empty-space.zip
+
+It's not so much a book as a very well commented source code
+listing.  But it uses a somewhat different interpreter model
+than I have.  The primitives are more "C-like" than my weird
+macro soup.
+
+Current interpreter strengths:
+	works. (-:
+	is continuation based.  call/cc works.
+	should allow exceptions to work without modifying the core.
+
+Current interpreter weaknesses:
+	roots are fragile and slow.
+	dynamic-wind unimplemented
+	multiple values unimplemented
+	API too complex for primitive procs, too simple for primitive syntax.
+	hard to call Scheme from C
+	warps my brain
+	no checking C procs for right number of args
+	crashes on any error.

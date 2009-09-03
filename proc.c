@@ -61,11 +61,12 @@ void register_procs(void)
     }
     AUTO_ROOT(value, NIL);
     AUTO_ROOT(new_env, NIL);
+    AUTO_ROOT(old_env, NIL);
     while (alias_descs) {
 	alias_descriptor_t *desc = alias_descs;
 	const wchar_t *old_namespec = desc->ad_old_libdesc->ld_namespec;
 	obj_t *old_library = find_library_str(old_namespec);
-	env_t *old_env = library_env(old_library);
+	old_env = library_env(old_library);
 	obj_t *old_sym = make_symbol_from_C_str(desc->ad_old_name);
 	obj_t *binding = env_lookup(old_env, old_sym);
 	value = binding_value(binding);

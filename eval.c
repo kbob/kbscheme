@@ -48,7 +48,7 @@ static obj_t *eval_symbol(void)
 
 #if EVAL_TRACE
 
-    static const wchar_t *block_name(C_procedure_t *block)
+    static const wchar_t *block_name(C_procedure_t *block, obj_t *env)
     {
 	if (block == b_eval)
 	    return L"b_eval";
@@ -61,22 +61,28 @@ static obj_t *eval_symbol(void)
 	if (block == NULL)
 	    return L"NULL";
 	/* XXX Move this code into env.c. */
-	obj_t *env = library_env(r6rs_library());
-	obj_t *frame = pair_car(env);
-	while (frame) {
-	    obj_t *binding = pair_car(frame);
-	    obj_t *value = binding_value(binding);
-	    if (is_procedure(value) && procedure_is_C(value)) {
-		C_procedure_t *body = (C_procedure_t *)procedure_body(value);
-		if (body == block)
-		    return string_value(symbol_name(binding_name(binding)));
+	if (!env)
+	    env = library_env(r6rs_library());
+	if (is_pair(env)) {
+	    obj_t *frame = pair_car(env);
+	    while (frame) {
+		obj_t *binding = pair_car(frame);
+		obj_t *value = binding_value(binding);
+		if (is_procedure(value) && procedure_is_C(value)) {
+		    C_procedure_t *body;
+		    body = (C_procedure_t *)procedure_body(value);
+		    if (body == block) {
+			obj_t *name = symbol_name(binding_name(binding));
+			return string_value(name);
+		    }
+		}
+		frame = pair_cdr(frame);
 	    }
-	    frame = pair_cdr(frame);
 	}
 	return L"<some-proc>";
     }
 
-    static void print_stack(const char *label)
+    void print_stack(const char *label)
     {
 	printf("%s: stack = ", label);
 	const char *sep = "";
@@ -84,14 +90,14 @@ static obj_t *eval_symbol(void)
 	for (fp = FRAME; fp; fp = frame_get_parent(fp), sep = " -> ") {
 	    C_procedure_t *cont = frame_get_continuation(fp);
 	    obj_t *subj = frame_get_subject(fp);
-	    printf("%s%ls", sep, block_name(cont));
+	    printf("%s%ls", sep, block_name(cont, NIL));
 	    if (cont || subj)
 		printf("[%O]", subj);
 	} 
 	printf("\n");
     }
 
-    static void print_env(obj_t *env)
+    void print_env(obj_t *env)
     {
 	if (!is_pair(env)) {
 	    printf("%O\n", env);
@@ -222,12 +228,13 @@ obj_t *eval(obj_t *expr, env_t *env)
     while (FRAME) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
-	print_stack("eval");
-	printf("   F_SUBJ => %O\n", F_SUBJ);
-	printf("   VALUE => %O\n", value);
-	printf("   ENV => ");
-	print_env(F_ENV);
-	printf("\n");
+	printf("    %ls %O\n", block_name(F_CONT, F_ENV), F_SUBJ);
+	//print_stack("eval");
+	//printf("   F_SUBJ => %O\n", F_SUBJ);
+	//printf("   VALUE => %O\n", value);
+	//printf("   ENV => ");
+	//print_env(F_ENV);
+	//printf("\n");
 #endif
 	value = (*F_CONT)(value);
     }
