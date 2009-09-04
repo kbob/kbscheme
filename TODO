@@ -105,7 +105,7 @@ DONE	full mem model
 
 	testing
  DONE	    Decentralize unit testing.
-	    Make each test start with a clean environment.
+ DONE	    Make each test start with a clean environment.
 	    Add Scheme-callable unit tests.
 	    Make a harness for functional tests.
 

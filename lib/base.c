@@ -331,9 +331,102 @@ TEST_EVAL(L"(procedure? 'car)",                  L"#f");
 TEST_EVAL(L"(procedure? (lambda (x) (* x x)))",  L"#t");
 TEST_EVAL(L"(procedure? '(lambda (x) (* x x)))", L"#f");
 
-/* 11.7.  Arithmetic
+/* 11.7.4.  Numerical operations
  *
- * ...
+ * (number? obj)				# procedure
+ * (complex? obj)				# procedure
+ * (real? obj)					# procedure
+ * (rational? obj)				# procedure
+ * (integer? obj)				# procedure
+ *
+ * (real-valued? obj)				# procedure
+ * (rational-valued? obj)			# procedure
+ * (integer-valued? obj)			# procedure
+ *
+ * (exact? z)					# procedure
+ * (inexact? z)					# procedure
+ *
+ * (inexact z)					# procedure
+ * (exact z)					# procedure
+ *
+ * (= z1 z2 z3 ...)				# procedure
+ * (< z1 z2 z3 ...)				# procedure
+ * (> z1 z2 z3 ...)				# procedure
+ * (<= z1 z2 z3 ...)				# procedure
+ * (>= z1 z2 z3 ...)				# procedure
+ *
+ * (zero? z)					# procedure
+ * (positive? x)				# procedure
+ * (negative? x)				# procedure
+ * (odd? n)					# procedure
+ * (even? n)					# procedure
+ * (finite? x)					# procedure
+ * (infinite? x)				# procedure
+ * (nan? x)					# procedure
+ *
+ * (max x1 x2 ...)				# procedure
+ * (min x1 x2 ...)				# procedure
+ *
+ * (+ z1 ...)					# procedure
+ * (* z1 ...)					# procedure
+ *
+ * (- z)					# procedure
+ * (- z1 z2 ...)				# procedure
+ *
+ * (/ z)					# procedure
+ * (/ z1 z2 ...)				# procedure
+ *
+ * (abs x)					# procedure
+ *
+ * (div-and-mod x1 x2)				# procedure
+ * (div x1 x2)					# procedure
+ * (mod x1 x2)					# procedure
+ * (div0-and-mod0 x1 x2)			# procedure
+ * (div0 x1 x2)					# procedure
+ * (mod0 x1 x2)					# procedure
+ *
+ * (gcd n1 ...)					# procedure
+ * (lcm n1 ...)					# procedure
+ *
+ * (numerator q)				# procedure
+ * (denominator q)				# procedure
+ *
+ * (floor x)					# procedure
+ * (ceiling x)					# procedure
+ * (truncate x)					# procedure
+ * (round x)					# procedure
+ *
+ * (rationalize x1 x2)				# procedure
+ *
+ * (exp z)					# procedure
+ * (log z)					# procedure
+ * (log z1 z2)					# procedure
+ * (sin z)					# procedure
+ * (cos z)					# procedure
+ * (tan z)					# procedure
+ * (asin z)					# procedure
+ * (acos z)					# procedure
+ * (atan x1 x2)					# procedure
+ *
+ * (sqrt z)					# procedure
+ *
+ * (exact-integer-sqrt k)			# procedure
+ *
+ * (expt z1 z2)					# procedure
+ *
+ * (make-rectangular x1 x2)			# procedure
+ * (make-polar x3 x4)				# procedure
+ * (real-part z)				# procedure
+ * (imag-part z)				# procedure
+ * (magnitude z)				# procedure
+ * (angle z)					# procedure
+ *
+ * (number->string z)				# procedure
+ * (number->string z radix)			# procedure
+ * (number->string z radix precision)		# procedure
+ *
+ * (string->number string)			# procedure
+ * (string->number string radix)		# procedure
  */
 
 DEFINE_PROC(L"number?")
@@ -419,6 +512,15 @@ DEFINE_PROC(L">=")
     }
     RETURN(make_boolean(true));
 }
+
+DEFINE_PROC(L"negative?")
+{
+    RETURN(make_boolean(fixnum_value(pair_car(F_SUBJ)) < 0));
+}
+
+TEST_EVAL(L"(negative? -1)",			L"#t");
+TEST_EVAL(L"(negative? 0)",			L"#f");
+TEST_EVAL(L"(negative? +1)",			L"#f");
 
 DEFINE_PROC(L"+")
 {
@@ -1284,13 +1386,13 @@ DEFINE_PROC(L"call-with-current-continuation")
 ALIAS_NAME(&current_library_, L"call-with-current-continuation",
 	   &current_library_, L"call/cc");
 
-//TEST_EVAL(L"(call-with-current-continuation\n"
-//          L"  (lambda (exit)\n"
-//          L"    (for-each (lambda (x)\n"
-//          L"                (if (negative? x)\n"
-//          L"                    (exit x)))\n"
-//          L"              '(54 0 37 -3 245 19))\n"
-//          L"    #t))", L"-3");
+TEST_EVAL(L"(call-with-current-continuation\n"
+          L"  (lambda (exit)\n"
+          L"    (for-each (lambda (x)\n"
+          L"                (if (negative? x)\n"
+          L"                    (exit x)))\n"
+          L"              '(54 0 37 -3 245 19))\n"
+          L"    #t))", L"-3");
 
 //TEST_EVAL(L"(define list-length\n"
 //          L"  (lambda (obj)\n"

@@ -89,8 +89,9 @@ static int eval_driver(const test_case_descriptor_t *tc)
 	make_string_instream(tc->tcd_input, wcslen(tc->tcd_input));
     AUTO_ROOT(expr, NIL);
     AUTO_ROOT(value, NIL);
+    AUTO_ROOT(env, make_env(library_env(r6rs_library())));
     while (read_stream(in, &expr))
-	value = eval(expr, library_env(r6rs_library()));
+	value = eval(expr, env);
     /* Compare the value of the last expression. */
     const size_t out_size = 100;
     wchar_t actual[out_size + 1];

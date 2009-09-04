@@ -397,7 +397,7 @@
     >=
   ; zero?
   ; positive?
-  ; negative?
+    negative?
   ; odd?
   ; even?
   ; finite?
@@ -434,7 +434,6 @@
   ; acos
   ; atan
   ; sqrt
-  ; not
   ; exact-integer-sqrt
   ; expt
   ; make-rectangular
@@ -1117,7 +1116,14 @@
 	; (rnrs conditions (6))
 	  (rnrs io ports (6))
 	; (rnrs io simple (6))
+	; (rnrs files (6))
+	; (rnrs programs (6))
 	  (rnrs arithmetic fixnums (6))
+	; (rnrs arithmetic flonums (rnrs 6)) (6))
+	; (rnrs arithmetic bitwise (rnrs 6)) (6))
+	; (syntax-rnrs case (6))
+	; (rnrs hashtables (6))
+	; (rnrs enums (6))
 	  (rnrs eval (6))
 	  (rnrs mutable-pairs (6))
 	  (draft)
