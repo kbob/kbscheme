@@ -16,7 +16,7 @@
  drop	    Rename make_symbol() to find_symbol().
  DONE	    Replace "exit" with (eof-object) in REPL.
  DONE	    Some accessors are called foo_len, others are called foo_length.
-	    Remove debug_heap flag in mem.c.
+ DONE	    Remove debug_heap flag in mem.c.
 
 	nonrecursive eval
  DONE	    Define C procedure API.

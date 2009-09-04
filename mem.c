@@ -24,6 +24,7 @@ static size_t heap_size_bytes = INITIAL_HEAP_BYTES;
 static void *tospace;
 static void *tospace_end;
 static void *next_alloc;
+static void *alloc_end;
 static void *next_scan;
 static void *fromspace, *fromspace_end;
 static bool heap_is_initialized;
@@ -116,6 +117,7 @@ static size_t aligned_size(size_t size)
 	    printf("                    p=%p\n", p);
 	    printf("           next_alloc=%p\n", next_alloc);
 	    printf("         to_space_end=%p\n", tospace_end);
+	    printf("            alloc_end=%0\n", alloc_end);
 	}
 	assert(p == next_scan);
 	while (p < next_alloc) {
@@ -147,10 +149,10 @@ static void flip()
     fromspace_end = tospace_end;
     if (tospace == the_heap) {
 	tospace = the_heap + heap_size_bytes / 2;
-	tospace_end = the_heap + heap_size_bytes;
+	alloc_end = tospace_end = the_heap + heap_size_bytes;
     } else {
 	tospace = the_heap;
-	tospace_end = the_heap + heap_size_bytes / 2;
+	alloc_end = tospace_end = the_heap + heap_size_bytes / 2;
     }
     next_alloc = next_scan = tospace;
     if (debug_heap) {
@@ -168,10 +170,10 @@ static obj_t *move_obj(obj_t *obj)
 	return OBJ_FWD_PTR(obj);
     assert(is_known_ops(OBJ_MEM_OPS(obj)));
     size_t size = aligned_size(OBJ_MEM_OPS(obj)->mo_size(obj));
-    assert(next_alloc + size <= tospace_end);
+    assert(next_alloc + size <= alloc_end);
     obj_t *new_obj = next_alloc;
     next_alloc += size;
-    assert(next_alloc <= tospace_end);
+    assert(next_alloc <= alloc_end);
     OBJ_MEM_OPS(obj)->mo_move(obj, new_obj);
     OBJ_SET_FWD(obj, new_obj);
     return new_obj;
@@ -205,6 +207,8 @@ static void copy_heap()
 	    verify_heap();
 	}
 	assert(next_scan == next_alloc);
+	if (debug_heap)
+	    alloc_end = next_alloc;
     }
 }
 
@@ -221,9 +225,11 @@ void init_heap(void)
     assert(!heap_is_initialized);
     the_heap = malloc(heap_size_bytes);
     tospace = the_heap;
-    tospace_end = the_heap + heap_size_bytes / 2;
+    alloc_end = tospace_end = the_heap + heap_size_bytes / 2;
     next_alloc = the_heap;
     next_scan = the_heap;
+    if (debug_heap)
+	alloc_end = next_alloc;
     
     heap_is_initialized = true;
 }
@@ -234,7 +240,7 @@ obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size_bytes)
     verify_heap();
     remember_ops(ops);
     size_t alloc_size = aligned_size(size_bytes);
-    if (debug_heap || next_alloc > tospace_end - alloc_size) {
+    if (next_alloc > alloc_end - alloc_size) {
 	copy_heap();
 	assert(next_alloc <= tospace_end - alloc_size && "out of memory");
     }
