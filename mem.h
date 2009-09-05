@@ -79,7 +79,11 @@ extern void set_heap_size_bytes(size_t usable_size_bytes);
 /* init_heap must be called before mem_alloc_obj. */
 extern void init_heap(void);
 
-extern void assert_in_tospace(const obj_t *);
+#ifdef NDEBUG
+    #define assert_in_tospace(obj) ((void)0)
+#else
+    extern void assert_in_tospace(const obj_t *);
+#endif
 
 extern obj_t *mem_alloc_obj(const mem_ops_t *, size_t size_bytes);
 
