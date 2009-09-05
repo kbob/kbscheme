@@ -60,7 +60,7 @@ test:	tests
 	    echo 'Test $(patsubst ./%,%,$t)'; \
 	    $t;)
 
-build:	libs programs tests Makefiles
+build:	Makefiles libs programs tests
 
 programs: $(PROGRAMS)
 
