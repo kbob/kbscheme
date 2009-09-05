@@ -30,6 +30,11 @@ static inline obj_t *pair_cddr(obj_t *pair)
     return pair_cdr(pair_cdr(pair));
 }
 
+static inline obj_t *pair_cadar(obj_t *pair)
+{
+    return pair_car(pair_cdr(pair_car(pair)));
+}
+
 static inline obj_t *pair_caddr(obj_t *pair)
 {
     return pair_car(pair_cdr(pair_cdr(pair)));

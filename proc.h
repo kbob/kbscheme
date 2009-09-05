@@ -19,6 +19,8 @@
  * DEFINE_SPECIAL_FORM(scheme_name)
  *        short for DEFINE_ANONYMOUS_SPECIAL_FORM.
  *
+ * DEFINE_TRANFORMER(scheme_name)
+ *	  short for DEFINE_ANONYMOUS_TRANSFORMER.
  * DEFINE_BLOCK(C_name)
  *	  short for DEFINE_STATIC_BLOCK.
  *
@@ -30,21 +32,26 @@
  * DEFINE_EXTERN_PROC(C_name, scheme_name)
  *        Define a procedure with extern scope and the given names in
  *        C and in Scheme.  C_name is an identifier, but scheme_name
- *        is a string.
+ *        is a wide string.
  *
  * DEFINE_STATIC_PROC(C_name, scheme_name)
  *        Define a procedure with file static scope and the given
  *        names in C and in Scheme.  C_name is an identifier, but
- *        scheme_name is a string.
+ *        scheme_name is a wide string.
  *
  * DEFINE_ANONYMOUS_PROC(scheme_name)
- *        Define a procedure with the given name in scheme.  Its
- *        name in C is auto-generated.  scheme_name is a string.
+ *        Define a procedure with the given name in scheme.  Its name
+ *        in C is auto-generated.  scheme_name is a wide string.
  *
  * DEFINE_EXTERN_SPECIAL_FORM(C_name, scheme_name)
  * DEFINE_STATIC_SPECIAL_FORM(C_name, scheme_name)
  * DEFINE_ANONYMOUS_SPECIAL_FORM(scheme_name)
  *        Define a special form with the given names and scope.
+ *
+ * DEFINE_EXTERN_TRANSFORMER(C_name, scheme_name)
+ * DEFINE_STATIC_TRANSFORMER(C_name, scheme_name)
+ * DEFINE_ANONYMOUS_TRANSFORMER(scheme_name)
+ *        Define a transformer with the given names and scope.
  *
  * DEFINE_EXTERN_BLOCK(C_name)
  * DEFINE_STATIC_BLOCK(C_name)
@@ -118,6 +125,7 @@
 /* abbreviations */
 #define DEFINE_PROC         DEFINE_ANONYMOUS_PROC
 #define DEFINE_SPECIAL_FORM DEFINE_ANONYMOUS_SPECIAL_FORM
+#define DEFINE_TRANSFORMER  DEFINE_ANONYMOUS_TRANSFORMER
 #define DEFINE_BLOCK        DEFINE_STATIC_BLOCK
 #define DECLARE_BLOCK       DECLARE_STATIC_BLOCK
 
@@ -162,6 +170,27 @@
                          UNIQ_IDENT(anonymous_special_),		\
                          scheme_name,					\
 			 bind_special_form)
+
+#define DEFINE_EXTERN_TRANFORMER(C_name, scheme_name)			\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
+			 extern,					\
+			 C_name,					\
+			 scheme_name,					\
+			 bind_transformer)
+
+#define DEFINE_STATIC_TRANSFORMER(C_name, scheme_name)			\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
+		         static,					\
+			 C_name,					\
+			 scheme_name,					\
+			 bind_transformer)
+
+#define DEFINE_ANONYMOUS_TRANSFORMER(scheme_name)			\
+    DEFINE_GENERAL_PROC_(&current_library_,				\
+                         static,					\
+                         UNIQ_IDENT(anonymous_transformer_),		\
+                         scheme_name,					\
+			 bind_transformer)
 
 #define DEFINE_EXTERN_BLOCK(C_name) DECLARE_PROC_(extern, C_name)
 #define DEFINE_STATIC_BLOCK(C_name) DECLARE_PROC_(static, C_name)
@@ -320,5 +349,6 @@ extern void register_alias(alias_descriptor_t *);
 
 extern void bind_proc(C_procedure_t, obj_t *lib, const wchar_t *name);
 extern void bind_special_form(C_procedure_t, obj_t *lib, const wchar_t *name);
+extern void bind_transformer(C_procedure_t, obj_t *lib, const wchar_t *name);
 
 #endif /* !PROC_INCLUDED */

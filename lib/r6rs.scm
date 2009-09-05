@@ -367,7 +367,8 @@
   ; case
   ; and
   ; or
-  ; let					; r6rs 11.4.6 Binding constructs
+    let					; r6rs 11.4.6 Binding constructs
+    foo					; XXX temp
   ; let*
   ; letrec
   ; letrec*

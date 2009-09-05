@@ -29,6 +29,15 @@ void bind_special_form(C_procedure_t *form,
     env_bind(env, sym, BINDING_IMMUTABLE, code);
 }
 
+void bind_transformer(C_procedure_t *form, obj_t *library, const wchar_t *name)
+{
+    AUTO_ROOT(env, library_env(library));
+    AUTO_ROOT(code, make_C_xformer_proc(form, NIL, env));
+    obj_t *sym = make_symbol_from_C_str(name);
+    POP_FUNCTION_ROOTS();
+    env_bind(env, sym, BINDING_IMMUTABLE, code);
+}
+
 void register_proc(proc_descriptor_t *desc)
 {
 #ifndef NDEBUG

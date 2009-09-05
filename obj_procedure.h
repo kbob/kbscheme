@@ -15,6 +15,10 @@ extern obj_t *make_special_form_procedure(obj_t *code,
 extern obj_t *make_C_special_form_procedure(C_procedure_t *code,
 					    obj_t *arglist,
 					    obj_t *env);
+extern obj_t *make_C_xformer_proc(C_procedure_t *code,
+				  obj_t *arglist,
+				  obj_t *env);
+
 extern bool   is_procedure(obj_t *);
 extern bool   procedure_is_C(obj_t *);
 extern bool   procedure_is_special_form(obj_t *);

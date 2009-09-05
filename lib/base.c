@@ -264,6 +264,90 @@ TEST_EVAL(L"(define v2 '()) (set! v2 4)",    UNSPECIFIED_REPR);
  * (let*-values <mv-bindings> <body>)	# syntax
  */
 
+#include <stdio.h>			/* XXX */
+
+static obj_t *let_get_args(obj_t *bindings)
+{
+    PUSH_ROOT(bindings);
+    AUTO_ROOT(args, NIL);
+    AUTO_ROOT(last_arg, NIL);
+    AUTO_ROOT(t, NIL);
+    while (bindings) {
+	obj_t *var = pair_caar(bindings);
+	if (args) {
+	    t = make_pair(var, NIL);
+	    pair_set_cdr(last_arg, t);
+	    last_arg = t;
+	}
+	else
+	    args = last_arg = make_pair(var, NIL);
+	bindings = pair_cdr(bindings);
+    }
+    POP_FUNCTION_ROOTS();
+    return args;
+}
+
+static obj_t *let_get_inits(obj_t *bindings)
+{
+    PUSH_ROOT(bindings);
+    AUTO_ROOT(inits, NIL);
+    AUTO_ROOT(last_init, NIL);
+    AUTO_ROOT(t, NIL);
+    while (bindings) {
+	obj_t *init = pair_cadar(bindings);
+	if (inits) {
+	    t = make_pair(init, NIL);
+	    pair_set_cdr(last_init, t);
+	    last_init = t;
+	}
+	else
+	    inits = last_init = make_pair(init, NIL);
+	bindings = pair_cdr(bindings);
+    }
+    POP_FUNCTION_ROOTS();
+    return inits;
+}
+
+DEFINE_STATIC_TRANSFORMER(foo_let, L"let")
+{
+    /*
+     * (let				((lambda (v1 ...)
+     *   ((v1 i1) ...)		=>	  body1 ...)
+     *    body1 body2 ...)		 i1 ...)
+     *
+     * (let				((lambda ()
+     *   var				  (define var
+     *   ((v1 i1) ...)		=>	    (lambda (v1 ...)
+     *   body ...)			     body1 ...))
+     *					  (var i1 ...)))
+     */
+    AUTO_ROOT(let, NIL);
+    printf("VALUE = %O\n", VALUE);
+    if (is_pair(pair_cadr(VALUE))) {
+	/* unnamed let */
+	AUTO_ROOT(args, let_get_args(pair_cadr(VALUE)));
+	AUTO_ROOT(inits, let_get_inits(pair_cadr(VALUE)));
+	printf("inits = %O\n", inits);
+	AUTO_ROOT(bodies, pair_cddr(VALUE));
+	AUTO_ROOT(tmp, make_pair(args, bodies));
+	let = make_symbol_from_C_str(L"lambda");
+	let = make_pair(let, tmp);
+	// tmp = make_pair(inits, NIL);
+	let = make_pair(let, inits);
+    } else {
+	/* named let */
+	assert(is_symbol(pair_cadr(VALUE)));
+	assert(false && "implement named let");
+    }
+    POP_FUNCTION_ROOTS();
+    return let;
+}
+
+DEFINE_PROC(L"foo")
+{
+    RETURN(foo_let(pair_car(F_SUBJ)));
+}
+
 /* 11.4.7.  Sequencing
  *
  * (begin <form> ...)			 # syntax

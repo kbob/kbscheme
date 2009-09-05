@@ -9,6 +9,7 @@
 typedef enum proc_flags {
     PF_COMPILED_C   = 1 << 0,
     PF_SPECIAL_FORM = 1 << 1,
+    PF_TRANSFORMER  = 1 << 2,
 } proc_type_t;
 
 typedef struct proc_obj {
@@ -134,6 +135,12 @@ obj_t *make_C_special_form_procedure(C_procedure_t *code,
 				     obj_t *env)
 {
     return make_proc(PF_COMPILED_C | PF_SPECIAL_FORM,
+		     (obj_t **)&code, arglist, env);
+}
+
+obj_t *make_C_xformer_proc(C_procedure_t *code, obj_t *arglist, obj_t *env)
+{
+    return make_proc(PF_COMPILED_C | PF_TRANSFORMER,
 		     (obj_t **)&code, arglist, env);
 }
 
