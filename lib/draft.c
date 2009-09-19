@@ -6,6 +6,7 @@
 
 #include "io.h"
 #include "obj_eof.h"
+#include "obj_syntax.h"
 #include "print.h"
 #include "proc.h"
 #include "read.h"
@@ -40,6 +41,11 @@ DEFINE_PROC(L"draft-print")
 DEFINE_PROC(L"draft-environment")
 {
     RETURN(library_env(r6rs_library()));
+}
+
+DEFINE_PROC(L"draft-make-syntax")
+{
+    RETURN(make_syntax(pair_car(F_SUBJ), pair_cadr(F_SUBJ)));
 }
 
 DEFINE_BLOCK(b_continue_mu)

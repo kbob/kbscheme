@@ -258,7 +258,7 @@
 #define TAIL_EVAL(exp) GOTO(b_eval, (exp), F_ENV)
 
 /* Raise an exception. */
-#define RAISE(condition) (assert(false && "XXX implement RAISE"))
+#define RAISE(condition) (assert(false && "RAISE" #condition))
 
 /* Evaluate the expression in the environment, then go to the
  * target block.
@@ -341,7 +341,7 @@ extern obj_t *FRAME;
 DECLARE_EXTERN_BLOCK(b_eval);
 DECLARE_EXTERN_BLOCK(b_accum_operator);
 
-extern obj_t *eval_application(obj_t *proc, obj_t *args);
+extern obj_t *apply_procedure(obj_t *proc, obj_t *args);
 
 extern void register_proc(proc_descriptor_t *desc);
 extern void register_procs(void);

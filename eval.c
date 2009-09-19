@@ -10,7 +10,7 @@
 #define EVAL_TRACE 0
 #if EVAL_TRACE
     #include <stdio.h>
-    #include "print.h"
+    #include "uprintf.h"
 #endif
 
 THREAD_EXTERN_ROOT(FRAME);
@@ -92,7 +92,7 @@ static obj_t *eval_symbol(void)
 	    obj_t *subj = frame_get_subject(fp);
 	    printf("%s%ls", sep, block_name(cont, NIL));
 	    if (cont || subj)
-		printf("[%O]", subj);
+		printf_unchecked("[%O]", subj);
 	} 
 	printf("\n");
     }
@@ -100,7 +100,7 @@ static obj_t *eval_symbol(void)
     void print_env(obj_t *env)
     {
 	if (!is_pair(env)) {
-	    printf("%O\n", env);
+	    printf_unchecked("%O\n", env);
 	    return;
 	}
 	const char *sep = "";
@@ -112,7 +112,9 @@ static obj_t *eval_symbol(void)
 		sep = "";
 		while (f) {
 		    obj_t *binding = pair_car(f);
-		    printf("%s%O: %O", sep, binding_name(binding), binding_value(binding));
+		    printf_unchecked("%s%O: %O", sep,
+						 binding_name(binding),
+						 binding_value(binding));
 		    f = pair_cdr(f);
 		    sep = ", ";
 		}
@@ -126,8 +128,7 @@ static obj_t *eval_symbol(void)
 
 #endif /* EVAL_TRACE */
 
-/* XXX This function is misnamed. */
-obj_t *eval_application(obj_t *proc, obj_t *args)
+obj_t *apply_procedure(obj_t *proc, obj_t *args)
 {
     PUSH_ROOT(proc);
     PUSH_ROOT(args);
@@ -162,6 +163,10 @@ obj_t *eval_application(obj_t *proc, obj_t *args)
     GOTO(b_eval_sequence, body, new_env);
 }
 
+obj_t *apply_transformer(obj_t *xform, obj_t *form)
+{
+}
+
 DEFINE_EXTERN_BLOCK(b_eval)
 {
     assert(!is_null(F_SUBJ));
@@ -173,6 +178,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
 	AUTO_ROOT(proc, pair_car(F_SUBJ));
 	AUTO_ROOT(args, pair_cdr(F_SUBJ));
 	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, args, F_ENV);
+
     }
     RAISE(&syntax);
 }
@@ -181,8 +187,15 @@ DEFINE_EXTERN_BLOCK(b_accum_operator)
 {
     obj_t *proc = VALUE;
     obj_t *args = F_SUBJ;
+    assert(is_procedure(proc));
+#if 0
+    if (procedure_is_xformer(proc)) {
+	PUSH_ROOT(proc);
+	return apply_transformer(proc, make_syntax(make_pair());
+    }
+#endif
     if (procedure_is_special_form(proc) || is_null(args))
-	return eval_application(proc, args);
+	return apply_procedure(proc, args);
     PUSH_ROOT(proc);
     AUTO_ROOT(first_arg, pair_car(args));
     AUTO_ROOT(rest_args, pair_cdr(args));
@@ -210,7 +223,7 @@ DEFINE_BLOCK(b_accum_arg)
     else
 	pair_set_cdr(F_LARG, last_arg);
     if (is_null(F_SUBJ))
-	return eval_application(F_PROC, arglist);
+	return apply_procedure(F_PROC, arglist);
     PUSH_ROOT(last_arg);
     PUSH_ROOT(arglist);
     AUTO_ROOT(next_arg, pair_car(F_SUBJ));
@@ -228,10 +241,10 @@ obj_t *eval(obj_t *expr, env_t *env)
     while (FRAME) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
-	printf("    %ls %O\n", block_name(F_CONT, F_ENV), F_SUBJ);
+	printf_unchecked("    %ls %O\n", block_name(F_CONT, F_ENV), F_SUBJ);
 	//print_stack("eval");
-	//printf("   F_SUBJ => %O\n", F_SUBJ);
-	//printf("   VALUE => %O\n", value);
+	//printf_unchecked("   F_SUBJ => %O\n", F_SUBJ);
+	//printf_unchecked("   VALUE => %O\n", value);
 	//printf("   ENV => ");
 	//print_env(F_ENV);
 	//printf("\n");

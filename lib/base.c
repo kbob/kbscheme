@@ -8,10 +8,10 @@ LIBRARY(L"(rnrs base (6))")
 
 /* 11.2.1.  Variable definitions
  *
- * (define <variable> <expression>)	  # syntax
- * (define <variable>)			  # syntax
- * (define (<variable> <formals>) body)	  # syntax
- * (define (<variable> . <formals>) body) # syntax
+ * (define <variable> <expression>)	  	# syntax
+ * (define <variable>)			  	# syntax
+ * (define (<variable> <formals>) body)	  	# syntax
+ * (define (<variable> . <formals>) body) 	# syntax
  */
 
 DEFINE_BLOCK(b_define_continue)
@@ -59,16 +59,15 @@ TEST_EVAL(L"(define first car)\n"
 
 /* 11.2.2.  Syntax definitions
  *
- * (define-syntax <keyword> <expression>) # syntax
+ * (define-syntax <keyword> <expression>) 	# syntax
  */
 
-#if 0
 DEFINE_BLOCK(b_define_syntax_continue)
 {
     obj_t *proc = VALUE;
-    proc = make_special_form_procedure(procedure_body(proc),
-				       procedure_args(proc),
-				       procedure_env(proc));
+    proc = make_xformer_proc(procedure_body(proc),
+			     procedure_args(proc),
+			     procedure_env(proc));
     obj_t *keyword = pair_car(F_SUBJ);
     env_bind(F_ENV, keyword, BINDING_IMMUTABLE, proc);
     RETURN(UNSPECIFIED);
@@ -80,6 +79,7 @@ DEFINE_EXTERN_SPECIAL_FORM(define_syntax, L"define-syntax")
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
 }
 
+#if 0
 TEST_EVAL(L"(define-syntax qot (lambda (x) x))\n"
 	  L"(qot (1 2))",		L"(1 2)");
 
@@ -102,7 +102,7 @@ TEST_EVAL(L"(define-syntax qot (lambda (x) x))\n"
 
 /* 11.4.1.  Quotation
  *
- * (quote <datum>)			# syntax
+ * (quote <datum>)				# syntax
  */
 
 DEFINE_SPECIAL_FORM(L"quote")
@@ -130,7 +130,7 @@ TEST_EVAL(L"''a",			L"(quote a)");
 
 /* 11.4.2.  Procedures
  *
- * (lambda <formals> <body>)		# syntax
+ * (lambda <formals> <body>)			# syntax
  */
 
 DEFINE_SPECIAL_FORM(L"lambda")
@@ -168,8 +168,8 @@ TEST_EVAL(L"((lambda (x y . z) z)\n"
 
 /* 11.4.3.  Conditionals
  *
- * (if <test> <consequent> <alternate>) # syntax
- * (if <test> <consequent>)             # syntax
+ * (if <test> <consequent> <alternate>) 	# syntax
+ * (if <test> <consequent>)             	# syntax
  */
 
 DEFINE_BLOCK(b_continue_if)
@@ -208,7 +208,7 @@ TEST_EVAL(L"(if #f #f)",		UNSPECIFIED_REPR);
 
 /* 11.4.4.  Assignments
  *
- * (set! <variable> <expression>)	# syntax
+ * (set! <variable> <expression>)		# syntax
  */
 
 DEFINE_BLOCK(b_set_continue)
@@ -238,30 +238,30 @@ TEST_EVAL(L"(define v2 '()) (set! v2 4)",    UNSPECIFIED_REPR);
           
 /* 11.4.5.  Derived conditionals
  *
- * (cond <cond clause1> <cond clause2> ...)         # syntax
+ * (cond <cond clause1> <cond clause2> ...)     # syntax
  * => auxiliary syntax
  * => auxiliary syntax
  *
  * (case <key> <case clause 1> <case clause 2> ...) # syntax
  *
- * (and <test1> ...)				    # syntax
+ * (and <test1> ...)				# syntax
  *
- * (or <test1> ...)				    # syntax
+ * (or <test1> ...)				# syntax
  */
 
 /* 11.4.6.  Binding constructs
  *
- * (let <bindings> <body>)		# syntax
+ * (let <bindings> <body>)			# syntax
  *
- * (let* <bindings> <body>)		# syntax
+ * (let* <bindings> <body>)			# syntax
  *
- * (letrec <bindings> <body>)		# syntax
+ * (letrec <bindings> <body>)			# syntax
  *
- * (letrec* <bindings> <body>)		# syntax
+ * (letrec* <bindings> <body>)			# syntax
  *
- * (let-values <mv-bindings> <body>)	# syntax
+ * (let-values <mv-bindings> <body>)		# syntax
  *
- * (let*-values <mv-bindings> <body>)	# syntax
+ * (let*-values <mv-bindings> <body>)		# syntax
  */
 
 #include <stdio.h>			/* XXX */
@@ -308,31 +308,28 @@ static obj_t *let_get_inits(obj_t *bindings)
     return inits;
 }
 
-DEFINE_STATIC_TRANSFORMER(foo_let, L"let")
+DEFINE_STATIC_TRANSFORMER(foo_let, L"lett")
 {
     /*
      * (let				((lambda (v1 ...)
      *   ((v1 i1) ...)		=>	  body1 ...)
      *    body1 body2 ...)		 i1 ...)
      *
-     * (let				((lambda ()
-     *   var				  (define var
-     *   ((v1 i1) ...)		=>	    (lambda (v1 ...)
-     *   body ...)			     body1 ...))
-     *					  (var i1 ...)))
+     * (let				((lambda (var)
+     *   var				  (var i1 ...))
+     *   ((v1 i1) ...)		=>	 (lambda (v1 ...) body1 ...)
+     *   body1 ...)			
+     *					
      */
     AUTO_ROOT(let, NIL);
-    printf("VALUE = %O\n", VALUE);
     if (is_pair(pair_cadr(VALUE))) {
 	/* unnamed let */
 	AUTO_ROOT(args, let_get_args(pair_cadr(VALUE)));
 	AUTO_ROOT(inits, let_get_inits(pair_cadr(VALUE)));
-	printf("inits = %O\n", inits);
 	AUTO_ROOT(bodies, pair_cddr(VALUE));
 	AUTO_ROOT(tmp, make_pair(args, bodies));
 	let = make_symbol_from_C_str(L"lambda");
 	let = make_pair(let, tmp);
-	// tmp = make_pair(inits, NIL);
 	let = make_pair(let, inits);
     } else {
 	/* named let */
@@ -350,8 +347,8 @@ DEFINE_PROC(L"foo")
 
 /* 11.4.7.  Sequencing
  *
- * (begin <form> ...)			 # syntax
- * (begin <expression> <expression> ...) # syntax
+ * (begin <form> ...)			 	# syntax
+ * (begin <expression> <expression> ...) 	# syntax
  */
 
 DEFINE_EXTERN_SPECIAL_FORM(begin, L"begin")
@@ -377,12 +374,34 @@ TEST_EVAL(L"(begin\n"
 
 /* 11.5.  Equivalence
  *
- * (eqv? obj1 obj2)			# procedure
+ * (eqv? obj1 obj2)				# procedure
  *
- * (eq? obj1 obj2)			# procedure
+ * (eq? obj1 obj2)				# procedure
  *
- * (equal? obj1 obj2)			# procedure
+ * (equal? obj1 obj2)				# procedure
  */
+
+DEFINE_PROC(L"eqv?")
+{
+    obj_t *obj1 = pair_car(F_SUBJ);
+    obj_t *obj2 = pair_cadr(F_SUBJ);
+
+    if (is_fixnum(obj1) && is_fixnum(obj2))
+	RETURN(make_boolean(fixnum_value(obj1) == fixnum_value(obj2)));
+    if (is_character(obj1) && is_character(obj2))
+	RETURN(make_boolean(character_value(obj1) == character_value(obj2)));
+    RETURN(make_boolean(obj1 == obj2));
+}
+
+TEST_EVAL(L"(eqv? 'a 'a)",			L"#t");
+TEST_EVAL(L"(eqv? 'a 'b)",			L"#f");
+TEST_EVAL(L"(eqv? 2 2)",			L"#t");
+TEST_EVAL(L"(eqv? '() '())",			L"#t");
+TEST_EVAL(L"(eqv? 100000000 100000000)",	L"#t");
+TEST_EVAL(L"(eqv? (cons 1 2) (cons 1 2))",	L"#f");
+TEST_EVAL(L"(eqv? (lambda () 1)\n"
+	  L"      (lambda () 2))",		L"#f");
+TEST_EVAL(L"(eqv? #f 'nil)",			L"#f");
 
 DEFINE_PROC(L"eq?")
 {
@@ -672,11 +691,11 @@ DEFINE_PROC(L"abs")
 }
 /* 11.8.  Booleans
  *
- * (not obj)				# procedure
+ * (not obj)					# procedure
  *
- * (boolean? obj)			# procedure
+ * (boolean? obj)				# procedure
  *
- * (boolean=? bool1 bool2 bool3 ...)	# procedure
+ * (boolean=? bool1 bool2 bool3 ...)		# procedure
  */
 
 DEFINE_PROC(L"not")
@@ -710,40 +729,40 @@ TEST_EVAL(L"(boolean? '())",    L"#f");
 
 /* 11.9.  Pairs and lists
  *
- * (pair? obj)				# procedure
+ * (pair? obj)					# procedure
  *
- * (cons obj1 obj2)			# procedure
+ * (cons obj1 obj2)				# procedure
  *
  *
- * (car pair)				# procedure
+ * (car pair)					# procedure
  *
- * (cdr pair)				# procedure
+ * (cdr pair)					# procedure
  *
- * (caar pair)				# procedure
- * (cadr pair)				# procedure
- *     ...				     ...
- * (cdddar pair)			# procedure
- * (cddddr pair)			# procedure
+ * (caar pair)					# procedure
+ * (cadr pair)					# procedure
+ *     ...				       	     ...
+ * (cdddar pair)				# procedure
+ * (cddddr pair)				# procedure
  *
- * (null? obj)				# procedure
+ * (null? obj)					# procedure
  *
- * (list? obj)				# procedure
+ * (list? obj)					# procedure
  *
- * (list obj ...)			# procedure
+ * (list obj ...)				# procedure
  *
- * (length list)			# procedure
+ * (length list)				# procedure
  *
- * (append list ... obj)		# procedure
+ * (append list ... obj)			# procedure
  *
- * (reverse list)			# procedure
+ * (reverse list)				# procedure
  *
- * (list-tail list k)			# procedure
+ * (list-tail list k)				# procedure
  *
- * (list-ref list k)			# procedure
+ * (list-ref list k)				# procedure
  *
- * (map proc list1 list2 ...)		# procedure
+ * (map proc list1 list2 ...)			# procedure
  *
- * (for-each proc list1 list2 ...)	# procedure
+ * (for-each proc list1 list2 ...)		# procedure
  */
 
 DEFINE_PROC(L"pair?")
@@ -814,13 +833,13 @@ TEST_EVAL(L"(null? (quote (1 2)))", L"#f");
 
 /* 11.10.  Symbols
  *
- * (symbol? obj)			# procedure
+ * (symbol? obj)				# procedure
  *
- * symbol->string symbol)		# procedure
+ * symbol->string symbol)			# procedure
  *
- * (symbol=? symbol1 symbol2 symbol3 ...) # procedure
+ * (symbol=? symbol1 symbol2 symbol3 ...) 	# procedure
  *
- * (string->symbol string)		# procedure
+ * (string->symbol string)			# procedure
  */
 
 DEFINE_PROC(L"symbol?")
@@ -881,16 +900,16 @@ TEST_EVAL(L"(string=? \"K. Harper, M.D.\"\n"
 
 /* 11.11.  Characters
  *
- * (char? obj)				# procedure
+ * (char? obj)					# procedure
  *
- * (char->integer char)			# procedure
- * (integer->char sv)			# procedure
+ * (char->integer char)				# procedure
+ * (integer->char sv)				# procedure
  *
- * (char=? char1 char2 char3 ...)	# procedure
- * (char<? char1 char2 char3 ...)	# procedure
- * (char>? char1 char2 char3 ...)	# procedure
- * (char<=? char1 char2 char3 ...)	# procedure
- * (char>=? char1 char2 char3 ...)	# procedure
+ * (char=? char1 char2 char3 ...)		# procedure
+ * (char<? char1 char2 char3 ...)		# procedure
+ * (char>? char1 char2 char3 ...)		# procedure
+ * (char<=? char1 char2 char3 ...)		# procedure
+ * (char>=? char1 char2 char3 ...)		# procedure
  */
 
 DEFINE_PROC(L"char?")
@@ -1044,34 +1063,34 @@ TEST_EVAL(L"(char<? #\\z #\\Z)",	L"#f");
 
 /* 11.12.  Strings
  *
- * (string? obj)			# procedure
+ * (string? obj)				# procedure
  *
- * (make-string k)			# procedure
- * (make-string k char)			# procedure
+ * (make-string k)				# procedure
+ * (make-string k char)				# procedure
  *
- * (string char ...)			# procedure
+ * (string char ...)				# procedure
  *
- * (string-length string)		# procedure
+ * (string-length string)			# procedure
  *
- * (string-ref string k)		# procedure
+ * (string-ref string k)			# procedure
  *
- * (string=? string1 string2 string3 ...) # procedure
+ * (string=? string1 string2 string3 ...)	# procedure
  *
- * (string<?  string1 string2 string3 ...) # procedure
- * (string>?  string1 string2 string3 ...) # procedure
- * (string<=?  string1 string2 string3 ...) # procedure
- * (string>=?  string1 string2 string3 ...) # procedure
+ * (string<?  string1 string2 string3 ...)	# procedure
+ * (string>?  string1 string2 string3 ...)	# procedure
+ * (string<=?  string1 string2 string3 ...)	# procedure
+ * (string>=?  string1 string2 string3 ...)	# procedure
  *
- * (substring string start end)		# procedure
+ * (substring string start end)			# procedure
  *
- * (string-append string ...)		# procedure
+ * (string-append string ...)			# procedure
  *
- * (string->list string)		# procedure
- * (list->string list)			# procedure
+ * (string->list string)			# procedure
+ * (list->string list)				# procedure
  *
- * (string-for-each proc string1 string2 ...) # procedure
+ * (string-for-each proc string1 string2 ...)	# procedure
  *
- * (string-copy string)			# procedure
+ * (string-copy string)				# procedure
  */
 
 DEFINE_PROC(L"string?")
@@ -1306,25 +1325,25 @@ TEST_EVAL(L"(define s \"asdf\")\n"
 
 /* 11.13.  Vectors
  *
- * (make-vector k)			# procedure
- * (make-vector k fill)			# procedure
+ * (make-vector k)				# procedure
+ * (make-vector k fill)				# procedure
  *
- * (vector? obj)			# procedure
+ * (vector? obj)				# procedure
  *
- * (vector obj ...)			# procedure
+ * (vector obj ...)				# procedure
  *
- * (vector-length vector)		# procedure
+ * (vector-length vector)			# procedure
  *
- * (vector-ref vector k)		# procedure
+ * (vector-ref vector k)			# procedure
  *
- * (vector-set! vector k obj)		# procedure
+ * (vector-set! vector k obj)			# procedure
  *
- * (vector->list vector)		# procedure
- * (list->vector list)			# procedure
- * (vector-fill! vector fill)		# procedure
- * (vector-map proc vector1 vector2 ...) # procedure
+ * (vector->list vector)			# procedure
+ * (list->vector list)				# procedure
+ * (vector-fill! vector fill)			# procedure
+ * (vector-map proc vector1 vector2 ...)	# procedure
  *
- * (vector-for-each proc vector1 vector2 ...) # procedure
+ * (vector-for-each proc vector1 vector2 ...)	# procedure
  */
 
 DEFINE_PROC(L"vector?")
@@ -1387,23 +1406,23 @@ TEST_EVAL(L"'#(0 (2 2 2 2) \"Anna\")",	L"#(0 (2 2 2 2) \"Anna\")");
 
 /* 11.14.  Errors and violations
  *
- * (error who message irritant1 ...)	# procedure
+ * (error who message irritant1 ...)		# procedure
  *
- * (assert <expression>)		# syntax
+ * (assert <expression>)			# syntax
  */
 
 /* 11.15. Control features
  *
- * (apply proc arg1 ... rest-args)	# procedure
+ * (apply proc arg1 ... rest-args)		# procedure
  *
- * (call-with-current-continuation proc) # procedure
- * (call/cc proc)			# procedure
+ * (call-with-current-continuation proc)	# procedure
+ * (call/cc proc)				# procedure
  *
- * (values obj ...)			# procedure
+ * (values obj ...)				# procedure
  *
- * (call-with-values producer consumer	# procedure
+ * (call-with-values producer consumer		# procedure
  *
- * (dynamic-wind before thunk after)	# procedure
+ * (dynamic-wind before thunk after)		# procedure
  */
 
 DEFINE_PROC(L"apply")
@@ -1426,7 +1445,7 @@ DEFINE_PROC(L"apply")
 	args = pair_cdr(args);
     }
     POP_FUNCTION_ROOTS();
-    return eval_application(proc, arglist);
+    return apply_procedure(proc, arglist);
 }
 
 TEST_EVAL(L"(apply + '())",		L"0");
@@ -1450,8 +1469,6 @@ TEST_EVAL(L"(apply + (list 3 4))",		L"7");
 //	  L"      (f (apply g args)))))\n"
 //	  L"((compose sqrt *) 12 75)",	L"30");
 
-
-
 DEFINE_BLOCK(b_continue_callcc)
 {
     obj_t *value = pair_car(F_SUBJ);
@@ -1464,7 +1481,7 @@ DEFINE_PROC(L"call-with-current-continuation")
     obj_t *closure = make_C_procedure(b_continue_callcc, NIL, FRAME);
     obj_t *args = make_pair(closure, NIL);
     obj_t *proc = pair_car(F_SUBJ);
-    return eval_application(proc, args);
+    return apply_procedure(proc, args);
 }
 
 ALIAS_NAME(&current_library_, L"call-with-current-continuation",
@@ -1505,29 +1522,29 @@ TEST_EVAL(L"(define plus3 '())\n"
 
 /* 11.17.  Quasiquotation
  *
- * (quasiquote <qq-template>)		# syntax
- * unquote				# auxiliary syntax
- * unquote-splicing			# auxiliary syntax
+ * (quasiquote <qq-template>)			# syntax
+ * unquote					# auxiliary syntax
+ * unquote-splicing				# auxiliary syntax
  */
 
 /* 11.18.  Binding constructs for syntactic keywords
  *
- * (let-syntax <bindings> <form> ...)	# syntax
+ * (let-syntax <bindings> <form> ...)		# syntax
  *
- * (letrec-syntax <bindings> <form> ...) # syntax
+ * (letrec-syntax <bindings> <form> ...)	# syntax
  */
 
 /* 11.19. Macro transformers
  *
  * (syntax-rules (<literal> ...) <syntax rule> ...)
- *					# syntax (expand)
- * _					# auxiliary syntax (expand)
- * ...					# auxiliary syntax (expand)
+ *						# syntax (expand)
+ * _						# auxiliary syntax (expand)
+ * ...						# auxiliary syntax (expand)
  *
- * (identifier-syntax <template>)	# syntax (expand)
- * (identifier-syntax			# syntax (expand)
+ * (identifier-syntax <template>)		# syntax (expand)
+ * (identifier-syntax				# syntax (expand)
  *   (<id1> <template1>)
  *   ((set! <id2> <pattern)
  *    <template2))
- * set!					# auxiliary syntax (expand)
+ * set!						# auxiliary syntax (expand)
  */

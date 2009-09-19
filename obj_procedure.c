@@ -138,6 +138,12 @@ obj_t *make_C_special_form_procedure(C_procedure_t *code,
 		     (obj_t **)&code, arglist, env);
 }
 
+obj_t *make_xformer_proc(obj_t *code, obj_t *arglist, obj_t *env)
+{
+    return make_proc(PF_TRANSFORMER,
+		     &code, arglist, env);
+}
+
 obj_t *make_C_xformer_proc(C_procedure_t *code, obj_t *arglist, obj_t *env)
 {
     return make_proc(PF_COMPILED_C | PF_TRANSFORMER,
@@ -162,6 +168,13 @@ bool procedure_is_special_form(obj_t *proc)
     assert_in_tospace(proc);
     assert(is_procedure(proc));
     return (((proc_obj_t *)proc)->proc_flags & PF_SPECIAL_FORM) != 0;
+}
+
+bool procedure_is_xformer(obj_t *proc)
+{
+    assert_in_tospace(proc);
+    assert(is_procedure(proc));
+    return (((proc_obj_t *)proc)->proc_flags & PF_TRANSFORMER) != 0;
 }
 
 obj_t *procedure_body(obj_t *proc)

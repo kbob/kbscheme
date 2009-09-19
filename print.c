@@ -1,10 +1,10 @@
 #include "print.h"
 
 #include <wctype.h>
-#include <unicode.h>
 
 #include "obj_binding.h"
 #include "types.h"
+#include "unicode.h"
 
 /* XXX Reimplement this in Scheme. */
 

@@ -4,9 +4,10 @@
 
 static inline bool is_macro_use(obj_t *form)
 {
-    return (is_procedure(form) &&
-	    procedure_is_special_form(form) &&
-	    !procedure_is_C(form));
+    if (!is_pair(form))
+	return false;
+    obj_t *proc = pair_car(form);
+    return is_procedure(proc) && procedure_is_transformer(proc);
 }
 
 static inline bool is_proc(obj_t *form, C_procedure_t *proc)
@@ -37,9 +38,12 @@ static inline bool is_let_syntax_form(obj_t *form)
     //XXX return is_proc(form, let_syntax) || is_proc(form, letrec_syntax);
 }
 
-static obj_t *transform(obj_t *transformer)
+static obj_t *transform(obj_t *form)
 {
-    return NIL;
+    assert(is_pair(form));
+    obj_t *proc = pair_car(form);
+    if (procedure_is_C(proc))
+	return ((C_transformer_t *)procedure_body(proc))(form);
 }
 
 static void process_defines()

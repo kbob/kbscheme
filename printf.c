@@ -1,8 +1,11 @@
+#include "uprintf.h"
+
 /* Register new printf handlers to print objects. */
 /* Not used until the heap is initialized. */
 
 #include <assert.h>
 #include <printf.h>
+#include <stdarg.h>
 
 #include "io.h"
 #include "print.h"
@@ -31,4 +34,13 @@ __attribute__((constructor))
 static void extend_printf(void)
 {
     register_printf_function('O', print_obj, obj_arginfo);
+}
+
+int printf_unchecked(const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    int r = vprintf(format, ap);
+    va_end(ap);
+    return r;
 }

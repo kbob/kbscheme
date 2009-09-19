@@ -6,6 +6,7 @@
 #define ENV_TRACE 0
 #if ENV_TRACE
 #include "print.h"
+#include "uprintf.h"
 #endif
 #include "roots.h"
 #include "types.h"
@@ -58,7 +59,7 @@ obj_t *env_lookup(env_t *env, obj_t *var)
 
     assert(is_symbol(var));
 #if ENV_TRACE
-    printf("lookup(%ls, %O)\n", string_value(symbol_name(var)), env);
+    printf_unchecked("lookup(%ls, %O)\n", string_value(symbol_name(var)), env);
 #endif
     while (!is_null(env)) {
 	obj_t *frame = pair_car(env);
@@ -67,8 +68,8 @@ obj_t *env_lookup(env_t *env, obj_t *var)
 	    printf("   FRAME");
 	    obj_t *p = frame;
 	    while (p) {
-		printf(" %O: %O", binding_name(pair_car(p)),
-		                  binding_value(pair_car(p)));
+		printf_unchecked(" %O: %O", binding_name(pair_car(p)),
+				            binding_value(pair_car(p)));
 		p = pair_cdr(p);
 	    }
 	    printf("\n");

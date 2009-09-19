@@ -870,3 +870,30 @@ Current interpreter weaknesses:
 	warps my brain
 	no checking C procs for right number of args
 	crashes on any error.
+
+----------------------------------
+9/5/2009
+
+Here are the forms declared (non-library) syntax in r5rs.
+
+	<variable>
+
+	(quote <datum>)
+	'<datum>
+	<constant>
+
+	(<operator> <operand1> ...)
+
+	(lambda <formals> <body>)
+
+	(if <test> <consequent> <alternate>)
+	(if <test> <consequent>)
+
+	(set! <variable> <expression>)
+
+	(quasiquote <qq template>)
+	`<qq template>
+
+<variable>, <constant>, and (<operator> <operand1> ...) are not keywords.
+The keywords are quote, lambda, if, set!, and quasiquote.  Notably missing
+are define-syntax
