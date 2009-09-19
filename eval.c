@@ -163,9 +163,11 @@ obj_t *apply_procedure(obj_t *proc, obj_t *args)
     GOTO(b_eval_sequence, body, new_env);
 }
 
+#if 0
 obj_t *apply_transformer(obj_t *xform, obj_t *form)
 {
 }
+#endif
 
 DEFINE_EXTERN_BLOCK(b_eval)
 {
@@ -176,8 +178,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
 	RETURN(eval_symbol());
     if (is_application(F_SUBJ)) {
 	AUTO_ROOT(proc, pair_car(F_SUBJ));
-	AUTO_ROOT(args, pair_cdr(F_SUBJ));
-	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, args, F_ENV);
+	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, F_SUBJ, F_ENV);
 
     }
     RAISE(&syntax);
@@ -186,7 +187,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
 DEFINE_EXTERN_BLOCK(b_accum_operator)
 {
     obj_t *proc = VALUE;
-    obj_t *args = F_SUBJ;
+    obj_t *args = pair_cdr(F_SUBJ);
     assert(is_procedure(proc));
 #if 0
     if (procedure_is_xformer(proc)) {

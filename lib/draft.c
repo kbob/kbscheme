@@ -93,6 +93,8 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 	}
     }
     AUTO_ROOT(args, make_pair(F_SUBJ, NIL));
+    AUTO_ROOT(mu, make_symbol_from_C_str(L"mu"));
+    args = make_pair(mu, args);
     MU_THEN_GOTO(mu_expand,
 		 (b_accum_operator, args, F_ENV),
 		 (b_continue_mu, NIL, F_ENV));
