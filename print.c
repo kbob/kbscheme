@@ -140,7 +140,8 @@ static void print_symbol(obj_t *obj, outstream_t *out)
 
 static void print_procedure(obj_t *obj, outstream_t *out)
 {
-    if (procedure_is_special_form(obj) || procedure_is_C(obj)) {
+    //    if (procedure_is_special_form(obj) || procedure_is_C(obj)) {
+    if (procedure_is_C(obj)) {
 	outstream_printf(out, L"#<proc-%s%s>",
 			 procedure_is_special_form(obj) ? "S" : "",
 			 procedure_is_C(obj) ? "C" : "");

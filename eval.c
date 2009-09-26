@@ -3,6 +3,7 @@
 #include <assert.h>
 
 #include "env.h"
+#include "expand.h"
 #include "proc.h"
 #include "roots.h"
 #include "test.h"
@@ -163,12 +164,6 @@ obj_t *apply_procedure(obj_t *proc, obj_t *args)
     GOTO(b_eval_sequence, body, new_env);
 }
 
-#if 0
-obj_t *apply_transformer(obj_t *xform, obj_t *form)
-{
-}
-#endif
-
 DEFINE_EXTERN_BLOCK(b_eval)
 {
     assert(!is_null(F_SUBJ));
@@ -181,7 +176,7 @@ DEFINE_EXTERN_BLOCK(b_eval)
 	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, F_SUBJ, F_ENV);
 
     }
-    RAISE(&syntax);
+    RAISE(&syntax && "can't eval");
 }
 
 DEFINE_EXTERN_BLOCK(b_accum_operator)
@@ -189,12 +184,7 @@ DEFINE_EXTERN_BLOCK(b_accum_operator)
     obj_t *proc = VALUE;
     obj_t *args = pair_cdr(F_SUBJ);
     assert(is_procedure(proc));
-#if 0
-    if (procedure_is_xformer(proc)) {
-	PUSH_ROOT(proc);
-	return apply_transformer(proc, make_syntax(make_pair());
-    }
-#endif
+    assert(!(procedure_is_xformer(proc)));
     if (procedure_is_special_form(proc) || is_null(args))
 	return apply_procedure(proc, args);
     PUSH_ROOT(proc);
@@ -234,11 +224,10 @@ DEFINE_BLOCK(b_accum_arg)
 			 rest_args, F_ENV, F_PROC, arglist, last_arg);
 }
 
-obj_t *eval(obj_t *expr, env_t *env)
+obj_t *eval_frame(obj_t *frame)
 {
+    FRAME = frame;
     obj_t *value = NIL;
-    FRAME = NIL;
-    FRAME = MAKE_CALL(b_eval, expr, env);
     while (FRAME) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
@@ -253,4 +242,38 @@ obj_t *eval(obj_t *expr, env_t *env)
 	value = (*F_CONT)(value);
     }
     return value;
+}
+
+obj_t *eval_expanded(obj_t *expr, env_t *env)
+{
+    FRAME = NIL;
+    FRAME = MAKE_CALL(b_eval, expr, env);
+    return eval_frame(FRAME);
+}
+
+static obj_t *expand(obj_t *expr, env_t *env)
+{
+    // (cons 'expand-syntax (cons expr (cons env '()))
+    PUSH_ROOT(expr);
+    PUSH_ROOT(env);
+    AUTO_ROOT(proc, expander());
+    AUTO_ROOT(args, make_pair(env, NIL));
+    args = make_pair(expr, args);
+    //printf_unchecked("proc = %O\n", proc);
+    //printf_unchecked("args = %O\n", args);
+    FRAME = NIL;
+    FRAME = MAKE_CALL(b_eval, make_fixnum(0), env);
+    apply_procedure(proc, args);
+    POP_FUNCTION_ROOTS();
+    return eval_frame(FRAME);
+}
+
+obj_t *eval(obj_t *expr, env_t *env)
+{
+    PUSH_ROOT(expr);
+    PUSH_ROOT(env);
+    expr = expand(expr, env);
+    expr = eval_expanded(expr, env);
+    POP_FUNCTION_ROOTS();
+    return expr;
 }

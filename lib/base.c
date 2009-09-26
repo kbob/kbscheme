@@ -21,7 +21,7 @@ DEFINE_BLOCK(b_define_continue)
     RETURN(UNSPECIFIED);
 }
 
-DEFINE_EXTERN_SPECIAL_FORM(define, L"define")
+DEFINE_SPECIAL_FORM(L"define")
 {
     AUTO_ROOT(var, pair_car(F_SUBJ));
     AUTO_ROOT(rest, pair_cdr(F_SUBJ));
@@ -73,7 +73,7 @@ DEFINE_BLOCK(b_define_syntax_continue)
     RETURN(UNSPECIFIED);
 }
 
-DEFINE_EXTERN_SPECIAL_FORM(define_syntax, L"define-syntax")
+DEFINE_SPECIAL_FORM(L"define-syntax")
 {
     AUTO_ROOT(exp, pair_cadr(F_SUBJ));
     EVAL_THEN_GOTO(exp, F_ENV, b_define_syntax_continue, F_SUBJ, F_ENV);
@@ -351,7 +351,7 @@ DEFINE_PROC(L"foo")
  * (begin <expression> <expression> ...) 	# syntax
  */
 
-DEFINE_EXTERN_SPECIAL_FORM(begin, L"begin")
+DEFINE_STATIC_SPECIAL_FORM(begin, L"begin")
 {
     if (pair_cdr(F_SUBJ)) {
 	AUTO_ROOT(first, pair_car(F_SUBJ));
