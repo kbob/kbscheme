@@ -3,6 +3,11 @@
 #include <assert.h>
 #include <wchar.h>
 
+#define ROOTS_TRACE 0
+#if ROOTS_TRACE
+    #include <stdio.h>
+#endif
+
 static root_descriptor_t *static_roots;
 static root_descriptor_t *thread_roots;
 
@@ -17,6 +22,9 @@ void record_static_root(root_descriptor_t *desc)
 
 void push_root(root_descriptor_t *desc)
 {
+#if ROOTS_TRACE
+    printf("push_root(%s.%ls)\n", desc->rd_func, desc->rd_name);
+#endif
     assert(thread_roots < (root_descriptor_t *)0xc0000000 ||
 	   desc < thread_roots);
     if (!thread_roots)
@@ -27,15 +35,32 @@ void push_root(root_descriptor_t *desc)
 
 void pop_function_roots(const char *func)
 {
+#if ROOTS_TRACE
+    printf("pop_function_roots(%s)\n", func);
+#endif
     while (thread_roots && thread_roots->rd_func == func)
 	pop_root(thread_roots->rd_name);
+#if ROOTS_TRACE
+    printf("\n");
+#endif
+#ifndef NDEBUG
     root_descriptor_t *p;
+#if ROOTS_TRACE
+    printf("stack =");
+    for (p = thread_roots; p; p = p->rd_next)
+	printf(" %s.%ls", p->rd_func, p->rd_name);
+    printf("\n");
+#endif
     for (p = thread_roots; p; p = p->rd_next)
 	assert(p->rd_func != func);
+#endif
 }
 
 void pop_root(const wchar_t *name)
 {
+#if ROOTS_TRACE
+    printf("pop_root(%ls)\n", name);
+#endif
     assert(!wcscmp(thread_roots->rd_name, name));
     thread_roots = thread_roots->rd_next;
 }
