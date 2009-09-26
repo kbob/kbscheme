@@ -12,6 +12,7 @@
 
 ROOT(library_list);
 ROOT(r6rs_lib);
+
 static library_descriptor_t *lib_descriptors;
 
 /*
@@ -220,7 +221,6 @@ static bool load_library(const wchar_t *libname)
 
 void load_libraries(void)
 {
-    register_libraries();
     if (!load_library(STD_LIBRARY))
 	assert(false && "No std lib");
 }
