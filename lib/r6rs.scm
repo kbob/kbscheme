@@ -460,6 +460,12 @@
   (draft)
   (rnrs base (6)))
 
+  ; XXX use this when we have macros.
+  #;(define-syntax _accum-cmp
+    (syntax-rules ()
+      ((_ accum cmp obj list)
+       (accum (lambda (x) (cmp x obj)) list))))
+
   (define (_accum-cmp accum cmp obj list)
     (accum (lambda (x) (cmp x obj)) list))
 
@@ -1267,7 +1273,6 @@
     draft-print
     mu
     draft-make-syntax
-
   )
   (import (rnrs base (6))
 	  (rnrs unicode (6))
