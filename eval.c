@@ -253,7 +253,6 @@ obj_t *eval_expanded(obj_t *expr, env_t *env)
 
 static obj_t *expand(obj_t *expr, env_t *env)
 {
-    // (cons 'expand-syntax (cons expr (cons env '()))
     PUSH_ROOT(expr);
     PUSH_ROOT(env);
     AUTO_ROOT(proc, expander());
@@ -262,7 +261,7 @@ static obj_t *expand(obj_t *expr, env_t *env)
     //printf_unchecked("proc = %O\n", proc);
     //printf_unchecked("args = %O\n", args);
     FRAME = NIL;
-    FRAME = MAKE_CALL(b_eval, make_fixnum(0), env);
+    FRAME = MAKE_CALL(b_eval, make_boolean(false), env);
     apply_procedure(proc, args);
     POP_FUNCTION_ROOTS();
     return eval_frame(FRAME);
