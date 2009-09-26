@@ -253,8 +253,10 @@ obj_t *mem_alloc_obj(const mem_ops_t *ops, size_t size_bytes)
     return (obj_t *)p;
 }
 
+#ifndef NDEBUG
 void assert_in_tospace(const obj_t *obj)
 {
     assert(heap_is_initialized);
     assert(is_null(obj) || is_in_tospace(obj));
 }
+#endif /* !NDEBUG */
