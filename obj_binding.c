@@ -26,7 +26,7 @@ obj_t *make_binding(obj_t *name, binding_type_t type, obj_t *value)
 
 bool is_binding(obj_t *obj)
 {
-    return OBJ_MEM_OPS(obj) == &binding_ops;
+    return obj && OBJ_MEM_OPS(obj) == &binding_ops;
 }
 
 obj_t *binding_name(obj_t *binding)
