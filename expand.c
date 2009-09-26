@@ -1,40 +1,17 @@
 #include "expand.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "proc.h"
 
-#include "eval.h"
-#include "io.h"
-#include "lib.h"
-#include "obj_pair.h"
-#include "obj_procedure.h"
-#include "read.h"
-#include "roots.h"
+LIBRARY(L"(foo)");			// XXX won't need this
 
-STATIC_ROOT(expander_proc);
-
-static void load_expander(void)
+DEFINE_PROC(L"expand")			/* initial implementation */
 {
-    FILE *fin = fopen("expand.scm", "r");
-    if (!fin) {
-	perror("expand.scm");
-	exit(1);
-    }
-    AUTO_ROOT(proc, NIL);
-    instream_t *in = make_file_instream(fin);
-    if (!read_stream(in, &proc))
-	fprintf(stderr, "error in expand.scm\n");
-    delete_instream(in);
-    obj_t *lib = r6rs_library();
-    obj_t *params = pair_cadr(proc);
-    obj_t *body = pair_cddr(proc);
-    expander_proc = make_special_form_procedure(body, params, lib);
-    POP_ROOT(proc);
+    RETURN(pair_car(F_SUBJ));
 }
 
 obj_t *expander(void)
 {
-    if (!expander_proc)
-	load_expander();
-    return expander_proc;
+    obj_t *expand_sym = make_symbol_from_C_str(L"expand");
+    obj_t *expand_binding = env_lookup(builtin_environment(), expand_sym);
+    return binding_value(expand_binding);
 }

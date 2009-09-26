@@ -897,3 +897,74 @@ Here are the forms declared (non-library) syntax in r5rs.
 <variable>, <constant>, and (<operator> <operand1> ...) are not keywords.
 The keywords are quote, lambda, if, set!, and quasiquote.  Notably missing
 are define-syntax
+
+----------------------------------
+9/26/2009
+
+Now I have an eval() that calls expand to expand the macros.
+And I have a trivial expand, written in Scheme, that does
+that job.  It looks like this.
+
+    (lambda (form env)
+      form)
+
+The problem is that I can't load any of the standard environment
+because the standard environment is defined in lib/r6rs.scm, and
+lib/r6rs.scm is imported by read, expand, eval.  So, there are no
+useful symbols defined like cons, + or lambda.  They're *defined* in
+C, but they're not in an environment.  The default environment, (rnrs
+(6)), is created at the end of lib/r6rs.scm.  So it's yet another
+chicken/egg problem.
+
+I think I have a solution.  Here it is.
+
+   1. Write a trivial expand which looks like the above, except it's
+      in C but Scheme-callable.  Install it.  (Call it expand, I
+      guess.)
+
+   2. Rip out all the C code to manage libraries.  Instead, have a
+      single namespace called (implementation) and put all the C
+      primitives there.
+
+   3. Read lib/r6rs.scm (or whatever it's called), not as a Scheme
+      library, but simply as a bunch of code.  Let its definitions
+      also fill up the (implementation) namespace.
+
+   4. Write a main() in Scheme.  Give it argv, let it load a file
+      implement the REPL or run the tests or whatever.  Write, in
+      Scheme, a library constructor which main() will use to set up
+      the default (rnrs (6)) environment for top-level.
+
+But the C files already have namespaces.  I guess I'll strip that out,
+too.
+
+The first step is, change DEFINE_PROC and friends to always add
+to the (implementation) namespace.
+
+---
+The Hygiene test.   From tr356.
+
+	(define t 42)
+
+	(define-syntax or2
+	  (syntax-rules ()
+	    ((_ e1 e2)
+	     (let ((t e1)) (if t t e2)))))
+
+	(let ((if #f)) (or2 if t))
+
+      
+How do the various Schemes available in Ubuntu handle it?
+
+	chicken			inscrutable error
+      	gambit-C		inscrutable error
+	gauche			correct
+	guile			no syntax-rules
+	mit-scheme		correct
+	PLT scheme		correct
+	scheme2c		inscrutable error
+      	scheme48		correct
+	scm			no syntax-rules
+	SigScheme		no define-syntax
+	stalin			no high-level macros
+	tinyscheme		no hygienic macros

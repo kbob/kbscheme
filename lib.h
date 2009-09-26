@@ -32,6 +32,7 @@ extern void register_C_library(library_descriptor_t *);
 extern void register_libraries(void);
 extern void load_libraries(void);
 
+extern void set_exec_path(const char *exec_path);
 extern obj_t *r6rs_library(void);
 
 #endif /* !LIB_INCLUDED */

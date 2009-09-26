@@ -6,6 +6,8 @@
 
 #include "roots.h"
 
+ROOT(builtin_env);
+
 static proc_descriptor_t *proc_descs;
 static alias_descriptor_t *alias_descs;
 
@@ -16,6 +18,7 @@ void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
     env_bind(env, sym, BINDING_MUTABLE, code);
+    env_bind(builtin_env, sym, BINDING_MUTABLE, code);
 }
 
 void bind_special_form(C_procedure_t *form,
@@ -27,6 +30,7 @@ void bind_special_form(C_procedure_t *form,
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
     env_bind(env, sym, BINDING_IMMUTABLE, code);
+    env_bind(builtin_env, sym, BINDING_IMMUTABLE, code);
 }
 
 void bind_transformer(C_procedure_t *form, obj_t *library, const wchar_t *name)
@@ -36,6 +40,7 @@ void bind_transformer(C_procedure_t *form, obj_t *library, const wchar_t *name)
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
     env_bind(env, sym, BINDING_IMMUTABLE, code);
+    env_bind(builtin_env, sym, BINDING_IMMUTABLE, code);
 }
 
 void register_proc(proc_descriptor_t *desc)
@@ -62,6 +67,7 @@ void register_alias(alias_descriptor_t *desc)
 
 void register_procs(void)
 {
+    builtin_env = make_env(NIL);
     while (proc_descs) {
 	proc_descriptor_t *desc = proc_descs;
 	obj_t *library = find_library_str(desc->pd_libdesc->ld_namespec);
@@ -87,4 +93,11 @@ void register_procs(void)
 	alias_descs = desc->ad_next;
     }
     POP_FUNCTION_ROOTS();
+}
+
+/* XXX not sure this belongs here.  Reevaluate. */
+
+obj_t *builtin_environment(void)
+{
+    return builtin_env;
 }
