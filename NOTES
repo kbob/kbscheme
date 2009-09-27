@@ -956,8 +956,10 @@ The Hygiene test.   From tr356.
       
 How do the various Schemes available in Ubuntu handle it?
 
-	chicken			inscrutable error
-      	gambit-C		inscrutable error
+	chicken 3.2.7		inscrutable error
+	chicken 4.2.0		correct
+      	gambit-C 2.8		inscrutable error
+      	gambit-C 4.5		correct
 	gauche			correct
 	guile			no syntax-rules
 	mit-scheme		correct
@@ -968,3 +970,31 @@ How do the various Schemes available in Ubuntu handle it?
 	SigScheme		no define-syntax
 	stalin			no high-level macros
 	tinyscheme		no hygienic macros
+Also, chibi-scheme gets it correct.
+
+-------------------------------------------
+9/26/2009 Noon
+
+Implemented steps 1-3 described above.  Not quite there yet -- there
+is no way to export a binding from the "builtin" environment* to a
+REPL-visible environment.
+
+A lot of C code is about to be obsolete.  All of lib.c, for example.
+
+What does (main) need?
+
+     - A primitive to add a binding to an environment
+       other than the current(?)
+
+     - the-environment
+
+* I want a better name than "builtin".  Maybe "root"?
+
+-------------------------------------------
+9/26/2009 18:30
+
+Works.  scheme.scm runs a restricted REPL with just five ops: cons car
+cdr quote eval environment.  Have code to build libraries from lists
+of constituent libraries and symbols.  Have find-library.
+
+Renamed builtin environment to root environment.

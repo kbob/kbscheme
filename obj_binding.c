@@ -55,9 +55,17 @@ obj_t *binding_value(obj_t *binding)
     return mixvec_1_2_get_ptr(binding, 1);
 }
 
-void binding_set(obj_t *binding, obj_t *value)
+void binding_set_type(obj_t *binding, binding_type_t type)
 {
     assert_in_tospace(binding);
     assert(is_binding(binding));
+    mixvec_1_2_set_int(binding, 0, type);
+}
+
+void binding_set_value(obj_t *binding, obj_t *value)
+{
+    assert_in_tospace(binding);
+    assert(is_binding(binding));
+    assert(binding_is_mutable(binding));
     mixvec_1_2_set_ptr(binding, 1, value);
 }

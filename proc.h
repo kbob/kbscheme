@@ -351,6 +351,6 @@ extern void bind_proc(C_procedure_t, obj_t *lib, const wchar_t *name);
 extern void bind_special_form(C_procedure_t, obj_t *lib, const wchar_t *name);
 extern void bind_transformer(C_procedure_t, obj_t *lib, const wchar_t *name);
 
-extern obj_t *builtin_environment(void);
+extern obj_t *root_environment(void);
 
 #endif /* !PROC_INCLUDED */

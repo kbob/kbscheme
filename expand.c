@@ -12,6 +12,6 @@ DEFINE_PROC(L"expand")			/* initial implementation */
 obj_t *expander(void)
 {
     obj_t *expand_sym = make_symbol_from_C_str(L"expand");
-    obj_t *expand_binding = env_lookup(builtin_environment(), expand_sym);
+    obj_t *expand_binding = env_lookup(root_environment(), expand_sym);
     return binding_value(expand_binding);
 }

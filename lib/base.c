@@ -216,7 +216,7 @@ DEFINE_BLOCK(b_set_continue)
     obj_t *var = F_SUBJ;
     obj_t *binding = env_lookup(F_ENV, var);
     assert(binding_is_mutable(binding));
-    binding_set(binding, VALUE);
+    binding_set_value(binding, VALUE);
     RETURN(UNSPECIFIED);
 }
 
