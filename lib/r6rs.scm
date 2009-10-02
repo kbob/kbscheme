@@ -321,11 +321,23 @@
 ; XXX need unit tests for all of these
 
   (define (list? obj)
-    (if (null? obj)			; XXX detect cycles.
-	#t
-	(if (not (pair? obj))
-	    #f
-	    (list? (cdr obj)))))
+    (define (list-0? obj trail)
+      (if (eq? obj trail)
+	  #f
+	  (if (null? obj)
+	      #t
+	      (if (pair? obj)
+		  (list-1? (cdr obj) trail)
+		  #f))))
+    (define (list-1? obj trail)
+      (if (eq? obj trail)
+	  #f
+	  (if (null? obj)
+	      #t
+	      (if (pair? obj)
+		  (list-0? (cdr obj) (cdr trail))
+		  #f))))
+    (list-0? obj (cons list-0? obj)))
 
   (define (list . args)
     args)
