@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -120,11 +121,6 @@ static inline obj_t *stack_top(obj_t *stack)
     return pair_car(stack);
 }
 
-typedef unsigned char uint8_t;
-#define UINT8_MAX UCHAR_MAX
-typedef unsigned short uint16_t;
-#define UINT16_MAX USHRT_MAX
-
 /*
  * Special actions are implemented as anonymous pairs.
  * They are initialized by build() when it's called with init=true.
@@ -185,7 +181,7 @@ typedef enum char_type {
     SYMMASK = ~(CTMASK)
 } char_type_t;
 
-typedef uint16_t exterminal_set_t;
+typedef uint_fast16_t exterminal_set_t;
 
 /*
  * The language grammar is made up of productions.  Each production
@@ -275,7 +271,7 @@ static size_t token_pairs_size = sizeof token_pairs / sizeof *token_pairs;
 /*
  * Some parsing table entries are empty.  They contain the NO_RULE value.
  */
-static const uint8_t NO_RULE = UINT8_MAX;
+static const uint_fast8_t NO_RULE = UINT8_MAX;
 
 /*
  * For each ASCII (not Unicode) character, charmap classifies
@@ -283,12 +279,12 @@ static const uint8_t NO_RULE = UINT8_MAX;
  * For symbols, charmap also has the char's symbol index.
  * See char_type_t above.
  */
-static uint8_t charmap[256];
+static uint_fast8_t charmap[256];
 static const size_t charmap_size = sizeof charmap / sizeof *charmap;
 
 static inline bool char_is_nonterminal(char c)
 {
-    return (charmap[(uint8_t)c] & CTMASK) == CT_NONTERMINAL;
+    return (charmap[(uint_fast8_t)c] & CTMASK) == CT_NONTERMINAL;
 }
 
 static char start_symbol;
@@ -314,7 +310,7 @@ static size_t nonterminals_size;
 SIZED_ARRAY(char,             symbols,           NS);
 SIZED_ARRAY(exterminal_set_t, sym_first,         NS);
 SIZED_ARRAY(exterminal_set_t, follow,            NN);
-SIZED_ARRAY(uint8_t,          parsing_table,     NPE);
+SIZED_ARRAY(uint_fast8_t,     parsing_table,     NPE);
 
 /*
  * Initialize charmap and symbols.
@@ -337,18 +333,18 @@ static void init_symbols(void)
     for (i = 0; i < charmap_size; i++)
 	charmap[i] = CT_NONE;
     for (i = 0; i < grammar_size; i++)
-	charmap[(uint8_t)grammar[i].p_lhs] = CT_NONTERMINAL;
+	charmap[(uint_fast8_t)grammar[i].p_lhs] = CT_NONTERMINAL;
     for (i = 0; i < grammar_size; i++)
 	for (p = grammar[i].p_rhs; *p; p++)
-	    if (charmap[(uint8_t)*p] == CT_NONE)
-		charmap[(uint8_t)*p] = CT_TERMINAL;
+	    if (charmap[(uint_fast8_t)*p] == CT_NONE)
+		charmap[(uint_fast8_t)*p] = CT_TERMINAL;
     assert(charmap['$'] == CT_NONE);
     charmap['$'] = CT_TERMINAL;
     assert(charmap['-'] == CT_NONE);
     for (i = j = 0; i < token_pairs_size; i++, j++) {
 	token_pair_t *tpp = &token_pairs[i];
 	assert(tpp->tm_ttype < token_pairs_size);
-	uint8_t *cmp = &charmap[(uint8_t)tpp->tm_term];
+	uint_fast8_t *cmp = &charmap[(uint_fast8_t)tpp->tm_term];
 	assert(*cmp == CT_TERMINAL);
 	*cmp |= tpp->tm_ttype;
 	*next_symbols(1) = tpp->tm_term;
@@ -389,7 +385,7 @@ static void init_symbols(void)
 /* map a character to its symbol index. */
 static inline size_t sym_index(char sym)
 {
-    uint8_t cm = charmap[(size_t)sym];
+    uint_fast8_t cm = charmap[(size_t)sym];
     assert(cm & CTMASK);
     return cm & SYMMASK;
 }
@@ -397,7 +393,7 @@ static inline size_t sym_index(char sym)
 /* map a character to its terminal index. */
 static inline size_t term_index(char term)
 {
-    uint8_t cm = charmap[(size_t)term];
+    uint_fast8_t cm = charmap[(size_t)term];
     assert(cm & CT_TERMINAL);
     return cm & SYMMASK;
 }
@@ -405,7 +401,7 @@ static inline size_t term_index(char term)
 /* map a character to its nonterminal index. */
 static inline size_t nonterm_index(char nonterm)
 {
-    uint8_t cm = charmap[(size_t)nonterm];
+    uint_fast8_t cm = charmap[(size_t)nonterm];
     assert((cm & CTMASK) == CT_NONTERMINAL);
     return (cm & SYMMASK) - exterminals_size;
 }
@@ -600,7 +596,7 @@ static int pt_entry(char A, char a)
     return found;
 }
 
-static uint8_t parsing_table_entry(size_t i, size_t j)
+static uint_fast8_t parsing_table_entry(size_t i, size_t j)
 {
     assert(i < nonterminals_size);
     assert(j < terminals_size);
@@ -638,7 +634,7 @@ static void init_parsing_table(void)
     for (i = 0; i < nonterminals_size; i++) {
 	printf("%3c :", nonterminal(i));
 	for (j = 0; j < terminals_size; j++) {
-	    uint8_t e = parsing_table_entry(i, j);
+	    uint_fast8_t e = parsing_table_entry(i, j);
 	    if (e == NO_RULE)
 		printf(" - ");
 	    else
@@ -662,9 +658,9 @@ static void init_parser(void)
 
 /* Initialization code is above this point.  Code below runs at parse time. */
 
-static uint8_t get_rule(char symbol, size_t term)
+static uint_fast8_t get_rule(char symbol, size_t term)
 {
-    uint8_t rule = NO_RULE;
+    uint_fast8_t rule = NO_RULE;
     if (char_is_nonterminal(symbol))
 	rule = parsing_table_entry(nonterm_index(symbol), term);
     return rule;
@@ -687,7 +683,7 @@ static obj_t *parse(instream_t *in)
     while (true) {
 	int sym = fixnum_value(stack_pop(&stack));
 	assert(0 <= sym && sym < symbols_size);
-	uint8_t rule = get_rule(symbols[sym], tok);
+	uint_fast8_t rule = get_rule(symbols[sym], tok);
 	if (rule != NO_RULE) {
 	    const production_t *pp = &grammar[rule];
 	    int j;
