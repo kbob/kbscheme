@@ -1,8 +1,19 @@
 (define (list . args)
   args)
 
+(define (expand form env)
+  #;(draft-print (list 'expanding form))
+  form)
+
 ; An environment is implemented as a pair.  The car is a list of
 ; bindings, and the cdr is the parent environment.
+
+(define (generate-temporaries l)
+  (define (_ l temps)
+    (if (null? l)
+	temps
+	(_ (cdr l) (cons (make-anonymous-symbol) temps))))
+  (_ l '()))
 
 (define (make-environment parent)
   (cons '() parent))
@@ -124,6 +135,8 @@
   '(cons
     car
     cdr
+    generate-temporaries
+    make-anonymous-symbol
     quote))
 
 (define (repl)
@@ -134,6 +147,6 @@
 	    (repl)))))
    (draft-read)))
 
-(repl)
+#;(repl)
 
-(draft-print "hello again")
+#;(draft-print "hello again")

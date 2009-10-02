@@ -40,12 +40,12 @@ LIBRARY(L"(rnrs syntax-case (6))")
 
 DEFINE_PROC(L"syntax->datum")
 {
-    RETURN(syntax_datum(pair_car(F_SUBJ)));
+    RETURN(syntax_expr(pair_car(F_SUBJ)));
 }
 
 DEFINE_PROC(L"datum->syntax")
 {
-    RETURN(make_syntax(pair_cadr(F_SUBJ), syntax_env(pair_car(F_SUBJ))));
+    RETURN(make_syntax(pair_cadr(F_SUBJ), syntax_wrap(pair_car(F_SUBJ))));
 }
 
 /*

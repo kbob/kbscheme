@@ -37,3 +37,8 @@ DEFINE_PROC(L"the-environment")
 {
     RETURN(frame_get_environment(frame_get_parent(FRAME)));
 }
+
+DEFINE_PROC(L"make-anonymous-symbol")
+{
+    RETURN(make_anonymous_symbol());
+}

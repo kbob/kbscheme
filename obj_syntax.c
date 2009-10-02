@@ -6,13 +6,13 @@
 
 static mem_ops_t syntax_ops;
 
-extern obj_t *make_syntax(obj_t *obj, obj_t *env)
+extern obj_t *make_syntax(obj_t *expr, obj_t *wrap)
 {
-    assert_in_tospace(obj);
-    assert_in_tospace(env);
+    assert_in_tospace(expr);
+    assert_in_tospace(wrap);
     if (!syntax_ops.mo_super)
 	mem_fixvec_create_ops(&syntax_ops, L"syntax", 2);
-    return alloc_fixvec2(&syntax_ops, obj, env);
+    return alloc_fixvec2(&syntax_ops, expr, wrap);
 }
 
 bool is_syntax(obj_t *obj)
@@ -21,14 +21,14 @@ bool is_syntax(obj_t *obj)
     return obj && OBJ_MEM_OPS(obj) == &syntax_ops;
 }
 
-obj_t *syntax_datum(obj_t *syntax)
+obj_t *syntax_expr(obj_t *syntax)
 {
     assert_in_tospace(syntax);
     assert(is_syntax(syntax));
     return fixvec2_get_ptr(syntax, 0);
 }
 
-obj_t *syntax_env(obj_t *syntax)
+obj_t *syntax_wrap(obj_t *syntax)
 {
     assert_in_tospace(syntax);
     assert(is_syntax(syntax));

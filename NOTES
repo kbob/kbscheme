@@ -998,3 +998,57 @@ cdr quote eval environment.  Have code to build libraries from lists
 of constituent libraries and symbols.  Have find-library.
 
 Renamed builtin environment to root environment.
+
+----------------------------------
+9/27/2009
+
+Macro expansion is still not near.
+
+I need to implement expand.  I think it wraps a syntax object around
+the input form then traverses the wrapped form looking for macros and
+things with bindings.  That's more or less orthogonal to needing
+syntax-case.
+
+Dybvig's paper explains more about syntax objects.
+
+    A syntax object is an expr + wrap.
+
+    A wrap is a list of marks and substitutions.
+
+    A mark is just an opaque cookie.
+
+    A substitution maps <symbol, set of marks> onto <label>.
+
+    A label is another opaque cookie.
+
+    A binding is a <type, value> pair.
+
+    A binding's type is macro, lexical, or core.
+
+    A binding's value is a Scheme object.
+
+    An environment is an association list mapping symbols to bindings.
+
+Did I get that right?
+
+Note that Dybvig's binding is different from mine.  I put the name
+inside the binding, and he put it outside.  My representation is a
+little faster -- one less redirection.  His representation makes it
+possible for two names to share a binding and is probably "the Lisp
+way".
+
+----------------------------------
+10/2/2009
+
+Next push:
+
+    Implement letrec* as a core form.
+
+    Modify obj_binding to have types.
+
+     a) rename binding_type() to binding_mutability() or something.
+
+     b) introduce binding_type() with values CORE, EXPAND, LEXICAL
+        or something.  Add arg to constructor, add accessors.
+
+     c) augment expand to create a syntax obj and remove it aftewards.
