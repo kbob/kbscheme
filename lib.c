@@ -191,7 +191,7 @@ static void eval_library_form(obj_t *form)
 	obj_t *name = pair_car(export_list);
 	obj_t *binding = env_lookup(working_env, name);
 	obj_t *value = binding_value(binding);
-	env_bind(library_env(new_lib), name, BINDING_IMMUTABLE, value);
+	env_bind(library_env(new_lib), name, M_IMMUTABLE, value);
 	export_list = pair_cdr(export_list);
     }
     POP_FUNCTION_ROOTS();

@@ -17,8 +17,8 @@ void bind_proc(C_procedure_t *proc, obj_t *library, const wchar_t *name)
     AUTO_ROOT(code, make_C_procedure(proc, NIL, env));
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
-    env_bind(env, sym, BINDING_MUTABLE, code);
-    env_bind(root_env, sym, BINDING_MUTABLE, code);
+    env_bind(env, sym, M_MUTABLE, code);
+    env_bind(root_env, sym, M_MUTABLE, code);
 }
 
 void bind_special_form(C_procedure_t *form,
@@ -29,8 +29,8 @@ void bind_special_form(C_procedure_t *form,
     AUTO_ROOT(code, make_C_special_form_procedure(form, NIL, env));
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
-    env_bind(env, sym, BINDING_IMMUTABLE, code);
-    env_bind(root_env, sym, BINDING_IMMUTABLE, code);
+    env_bind(env, sym, M_IMMUTABLE, code);
+    env_bind(root_env, sym, M_IMMUTABLE, code);
 }
 
 void bind_transformer(C_procedure_t *form, obj_t *library, const wchar_t *name)
@@ -39,8 +39,8 @@ void bind_transformer(C_procedure_t *form, obj_t *library, const wchar_t *name)
     AUTO_ROOT(code, make_C_xformer_proc(form, NIL, env));
     obj_t *sym = make_symbol_from_C_str(name);
     POP_FUNCTION_ROOTS();
-    env_bind(env, sym, BINDING_IMMUTABLE, code);
-    env_bind(root_env, sym, BINDING_IMMUTABLE, code);
+    env_bind(env, sym, M_IMMUTABLE, code);
+    env_bind(root_env, sym, M_IMMUTABLE, code);
 }
 
 void register_proc(proc_descriptor_t *desc)
@@ -89,7 +89,7 @@ void register_procs(void)
 	obj_t *new_library = find_library_str(new_namespec);
 	new_env = library_env(new_library);
 	obj_t *new_symbol = make_symbol_from_C_str(desc->ad_new_name);
-	env_bind(new_env, new_symbol, BINDING_IMMUTABLE, value);
+	env_bind(new_env, new_symbol, M_IMMUTABLE, value);
 	alias_descs = desc->ad_next;
     }
     POP_FUNCTION_ROOTS();

@@ -27,9 +27,9 @@ DEFINE_PROC(L"binding-set!")
     RETURN(UNSPECIFIED);
 }
 
-DEFINE_PROC(L"binding-set-type!")
+DEFINE_PROC(L"binding-set-mutability!")
 {
-    binding_set_type(pair_car(F_SUBJ), fixnum_value(pair_cadr(F_SUBJ)));
+    binding_set_mutability(pair_car(F_SUBJ), fixnum_value(pair_cadr(F_SUBJ)));
     RETURN(UNSPECIFIED);
 }
 

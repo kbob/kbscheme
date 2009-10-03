@@ -17,7 +17,7 @@ LIBRARY(L"(rnrs base (6))")
 DEFINE_BLOCK(b_define_continue)
 {
     obj_t *var = pair_car(F_SUBJ);
-    env_bind(F_ENV, var, BINDING_MUTABLE, VALUE);
+    env_bind(F_ENV, var, M_MUTABLE, VALUE);
     RETURN(UNSPECIFIED);
 }
 
@@ -37,7 +37,7 @@ DEFINE_SPECIAL_FORM(L"define")
 	AUTO_ROOT(exp, pair_car(rest));
 	EVAL_THEN_GOTO(exp, F_ENV, b_define_continue, F_SUBJ, F_ENV);
     }
-    env_bind(F_ENV, var, BINDING_MUTABLE, value);
+    env_bind(F_ENV, var, M_MUTABLE, value);
     RETURN(UNSPECIFIED);
 }
 
@@ -69,7 +69,7 @@ DEFINE_BLOCK(b_define_syntax_continue)
 			     procedure_args(proc),
 			     procedure_env(proc));
     obj_t *keyword = pair_car(F_SUBJ);
-    env_bind(F_ENV, keyword, BINDING_IMMUTABLE, proc);
+    env_bind(F_ENV, keyword, M_IMMUTABLE, proc);
     RETURN(UNSPECIFIED);
 }
 

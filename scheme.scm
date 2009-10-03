@@ -31,8 +31,8 @@
 	    (_ (cdr bindings)))))
   (_ (env-bindings env)))
 	    
-(define binding-mutable 0)
-(define binding-immutable 1)
+(define binding-immutable 0)
+(define binding-mutable 1)
 
 (define (env-bind env name type value)
   (define binding (bound? env name))
@@ -115,7 +115,7 @@
   (define (freeze-bindings bindings)
     (if (null? bindings)
 	(if #f #f)
-	(begin (binding-set-type! (car bindings) binding-immutable)
+	(begin (binding-set-mutability! (car bindings) binding-immutable)
 	       (freeze-bindings (cdr bindings)))))
   (import-libs libraries)
   (import-symbols symbols)
