@@ -27,6 +27,16 @@ DEFINE_PROC(L"binding-set!")
     RETURN(UNSPECIFIED);
 }
 
+DEFINE_PROC(L"mutable")
+{
+    RETURN(make_fixnum(M_MUTABLE));
+}
+
+DEFINE_PROC(L"immutable")
+{
+    RETURN(make_fixnum(M_IMMUTABLE));
+}
+
 DEFINE_PROC(L"binding-set-mutability!")
 {
     binding_set_mutability(pair_car(F_SUBJ), fixnum_value(pair_cadr(F_SUBJ)));
