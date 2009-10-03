@@ -231,7 +231,7 @@ obj_t *eval_frame(obj_t *frame)
     while (FRAME) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
-	printf_unchecked("    %ls %O\n", block_name(F_CONT, F_ENV), F_SUBJ);
+	printf_unchecked("    %ls %.56O\n", block_name(F_CONT, F_ENV), F_SUBJ);
 	//print_stack("eval");
 	//printf_unchecked("   F_SUBJ => %O\n", F_SUBJ);
 	//printf_unchecked("   VALUE => %O\n", value);

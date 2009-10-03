@@ -48,6 +48,8 @@ struct outstream {
     out_putwc_proc_t   out_putwc;
     out_vprintf_proc_t out_vprintf;
     off_t              out_pos;
+    off_t              out_limit;
+    jmp_buf            out_jmpbuf;
 };
 
 typedef struct file_outstream {
@@ -81,6 +83,8 @@ static void init_outstream(outstream_t       *out,
     out->out_putwc = put;
     out->out_vprintf = vprintf;
     out->out_pos = 0;
+    out->out_limit = -1;
+    memset(&out->out_jmpbuf, '\0', sizeof out->out_jmpbuf);
 }
 
 static void instream_delete(instream_t *in)
@@ -315,7 +319,12 @@ void delete_outstream(outstream_t *out)
 wint_t outstream_putwc(wchar_t wc, outstream_t *out)
 {
     out->out_pos++;
-    return out->out_putwc(wc, out);
+    wint_t r = out->out_putwc(wc, out);
+    if (out->out_limit >= 0 && out->out_pos >= out->out_limit) {
+	out->out_limit = -1;
+	longjmp(out->out_jmpbuf, 1);
+    }
+    return r;
 }
 
 int outstream_printf(outstream_t *out, const wchar_t *fmt, ...)
@@ -325,10 +334,25 @@ int outstream_printf(outstream_t *out, const wchar_t *fmt, ...)
     int n = out->out_vprintf(out, fmt, ap);
     va_end(ap);
     out->out_pos += n;
+    if (out->out_limit >= 0 && out->out_pos >= out->out_limit) {
+	out->out_limit = -1;
+	longjmp(out->out_jmpbuf, 1);
+    }
     return n;
 }
 
 off_t outstream_pos(outstream_t *out)
 {
     return out->out_pos;
+}
+
+jmp_buf *outstream_set_limit(outstream_t *out, off_t limit)
+{
+    out->out_limit = out->out_pos + limit;
+    return &out->out_jmpbuf;
+}
+
+void outstream_clear_limit(outstream_t *out)
+{
+    out->out_limit = -1;
 }

@@ -16,8 +16,13 @@ static int print_obj(FILE *stream,
 {
     outstream_t *out = make_file_outstream(stream);
     long a = outstream_pos(out);
-    obj_t *obj = *(obj_t **)args[0];
-    princ(obj, out);
+    if (info->prec != -1 && setjmp(*outstream_set_limit(out, info->prec))) {
+	outstream_clear_limit(out);
+	outstream_printf(out, L"...");
+    } else {
+	obj_t *obj = *(obj_t **)args[0];
+	princ(obj, out);
+    }
     long b = outstream_pos(out);
     delete_outstream(out);
     return b - a;
