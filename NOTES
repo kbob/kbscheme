@@ -1052,3 +1052,18 @@ Next push:
         or something.  Add arg to constructor, add accessors.
 
      c) augment expand to create a syntax obj and remove it aftewards.
+
+----------------------------------
+10/3/2009
+
+Root pointers and fast alloc.
+
+What if there were a heap pointer, next_root, which points slightly
+past next_alloc, and all words between next_alloc and next_root are
+roots.  alloc() just sets the object header and increments next_alloc
+past the words which are already stored in place.
+
+The idea isn't quite baked yet, but seems interesting.
+
+Or maybe the root pointers are allocated from the other end of the
+free area?
