@@ -19,7 +19,7 @@
     let					; r6rs 11.4.6 Binding constructs
 ;   let*
 ;   letrec
-;   letrec*
+;;;;letrec*
 ;   let-values
 ;   let*-values
 ;;;;begin				; r6rs 11.4.7 Sequencing
@@ -44,7 +44,7 @@
 ;;;;>
 ;;;;<=
 ;;;;>=
-;   zero?
+    zero?
 ;   positive?
 ;   negative?
 ;   odd?
@@ -287,6 +287,9 @@
 
 
 ;  (define-syntax (or . tests) ())
+
+  (define (zero? n)
+    (= n 0))
 
 ;   someday I could rewrite these with a macro.
   (define (caar pair) (car (car pair)))
@@ -548,10 +551,9 @@
 ;   and
 ;   or
     let					; r6rs 11.4.6 Binding constructs
-    foo					; XXX temp
 ;   let*
 ;   letrec
-;   letrec*
+    letrec*
 ;   let-values
 ;   let*-values
     begin				; r6rs 11.4.7 Sequencing
@@ -576,7 +578,7 @@
     >
     <=
     >=
-;   zero?
+    zero?
 ;   positive?
     negative?
 ;   odd?
@@ -1089,7 +1091,7 @@
 ;   fx<?
 ;   fx>=?
 ;   fx<=?
-;   fxzero?
+    fxzero?
 ;   fxpositive?
 ;   fxnegative?
 ;   fxodd?

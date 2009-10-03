@@ -273,8 +273,8 @@
 /* Direct goto.  Returns from current block, then calls target block
    with specified args.
  */
-#define GOTO(target, ...) \
-    GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
+#define GOTO(target, subject, environment)				\
+    GOTO_FRAME(make_short_frame, (target), (subject), (environment))
 
 /* Goto with explicit frame factory.  */
 #define GOTO_FRAME(factory, target, ...)				\
@@ -306,15 +306,20 @@
 /* Make an activation frame whose continuation is this frame's
    continuation.
  */
-#define MAKE_GOTO(target, ...) \
-    MAKE_GOTO_FRAME(make_short_frame, (target), __VA_ARGS__)
+#define MAKE_GOTO(target, subject, environment)				\
+    MAKE_GOTO_FRAME(make_short_frame, (target), (subject), (environment))
 
-#define MAKE_GOTO_FRAME(factory, target, ...) \
+/* Call MAKE_GOTO_FRAME(make_short_frame, target, subject, environment) or
+ * MAKE_GOTO_FRAME(make_long_frame, target, subject, environment, procedure, 
+ * arg_list, last_arg).
+ */
+#define MAKE_GOTO_FRAME(factory, target, ...)				\
     (factory(F_PARENT, (target), __VA_ARGS__))
 
 /* Make an activation frame whose continuation is the current frame.
  */
-#define MAKE_CALL(target, ...) (make_short_frame(FRAME, (target), __VA_ARGS__))
+#define MAKE_CALL(target, subject, environment)				\
+    (make_short_frame(FRAME, (target), (subject), (environment)))
 
 typedef void binder_t(C_procedure_t, obj_t *lib, const wchar_t *name);
 typedef struct proc_descriptor proc_descriptor_t;

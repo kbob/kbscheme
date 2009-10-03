@@ -308,7 +308,7 @@ static obj_t *let_get_inits(obj_t *bindings)
     return inits;
 }
 
-DEFINE_STATIC_TRANSFORMER(foo_let, L"lett")
+DEFINE_TRANSFORMER(L"lett")
 {
     /*
      * (let				((lambda (v1 ...)
@@ -340,10 +340,68 @@ DEFINE_STATIC_TRANSFORMER(foo_let, L"lett")
     return let;
 }
 
-DEFINE_PROC(L"foo")
+static obj_t *list_reverse(obj_t *list)
 {
-    RETURN(foo_let(pair_car(F_SUBJ)));
+    PUSH_ROOT(list);
+    AUTO_ROOT(reversed, NIL);
+    while (list) {
+	reversed = make_pair(pair_car(list), reversed);
+	list = pair_cdr(list);
+    }
+    POP_ROOT(reversed);
+    POP_ROOT(list);
+    return reversed;
 }
+
+DEFINE_BLOCK(b_letrecstar_continue)
+{
+    obj_t *var = F_SUBJ;
+    obj_t *binding = env_lookup(F_ENV, var);
+    assert(binding_is_mutable(binding));
+    binding_set_value(binding, VALUE);
+    RETURN(NIL);
+}
+
+DECLARE_BLOCK(begin);
+
+DEFINE_SPECIAL_FORM(L"letrec*")
+{
+    // push env
+    // put vars in env, initialized to NIL
+    // push a bunch of work to eval the inits
+    // continue with the body
+    // eval arg returns to 
+    AUTO_ROOT(env, make_env(F_ENV));
+    AUTO_ROOT(bindings, list_reverse(pair_car(F_SUBJ)));
+    AUTO_ROOT(cont, make_short_frame(F_PARENT, begin, pair_cdr(F_SUBJ), env));
+    AUTO_ROOT(var, NIL);
+    while (bindings != NIL) {
+	var = pair_caar(bindings);
+	env_bind(env, var, BT_LEXICAL, M_MUTABLE, NIL);
+	cont = make_short_frame(cont, b_letrecstar_continue, var, env);
+	cont = make_short_frame(cont, b_eval, pair_cadar(bindings), env);
+	bindings = pair_cdr(bindings);
+    }
+    POP_FUNCTION_ROOTS();
+    FRAME = cont;
+    return NIL;
+}
+
+TEST_EVAL(L"(letrec* () #f)",			L"#f");
+TEST_EVAL(L"(letrec* ((var 42)) var)",		L"42");
+
+/* from r6rs */
+TEST_EVAL(L"(letrec* ((p\n"
+          L"	   (lambda (x)\n"
+          L"             (+ 1 (q (- x 1)))))\n"
+          L"          (q\n"
+          L"           (lambda (y)\n"
+          L"             (if (zero? y)\n"
+          L"		 0\n"
+          L"		 (+ 1 (p (- y 1))))))\n"
+          L"          (x (p 5))\n"
+          L"          (y x))\n"
+          L"	 y)",				L"5");
 
 /* 11.4.7.  Sequencing
  *
