@@ -35,12 +35,16 @@ obj_t *join_envs(env_t *an_env, env_t *other_env)
     return other_env;
 }
 
-void env_bind(env_t *env, obj_t *name, mutability_t mutability, obj_t *value)
+void env_bind(env_t *env,
+	      obj_t *name,
+	      binding_type_t type,
+	      mutability_t mutability,
+	      obj_t *value)
 {
     assert(!is_null(env));
     assert(is_symbol(name));
     PUSH_ROOT(env);
-    AUTO_ROOT(binding, make_binding(name, mutability, value));
+    AUTO_ROOT(binding, make_binding(name, type, mutability, value));
     obj_t *frame = pair_car(env);
     frame = make_pair(binding, frame);
     pair_set_car(env, frame);

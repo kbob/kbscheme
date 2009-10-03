@@ -159,7 +159,7 @@ obj_t *apply_procedure(obj_t *proc, obj_t *args)
 	    actual  = actuals;
 	    formals = actuals = NIL;
 	}
-	env_bind(new_env, formal, M_MUTABLE, actual);
+	env_bind(new_env, formal, BT_LEXICAL, M_MUTABLE, actual);
     }
     GOTO(b_eval_sequence, body, new_env);
 }

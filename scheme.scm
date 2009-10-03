@@ -31,11 +31,11 @@
 	    (_ (cdr bindings)))))
   (_ (env-bindings env)))
 	    
-(define (env-bind env name type value)
+(define (env-bind env name type mutability value)
   (define binding (bound? env name))
   (if binding
       (binding-set! binding value)
-      (env-set-bindings! env (cons (make-binding name type value)
+      (env-set-bindings! env (cons (make-binding name type mutability value)
 				   (env-bindings env)))))
 
 ; A library is implemented as a pair.  The car is the environment, and
@@ -78,7 +78,8 @@
   (define (import-binding binding)
     (env-bind env
 	      (binding-name binding)
-	      (mutable)
+	      (binding-type binding)
+	      (binding-mutable)
 	      (binding-value binding)))
   (define (import-bindings bindings)
     #;(unless (null? bindings)
@@ -104,15 +105,17 @@
     (if (null? syms)
 	(if #f #f)
 	(begin (define sym (car syms))
+	       (define binding (get-binding sym root-environment))
 	       (env-bind env
 			 sym
-			 (mutable)
-			 (eval sym root-environment))
+			 (binding-type binding)
+			 (binding-mutable)
+			 (binding-value binding))
 	       (import-symbols (cdr syms)))))
   (define (freeze-bindings bindings)
     (if (null? bindings)
 	(if #f #f)
-	(begin (binding-set-mutability! (car bindings) (immutable))
+	(begin (binding-set-mutability! (car bindings) (binding-immutable))
 	       (freeze-bindings (cdr bindings)))))
   (import-libs libraries)
   (import-symbols symbols)
