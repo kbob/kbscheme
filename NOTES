@@ -1031,11 +1031,11 @@ Dybvig's paper explains more about syntax objects.
 
 Did I get that right?
 
-Note that Dybvig's binding is different from mine.  I put the name
-inside the binding, and he put it outside.  My representation is a
-little faster -- one less redirection.  His representation makes it
-possible for two names to share a binding and is probably "the Lisp
-way".
+Note that Dybvig's binding [bc-syntax-case] is different from mine.  I
+put the name inside the binding, and he put it outside.  My
+representation is a little faster -- one less redirection.  His
+representation makes it possible for two names to share a binding and
+is probably "the Lisp way".
 
 ----------------------------------
 10/2/2009
@@ -1067,3 +1067,83 @@ The idea isn't quite baked yet, but seems interesting.
 
 Or maybe the root pointers are allocated from the other end of the
 free area?
+
+----------------------------------
+10/6/2009 12:00 AM
+
+r6rs compatibility in mzscheme
+
+    $ mzscheme
+    Welcome to MzScheme v4.1.3 [3m], Copyright (c) 2004-2008 PLT Scheme Inc.
+    > (require rnrs/main-6)  ; or something like that.
+    > 
+
+----------------------------------
+10/6/2009 1:30 AM
+
+The expander is orders of magnitude too slow, and all it's doing is
+creating the initial "meta-environment".  So, two things are in order.
+
+  1. Cache the initial wrap-n-env created from each env rib.
+
+  2. Turn the expander/reader relationship inside out.
+     Instead of
+
+         while ((form = read()) != EOF)
+	     print(eval(expand(form)));
+
+     We need something like this.
+
+         expand()
+	 {
+	     init();
+	     while ((form = read()) != EOF) {
+	     	 expanded = continue_expanding(form);
+		 print_eval(expanded);
+	     }
+	 }
+
+The labels create a layer of indirection.  We have wrap, which maps
+sym -> label, and meta-env, mapping label -> binding.  How about
+if we re-engineer the environment calls to build that directly?
+Then the labels are always up to date and nearly free.
+
+Have to look at how wraps are manipulated during expansion.
+
+(update 10/11/2009) won't work.  They're separate data structures.
+
+----------------------------------
+10/11/2009
+
+The expander is sort of working.  It can handle constants, lexical
+bindings, quote, and expressions of same.  Its speed is reasonable
+(not great).
+
+But it can't handle define or define-syntax, which modify the current
+environment.  The problem is that the expander uses the definition for
+environment in [bc-syntax-case], which treats the environment as
+a list of frames.
+
+So I need to rewrite initial-wrap-and-env, which I already
+complexificated to get the caching described above.
+
+Bibliography
+
+[tr356]
+Writing Hygienic Macros in Scheme with Syntax-Case
+R. Kent Dybvig
+Technical Report 356, Indiana Computer Science Department, June 1992.
+http://www.cs.indiana.edu/~dyb/pubs/tr356.pdf
+
+[LaSC]
+Syntactic Abstraction in Scheme
+R. Kent Dybvig, Carl Bruggeman
+Lisp and Symbolic Computation 5:4, 295-396, 1992.
+http://www.cs.indiana.edu/~dyb/pubs/LaSC-5-4-pp295-326.pdf
+
+[bc-syntax-case]
+R. Kent Dybvig. Syntactic abstraction: the syntax-case expander.
+In Andy Oram and Greg Wilson, editors, Beautiful Code: Leading
+Programmers Explain How They Think, chapter 25, 407–428.
+O'Reilly and Associates, June 2007.
+http://www.cs.indiana.edu/~dyb/pubs/bc-syntax-case.pdf

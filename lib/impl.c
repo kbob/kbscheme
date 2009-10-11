@@ -1,3 +1,4 @@
+#include "obj_syntax.h"
 #include "proc.h"
 #include "types.h"
 
@@ -79,4 +80,30 @@ DEFINE_PROC(L"the-environment")
 DEFINE_PROC(L"make-anonymous-symbol")
 {
     RETURN(make_anonymous_symbol());
+}
+
+DEFINE_PROC(L"make-syntax-object")
+{
+    RETURN(make_syntax(pair_car(F_SUBJ), pair_cadr(F_SUBJ)));
+}
+
+DEFINE_PROC(L"syntax-object?")
+{
+    RETURN(make_boolean(is_syntax(pair_car(F_SUBJ))));
+}
+
+DEFINE_PROC(L"syntax-object-expr")
+{
+    RETURN(syntax_expr(pair_car(F_SUBJ)));
+}
+
+DEFINE_PROC(L"syntax-object-wrap")
+{
+    RETURN(syntax_wrap(pair_car(F_SUBJ)));
+}
+
+DEFINE_PROC(L"special-form?")
+{
+    obj_t *obj = pair_car(F_SUBJ);
+    RETURN(make_boolean(is_procedure(obj) && procedure_is_special_form(obj)));
 }

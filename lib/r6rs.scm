@@ -2,6 +2,11 @@
 ; r6rs chapter 7.  The interpreter reads and evaluates them all
 ; and adds their exports to the global library list.
 
+#;(library (begin-log)
+ (export)
+ (import (draft))
+ (draft-print "loading r6rs"))
+
 (library
  (rnrs base (6))
  (export
@@ -16,7 +21,7 @@
 ;   case
 ;   and
 ;   or
-    let					; r6rs 11.4.6 Binding constructs
+;   let					; r6rs 11.4.6 Binding constructs
 ;   let*
 ;   letrec
 ;;;;letrec*
@@ -245,7 +250,7 @@
 ;
 ; (let*-values <mv-bindings> <body>)	# syntax
 
-  (define-syntax let
+  #;(define-syntax let
     (lambda (wrapped-syntax-object)
       (define form (syntax->datum wrapped-syntax-object))
       (define (get-vars bindings)
@@ -550,7 +555,7 @@
 ;   case
 ;   and
 ;   or
-    let					; r6rs 11.4.6 Binding constructs
+;   let					; r6rs 11.4.6 Binding constructs
 ;   let*
 ;   letrec
     letrec*
@@ -1285,8 +1290,7 @@
     draft-environment
     draft-read
     draft-print
-    mu
-    draft-make-syntax
+;   mu
   )
   (import (rnrs base (6))
 	  (rnrs unicode (6))
@@ -1313,3 +1317,8 @@
 	  (draft)
   )
 )
+
+#;(library (end-log)
+ (export)
+ (import (draft))
+ (draft-print "r6rs loaded"))

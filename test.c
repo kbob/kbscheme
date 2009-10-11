@@ -79,8 +79,6 @@ static int read_driver(const test_case_descriptor_t *tc)
 
 static int eval_driver(const test_case_descriptor_t *tc)
 {
-    /* XXX give each test a fresh environment. */
-
     int err_count = 0;
 #if TEST_TRACE
     printf("%s:%d eval %ls\n", tc->tcd_file, tc->tcd_lineno, tc->tcd_input);

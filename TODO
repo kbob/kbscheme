@@ -17,6 +17,7 @@
  DONE	    Replace "exit" with (eof-object) in REPL.
  DONE	    Some accessors are called foo_len, others are called foo_length.
  DONE	    Remove debug_heap flag in mem.c.
+	    Rename makefiles/module-makefile to GNUmakefile and correct links.
 
 	nonrecursive eval
  DONE	    Define C procedure API.

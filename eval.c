@@ -174,7 +174,6 @@ DEFINE_EXTERN_BLOCK(b_eval)
     if (is_application(F_SUBJ)) {
 	AUTO_ROOT(proc, pair_car(F_SUBJ));
 	EVAL_THEN_GOTO(proc, F_ENV, b_accum_operator, F_SUBJ, F_ENV);
-
     }
     RAISE(&syntax && "can't eval");
 }

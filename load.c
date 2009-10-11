@@ -43,4 +43,5 @@ void load_scheme(const char *dir_path)
     }    
     delete_instream(in);
     fclose(f);
+    exit(0);
 }

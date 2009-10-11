@@ -10,11 +10,11 @@
 #include "print.h"
 #include "proc.h"
 #include "read.h"
+#include "uprintf.h"
 
 LIBRARY(L"(draft)") /* XXX These should be in an invisible namespace. */
 
 static instream_t  *in;
-static outstream_t *out;
 
 DEFINE_PROC(L"draft-read")
 {
@@ -30,11 +30,7 @@ DEFINE_PROC(L"draft-read")
 
 DEFINE_PROC(L"draft-print")
 {
-    /* with lock */ {
-	if (!out)
-	    out = make_file_outstream(stdout);
-    }
-    print(pair_car(F_SUBJ), out);
+    printf_unchecked("%.76O\n", pair_car(F_SUBJ));
     RETURN(UNSPECIFIED);
 }
 
@@ -43,10 +39,7 @@ DEFINE_PROC(L"draft-environment")
     RETURN(library_env(r6rs_library()));
 }
 
-DEFINE_PROC(L"draft-make-syntax")
-{
-    RETURN(make_syntax(pair_car(F_SUBJ), pair_cadr(F_SUBJ)));
-}
+#if 0
 
 DEFINE_BLOCK(b_continue_mu)
 {
@@ -99,3 +92,5 @@ DEFINE_SPECIAL_FORM(L"mu")		/* letter after lambda */
 		 (b_accum_operator, args, F_ENV),
 		 (b_continue_mu, NIL, F_ENV));
 }
+
+#endif
