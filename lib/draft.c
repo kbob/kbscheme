@@ -30,7 +30,12 @@ DEFINE_PROC(L"draft-read")
 
 DEFINE_PROC(L"draft-print")
 {
-    printf_unchecked("%.76O\n", pair_car(F_SUBJ));
+    if (pair_cdr(F_SUBJ)) {
+	int precision = fixnum_value(pair_cadr(F_SUBJ));
+	printf_unchecked("%.*O\n", precision, pair_car(F_SUBJ));
+    } else {
+	printf_unchecked("%O\n", pair_car(F_SUBJ));
+    }
     RETURN(UNSPECIFIED);
 }
 

@@ -1,20 +1,44 @@
+(define (last list)
+  (if (null? list)
+      '()
+      (if (pair? list)
+	  (if (null? (cdr list))
+	      (car list)
+	      (last (cdr list)))
+	  list)))
+
 (define (trace . exps)
-  (define (last list)
-    (if (null? list)
-	'()
-	(if (pair? list)
-	    (if (null? (cdr list))
-		(car list)
-		(last (cdr list)))
-	    list)))
-  (draft-print exps)
+  (draft-print exps 76)
+  ;(draft-print exps)
   (last exps))
+
+(define (notrace . exps)
+     (last exps))
 
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
 ; ; ; Standard procedures
 
 (define (list . args)
   args)
+
+(define (list? obj)			; detects cycles
+  (define (list-0? obj trail)
+    (if (eq? obj trail)
+	#f
+	(if (null? obj)
+	    #t
+	    (if (pair? obj)
+		(list-1? (cdr obj) trail)
+		#f))))
+  (define (list-1? obj trail)
+    (if (eq? obj trail)
+	#f
+	(if (null? obj)
+	    #t
+	    (if (pair? obj)
+		(list-0? (cdr obj) (cdr trail))
+		#f))))
+  (list-0? obj (cons list-0? obj)))
 
 (define (length list)
   (define (_ list count)
@@ -117,6 +141,18 @@
 
 (define (env-add-binding! env binding)
   (env-set-bindings! env (cons binding (env-bindings env))))
+
+(define (env-lookup env name)
+  (define (_ seg env)
+    (if (null? seg)
+	(if (null? env)
+	    #f
+	    (_ (car env) (cdr env)))
+	(letrec* ([binding (car seg)])
+		 (if (eq? (binding-name binding) name)
+		     binding
+		     (_ (cdr seg) env)))))
+  (_ '() env))
 
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
 ; ; ; Expander
@@ -222,39 +258,46 @@
 		      (cons w wrap2))
 		  (cons w (f (car w*) (cdr w*)))))
 	    (f (car wrap1) (cdr wrap1))))))
-       
+
 (define (id-binding id r)
   (label-binding id (id-label id) r))
 
 (define (id-label id)
-  (letrec* ([sym (syntax-object-expr id)]
-	    [wrap (syntax-object-wrap id)]
-	    [marks (wrap-marks wrap)])
-    (define (search wrap)
-      (if (null? wrap)
-	  (syntax-error id
-			(string-append
-			 "undefined identifier: "
-			 (symbol->string (syntax-object-expr id))))
-	  (letrec* ([w0 (car wrap)])
-	    (if (mark? w0)
-		(search (cdr wrap))
-		(if (if (eq? (subst-sym w0) sym)
-			(same-marks? (subst-marks w0) marks)
-			#f)
-		    (subst-label w0)
-		    (search (cdr wrap)))))))
-    (search wrap)))
+  (letrec*
+   ([sym (syntax-object-expr id)]
+    [wrap (syntax-object-wrap id)]
+    [marks (wrap-marks wrap)])
+   (define (search seg wrap)
+     (if (null? seg)
+	 (if (null? wrap)
+	     (syntax-error id
+			   (string-append
+			    "undefined identifier: "
+			    (symbol->string (syntax-object-expr id))))
+	     (search (car wrap) (cdr wrap)))
+	 (letrec* ([w0 (car seg)])
+		  (if (mark? w0)
+		      (search (cdr seg) wrap)
+		      (if (if (eq? (subst-sym w0) sym)
+			      (same-marks? (subst-marks w0) marks)
+			      #f)
+			  (subst-label w0)
+			  (search (cdr seg) wrap))))))
+	 
+   (search '() wrap)))
 
 (define (wrap-marks wrap)
-  (define (_ wrap marks)
-    (if (null? wrap)
-      (reverse marks)
-      (_ (cdr wrap)
-	 (if (mark? (car wrap))
-	     (cons (car wrap) marks)
-	     marks))))
-  (_ wrap '()))
+  (define (_ wrap seg marks)
+    (if (null? seg)
+	(if (null? wrap)
+	    (reverse marks)
+	    (_ (cdr wrap) (car wrap) marks))
+	(_ wrap
+	   (cdr seg)
+	   (if (mark? (car seg))
+	       (cons (car seg) marks)
+	       marks))))
+  (_ wrap '() '()))
 
 (define (same-marks? m1* m2*)
   (if (null? m1*)
@@ -266,10 +309,12 @@
 	  #f)))
 
 (define (label-binding id label r)
-  (letrec* ([a (assq label r)])
-    (if a
-	(cdr a)
-	(syntax-error id "displaced lexical"))))
+  ; I want or.
+  ; (or (env-lookup r label) (syntax-error ...))
+  (letrec* ([binding (env-lookup r label)])
+	   (if binding
+	       binding
+	       (syntax-error id "displaced lexical"))))
 
 ; exp cases
 ;   x lexical identifier
@@ -312,7 +357,6 @@
 ;     list
 ;	calls exp
 
-
 (define (exp x r mr)
   (define (identifier-form? x)
     (if (syntax-pair? x)
@@ -321,8 +365,6 @@
   (define (exp-identifier id)
     (letrec* ([b (id-binding id r)]
 	      [bt (binding-type b)])
-	     #;(trace 'b b)
-	     #;(trace 'bt bt)
 	     (if (eq? bt (binding-macro))
 		 (exp (exp-macro (binding-value b) x) r mr)
 		 (if (eqv? bt (binding-lexical))
@@ -331,17 +373,10 @@
  (define (exp-identifier-form x)
     (letrec* ([b (id-binding (syntax-car x) r)]
 	      [bt (binding-type b)])
-	     ;(trace 'exp-identifier-form 'b b)
-	     ;(trace 'exp-identifier-form 'bt bt)
 	     (if (eqv? bt (binding-macro))
 		 (exp (exp-macro (binding-value b) x) r mr)
 		 (if (eqv? bt (binding-lexical))
-		     (begin
-		     ;(trace 'lexical)
-		     ;(trace '(binding-value b) '=> (binding-value b))
-		     ;(trace '(syntax-cdr x) '=> (syntax-cdr x))
 		     (cons (binding-value b) (exp-exprs (syntax-cdr x) r mr))
-		     )
 		     (if (eqv? bt (binding-core))
 			 (exp-core (binding-value b) x r mr)
 			 (syntax-error x "invalid syntax B"))))))
@@ -352,7 +387,6 @@
 	     (if (self-evaluating? d)
 		 x;d
 		 (syntax-error x "invalid syntax C"))))
-  ;(trace 'exp (syntax-object-expr x) '<r> '<mr>)
   ; I want cond.
   (if (identifier? x)
       (exp-identifier x)
@@ -367,7 +401,6 @@
 	   (add-mark m (p (add-mark m x)))))
 
 (define (exp-core p x r mr)
-  (trace 'exp-core '<p> (syntax-object-expr x) '<r> '<mr>)
   (p x r mr))
 
 (define (exp-exprs x* r mr)
@@ -391,7 +424,6 @@
 (define (exp-letrec* x r mr)
   ...)
 
-
 (define (syntax-pair? x)
   (pair? (syntax-object-expr x)))
 
@@ -405,13 +437,10 @@
    (syntax-object-wrap x)
    (cdr (syntax-object-expr x))))
 
-(define syntax (if #f #f))
+(define (syntax x) '())
 
 (define (exp-syntax x r mr)
-  (trace 'exp-syntax x '= (syntax-object-expr x))
-  (trace 'exp-syntax x '= (syntax-object-expr x) '=>
-	 (syntax-car (syntax-cdr x))))
-  
+  (syntax-car (syntax-cdr x)))
 
 (define (strip stx)
   (if (syntax-object? stx)
@@ -429,9 +458,9 @@
 
 (define syntax->datum strip)
 
-(define *wne-cache* '(() ()))
+#;(define *wne-cache* '(() ()))
 
-(define (initial-wrap-and-env env)
+#;(define (initial-wrap-and-env env)
   (define specials
     '((quote . exp-quote)
       (syntax . exp-syntax)
@@ -487,16 +516,84 @@
 		     wne))))
   (_ '() env))
 
+; list of ((env1 . bindings) . (wrap . env2))
+; where env1 is the eval-time env and env2 is the expand-time env.
 
+(define *wne-cache* '())
+
+(define (wnec-lookup env)
+  (assp (lambda (a) (eq? (car a) env))
+	*wne-cache*))
+
+(define (wnec-update! env bindings wne)
+  (letrec* ([a (wnec-lookup env)])
+	   (if a
+	       (begin
+		 (set-cdr! (car a) bindings)
+		 (set-cdr! a wne))
+	       (set! *wne-cache*
+		     (list (cons (cons env (env-bindings env)) wne))))))
+	       
+
+(define (initial-wrap-and-env env)
+  (define specials
+    (map
+     (lambda (a)
+       (cons (eval (car a) (the-environment))
+	     (eval (cdr a) (the-environment))))
+     '((quote . exp-quote)
+       (syntax . exp-syntax)
+       (lambda . exp-lambda)
+       (define . exp-define)
+       (define-syntax . exp-define-syntax)
+       (letrec* . exp-letrec*))))
+  (define (wrap-one sym label)
+	   (make-subst sym (list top-mark) label))
+  (define (bind-one binding label)
+    (letrec*
+     ([sym (binding-name binding)]
+      [value (binding-value binding)]
+      [sb (assq value specials)])
+     (if sb
+	 (make-binding label (binding-core) (binding-immutable) (cdr sb))
+	 (make-binding label (binding-lexical) (binding-immutable) sym))))
+  (define (make-one-wne binding)
+    (define label (make-label))
+    (cons (wrap-one (binding-name binding) label)
+	  (bind-one binding label)))
+  (define (make-frame-wne bindings cached)
+    (if (null? bindings)
+	'(() ())
+	;(list (list top-mark) '())
+	(if (if cached (eq? bindings (cdr (car cached))) #f)
+	    (cdr cached)
+	    (letrec* ([first-wne (make-one-wne (car bindings))]
+		      [rest-wnes (make-frame-wne (cdr bindings) cached)])
+		     (cons
+		      (cons (car first-wne) (car rest-wnes))
+		      (cons (cdr first-wne) (cdr rest-wnes)))))))
+  (define (make-env-wne env)
+    (letrec* ([cached (wnec-lookup env)]
+	      [bindings (env-bindings env)])
+	     (if (if cached (eq? (cdr (car cached)) bindings) #f)
+		 (cdr cached)
+		 (letrec* ([new-wne (make-frame-wne bindings cached)])
+			  (wnec-update! env (env-bindings env) new-wne)
+			  new-wne))))
+
+  (if (null? env)
+      (list (list (list top-mark)) '())
+      (letrec* ([first-ewne (make-env-wne env)]
+		[rest-ewne (initial-wrap-and-env (env-parent env))])
+	       (cons (cons (car first-ewne) (car rest-ewne))
+		     (cons (cdr first-ewne) (cdr rest-ewne))))))
 
 (define (expand form env)
-  (trace 'expand form '=>
   (letrec* ([wne (initial-wrap-and-env env)]
 	    [wrap (car wne)]
 	    [meta-env (cdr wne)])
 	   (syntax->datum
 	    (exp (make-syntax-object form wrap) meta-env meta-env))))
-  )
 
 123
 list
@@ -504,8 +601,8 @@ list
 (draft-print 123)
 (if 1 2 3)
 (draft-print (if 1 2 3))
-(quote 123)
-(draft-print (quote 123))
+(quote abc)
+(draft-print (quote abc))
 (draft-print (quote (a b c)))
 (syntax 123)
 
@@ -574,7 +671,7 @@ list
      (if test
 	 (begin result1 result2 ...)
 	 (cond clause1 clause2 ...))]))
-    
+
 #; (define-syntax case ...)
 
 #; (define-syntax let* ...)
@@ -612,7 +709,7 @@ list
 
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
 ; ; ; Libraries
-  
+
 ; An environment is implemented as a pair.  The car is a list of
 ; bindings, and the cdr is the parent environment.
 
@@ -638,7 +735,7 @@ list
 	    (car bindings)
 	    (_ (cdr bindings)))))
   (_ (env-bindings env)))
-	    
+
 (define (env-bind env name type mutability value)
   (define binding (bound? env name))
   (if binding

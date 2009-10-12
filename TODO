@@ -5,6 +5,7 @@
 	    Add prototypes of some sort to C procedures.
 	    Add macros to ref numbered args.
 		(e.g. #define ARG1 (pair_car(F_SUBJ)))
+		(also #define NARG (list_length(F_SUBJ)))
  DONE	    It should be illegal to bind two C functions to the same symbol.
  DONE	    Fix the makefile so subdirectories are rebuilt.
  DONE	    mem_fixvec should export non-virtual element accessors.

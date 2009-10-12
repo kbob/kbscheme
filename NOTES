@@ -1127,6 +1127,47 @@ a list of frames.
 So I need to rewrite initial-wrap-and-env, which I already
 complexificated to get the caching described above.
 
+The new initial-wrap-and-env will...
+
+... have a cache.  Each cache entry will represent a single
+environment frame.  Empty frames will not have cache entries.  Entries
+are not freed.  The cache keys will be (environment . bindings).  If
+an environment's bindings have changed, its cache entry will be
+updated.
+
+Since iwae is called at nearly top level, that will work.
+
+... check each binding value against the special forms.  There are
+several special forms, currently quote, syntax, lambda, define,
+define-syntax, and letrec*, which the expander knows about.  But in a
+given environment, other names could be bound to those forms.  And
+those names could be bound to other, non-special values.  So the
+expander has to watch the bound values, not the names.
+
+... bind lexical names to themselves.  I don't think that's right -- a
+macro could refer to names private to a library, and when it's
+expanded the private names won't be visible.
+
+For example,
+
+   (library (foo)
+     (export public)
+     (import (rnrs (6)))
+
+     (define (private) 42)
+
+     (define-syntax public
+       (syntax-rules ()
+         [(_) (private)])))
+
+Should export a macro, public, which expands to a call to private,
+which isn't in scope when public is expanded.
+
+I can't see how to make this work except to revamp eval so it no
+longer resolves names.  All names would be resolved at expand time.
+
+So I'm going to blow that part off for now.
+
 Bibliography
 
 [tr356]
