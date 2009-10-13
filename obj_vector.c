@@ -18,7 +18,7 @@ static inline size_t len_to_bytes(size_t len)
 
 static inline obj_t **elem_addr(vector_obj_t *vec, size_t index)
 {
-    return (void *)&vec[1] + index * sizeof (obj_t *);
+    return (obj_t **)&vec[1] + index;
 }
 
 static size_t vector_size_op(const obj_t *obj)

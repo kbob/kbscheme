@@ -1440,6 +1440,7 @@ DEFINE_PROC(L"vector-ref")
 }
 
 TEST_EVAL(L"(vector-ref '#(0 1 2) 1)",	L"1");
+TEST_EVAL(L"(vector-ref '#(0 1 2) 2)",	L"2");
 
 DEFINE_PROC(L"vector-set!")
 {

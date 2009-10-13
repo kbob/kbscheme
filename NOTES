@@ -1188,3 +1188,51 @@ In Andy Oram and Greg Wilson, editors, Beautiful Code: Leading
 Programmers Explain How They Think, chapter 25, 407–428.
 O'Reilly and Associates, June 2007.
 http://www.cs.indiana.edu/~dyb/pubs/bc-syntax-case.pdf
+
+----------------------------------
+10/12/2009
+
+Still don't have it quite right.  Implemented the cache above, and
+need to fix up four routines that know the format of the wraps.
+
+But it would be better if we only carried the wraps for symbols with
+interesting wraps, and kept them in a single list.  The rest could be
+derived from the starting environment.
+
+And marks and subst's shouldn't be interleaved.  That's leading me to
+a wrap format like this.
+
+  (define-record-type wrap (fields marks substs env))
+
+That means you can't just prepend items to a wrap with cons, though.
+
+So we probably need a set of methods for operating on wraps.  We sort
+of have those, but they're kind of irregular.
+
+Procedures that look inside wraps:
+	top-marked?
+	extend-wrap,
+	join-wraps,
+	add-mark,
+	add-subst
+	id-binding
+	id-label (private to id-binding)
+	wrap-marks
+	initial-wrap-and-env wrap-one
+	initial-wrap-and-env make-one-wne
+	initial-wrap-and-env make-frame-wne
+	initial-wrap-and-env
+
+Expansion procedures that manipulate wraps:
+
+    syntax-car           calls extend-wrap
+    syntax-cdr           calls extend-wrap
+    strip                calls top-marked?
+    exp-macro            calls add-mark
+    exp-identifier       calls id-binding
+    exp-identifier-form  calls id-binding
+    exp-lambda           calls ???
+    exp-define           calls ???
+    exp-define-syntax    calls ???
+    exp-letrec*          calls ???
+    initial-wrap-and-env calls ...
