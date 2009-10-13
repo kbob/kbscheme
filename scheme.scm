@@ -47,6 +47,15 @@
 	(_ (cdr list) (+ count 1))))
   (_ list 0))
 
+(define (append . lists)
+  (define (_  list lists)
+    (if (null? lists)
+	list
+	(if (null? list)
+	    (_ (car lists) (cdr lists))
+	    (cons (car list) (_ (cdr list) lists)))))
+  (_ '() lists))
+
 (define (reverse list)
   (define (_ list tail)
     (if (null? list)
@@ -97,18 +106,58 @@
 	      (_ (+ i 1)))))
   (list->vector (_ 0)))
 
-(define (_accum-cmp accum cmp obj list)
-  (accum (lambda (x) (cmp x obj)) list))
+  (define (_accum-cmp accum cmp obj list)
+    (accum (lambda (x) (cmp x obj)) list))
 
-(define (assp proc alist)
-  (if (null? alist)
-      #f
-      (if (proc (car (car alist)))
-	  (car alist)
-	  (assp proc (cdr alist)))))
+  (define (remp proc list)
+    (define (_ list result)
+      (if (null? list)
+	  (reverse result)
+	  (if (proc (car list))
+	      (_ (cdr list) result)
+	      (_ (cdr list) (cons (car list) result)))))
+    (_ list '()))
 
-(define (assq obj alist)
-  (_accum-cmp assp eq? obj alist))
+  (define (remove obj list)
+    (_accum-cmp remp equal? obj list))
+
+  (define (remv obj list)
+    (_accum-cmp remp eqv? obj list))
+
+  (define (remq obj list)
+    (_accum-cmp remp eq? obj list))
+
+  (define (memp proc list)
+    (if (null? list)
+	#f
+	(if (proc (car list))
+	    list
+	    (memp proc (cdr list)))))
+
+  (define (member obj list)
+    (_accum-cmp memp equal? obj list))
+
+  (define (memv obj list)
+    (_accum-cmp memp eqv? obj list))
+
+  (define (memq obj list)
+    (_accum-cmp memp eq? obj list))
+
+  (define (assp proc alist)
+    (if (null? alist)
+	#f
+	(if (proc (car (car alist)))
+	    (car alist)
+	    (assp proc (cdr alist)))))
+
+  (define (assoc obj alist)
+    (_accum-cmp assp equal? obj alist))
+
+  (define (assv obj alist)
+    (_accum-cmp assp eqv? obj alist))
+
+  (define (assq obj alist)
+    (_accum-cmp assp eq? obj alist))
 
 (define (fold-left combine nil . lists)
   (define (empties? lists)
@@ -186,8 +235,10 @@
 (define (subst-label sub)
   (car (cdr (cdr (cdr sub)))))
 
+(define *mc* 0)
 (define (make-mark)
-  (list "mark"))
+  (set! *mc* (+ *mc* 1))
+  (cons "mark" *mc*))
 
 (define (mark? obj)
   (if (pair? obj)
@@ -227,6 +278,9 @@
 		  (if (vector? obj)
 		      #t
 		      (bytevector? obj)))))))
+
+(draft-print "Rethink extend-wrap, join-wraps, add-mark, add-subst.")
+(draft-print "Default wrap should be much shorter.")
 
 (define (add-mark mark x)
   (extend-wrap (list mark) x))
@@ -310,7 +364,8 @@
 
 (define (label-binding id label r)
   ; I want or.
-  ; (or (env-lookup r label) (syntax-error ...))
+  ; (or (env-lookup r label)
+  ;     (syntax-error id "displaced lexical"))
   (letrec* ([binding (env-lookup r label)])
 	   (if binding
 	       binding
@@ -413,7 +468,30 @@
   (list 'quote (strip (syntax-car (syntax-cdr x)))))
 
 (define (exp-lambda x r mr)
-  ...)
+  (define new-env (make-environment r))
+  (define (make-arg name)
+    (letrec* ([label (make-label)]
+	      [new-name (make-anonymous-symbol)])
+	     (env-add-binding!
+	      new-env
+	      (make-binding new-name
+			    (binding-lexical)
+			    (binding-immutable)
+			    name))
+	     new-name))
+  (define (traverse-args al)
+    (if (null? al)
+	'()
+	(if (pair? al)
+	    (cons (make-arg (car al)) (list-args cdr al))
+	    (make-arg al))))
+  (define args (syntax-car (syntax-cdr x)))
+  (define body (syntax-cdr (syntax-cdr x)))
+  (define new-args (traverse-args args))
+  0					; XXX
+)
+
+  
 
 (define (exp-define x r mr)
   ...)
@@ -458,65 +536,7 @@
 
 (define syntax->datum strip)
 
-#;(define *wne-cache* '(() ()))
-
-#;(define (initial-wrap-and-env env)
-  (define specials
-    '((quote . exp-quote)
-      (syntax . exp-syntax)
-      (lambda . exp-lambda)
-      (define . exp-define)
-      (define-syntax . exp-define-syntax)
-      (letrec* . exp-letrec*)))
-  (define (choose-binding-type binding)
-    (if (special-form? (binding-value binding))
-	(binding-core)
-	(binding-lexical)))
-  (define (bind-one sym)
-    (letrec* ([sb (assq sym specials)])
-	     (if sb
-		 (make-binding
-		  sym
-		  (binding-core)
-		  (binding-immutable)
-		  (eval (cdr sb) (the-environment)))
-		 (make-binding sym (binding-lexical) (binding-immutable) sym))))
-  (define (wrap-one sym label parent)
-    (cons (make-subst sym (list top-mark) label)
-	  parent))
-  (define (_ frame env)
-    (if (null? frame)
-	(if (null? env)
-	    (list (list top-mark) '())
-	    (_ (car env) (cdr env)))
-	(if (eq? frame (car *wne-cache*))
-	    (cdr *wne-cache*)
-	    (letrec* ([pwne (_ (cdr frame) env)]
-; bind name to itself
-		      [orig-binding (car frame)]
-		      [sym (binding-name orig-binding)]
-		      #;[binding (make-binding sym
-					     ;(choose-binding-type orig-binding)
-					     (binding-lexical)
-					     (binding-immutable)
-					     sym)]
-
-		      [binding (bind-one sym)]
-; use original binding
-#|
- |		      [binding (car frame)]
- |		      [sym (binding-name binding)]
- |#
-; endif
-		      [label (make-label)]
-		      [wrap (wrap-one sym label (car pwne))]
-		      [meta-env (cons (cons label binding) (cdr pwne))]
-		      [wne (cons wrap meta-env)])
-		     (set! *wne-cache* (cons frame wne))
-		     wne))))
-  (_ '() env))
-
-; list of ((env1 . bindings) . (wrap . env2))
+; The wne cache is a list of ((env1 . bindings) . (wrap . env2)),
 ; where env1 is the eval-time env and env2 is the expand-time env.
 
 (define *wne-cache* '())
@@ -546,7 +566,8 @@
        (lambda . exp-lambda)
        (define . exp-define)
        (define-syntax . exp-define-syntax)
-       (letrec* . exp-letrec*))))
+       (letrec* . exp-letrec*)
+       )))
   (define (wrap-one sym label)
 	   (make-subst sym (list top-mark) label))
   (define (bind-one binding label)
@@ -605,6 +626,7 @@ list
 (draft-print (quote abc))
 (draft-print (quote (a b c)))
 (syntax 123)
+(lambda () 0)
 
 #|
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
