@@ -187,7 +187,7 @@ static void eval_library_form(obj_t *form)
     obj_t *namespec = pair_cadr(form);
     AUTO_ROOT(new_lib, find_library(namespec));
     AUTO_ROOT(export_list, pair_cdaddr(form));
-    while (export_list) {
+    while (!is_null(export_list)) {
 	obj_t *name = pair_car(export_list);
 	obj_t *binding = env_lookup(working_env, name);
 	obj_t *value = binding_value(binding);
@@ -227,7 +227,7 @@ void load_libraries(void)
 
 obj_t *r6rs_library(void)
 {
-    if (!r6rs_lib)
+    if (is_null(r6rs_lib))
 	r6rs_lib = find_library_str(L"(rnrs (6))");
     return r6rs_lib;
 }

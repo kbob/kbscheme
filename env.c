@@ -27,7 +27,7 @@ obj_t *join_envs(env_t *an_env, env_t *other_env)
 {
     PUSH_ROOT(an_env);
     AUTO_ROOT(env, other_env);
-    while (an_env) {
+    while (!is_null(an_env)) {
 	other_env = make_pair(pair_car(an_env), other_env);
 	an_env = pair_cdr(an_env);
     }
@@ -71,7 +71,7 @@ obj_t *env_lookup(env_t *env, obj_t *var)
 	if (pair_cdr(env)) {
 	    printf("   FRAME");
 	    obj_t *p = frame;
-	    while (p) {
+	    while (!is_null(p)) {
 		printf_unchecked(" %O: %O", binding_name(pair_car(p)),
 				            binding_value(pair_car(p)));
 		p = pair_cdr(p);

@@ -344,7 +344,7 @@ static obj_t *list_reverse(obj_t *list)
 {
     PUSH_ROOT(list);
     AUTO_ROOT(reversed, NIL);
-    while (list) {
+    while (!is_null(list)) {
 	reversed = make_pair(pair_car(list), reversed);
 	list = pair_cdr(list);
     }
@@ -411,7 +411,7 @@ TEST_EVAL(L"(letrec* ((p\n"
 
 DEFINE_STATIC_SPECIAL_FORM(begin, L"begin")
 {
-    if (pair_cdr(F_SUBJ)) {
+    if (!is_null(pair_cdr(F_SUBJ))) {
 	AUTO_ROOT(first, pair_car(F_SUBJ));
 	EVAL_THEN_GOTO(first, F_ENV,
 		       begin, pair_cdr(F_SUBJ), F_ENV);
@@ -928,7 +928,7 @@ DEFINE_PROC(L"symbol=?")
 {
     obj_t *sym = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p))
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p))
 	if (sym != pair_car(p))
 	    RETURN(make_boolean(false));
     RETURN(make_boolean(true));
@@ -994,100 +994,65 @@ TEST_EVAL(L"(char->integer (integer->char 5000))",
 
 DEFINE_PROC(L"char=?")
 {
-    obj_t *p = F_SUBJ;
-    wchar_t lc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    wchar_t rc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    while (true) {
-	if (!(lc == rc)) {
+    wchar_t lc = character_value(pair_car(F_SUBJ));
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
+	wchar_t rc = character_value(pair_car(p));
+	if (!(lc == rc))
 	    RETURN(make_boolean(false));
-	}
-	if (!p)
-	    break;
 	lc = rc;
-	rc = character_value(pair_car(p));
-	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(L"char<?")
 {
-    obj_t *p = F_SUBJ;
-    wchar_t lc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    wchar_t rc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    while (true) {
-	if (!(lc < rc)) {
+    wchar_t lc = character_value(pair_car(F_SUBJ));
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
+	wchar_t rc = character_value(pair_car(p));
+	if (!(lc < rc))
 	    RETURN(make_boolean(false));
-	}
-	if (!p)
-	    break;
 	lc = rc;
-	rc = character_value(pair_car(p));
-	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(L"char>?")
 {
-    obj_t *p = F_SUBJ;
-    wchar_t lc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    wchar_t rc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    while (true) {
-	if (!(lc > rc)) {
+    wchar_t lc = character_value(pair_car(F_SUBJ));
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
+	wchar_t rc = character_value(pair_car(p));
+	if (!(lc > rc))
 	    RETURN(make_boolean(false));
-	}
-	if (!p)
-	    break;
 	lc = rc;
-	rc = character_value(pair_car(p));
-	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(L"char<=?")
 {
-    obj_t *p = F_SUBJ;
-    wchar_t lc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    wchar_t rc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    while (true) {
-	if (!(lc <= rc)) {
+    wchar_t lc = character_value(pair_car(F_SUBJ));
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
+	wchar_t rc = character_value(pair_car(p));
+	if (!(lc <= rc))
 	    RETURN(make_boolean(false));
-	}
-	if (!p)
-	    break;
 	lc = rc;
-	rc = character_value(pair_car(p));
-	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
 
 DEFINE_PROC(L"char>=?")
 {
-    obj_t *p = F_SUBJ;
-    wchar_t lc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    wchar_t rc = character_value(pair_car(p));
-    p = pair_cdr(p);
-    while (true) {
-	if (!(lc >= rc)) {
+    wchar_t lc = character_value(pair_car(F_SUBJ));
+    obj_t *p;
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
+	wchar_t rc = character_value(pair_car(p));
+	if (!(lc >= rc))
 	    RETURN(make_boolean(false));
-	}
-	if (!p)
-	    break;
 	lc = rc;
-	rc = character_value(pair_car(p));
-	p = pair_cdr(p);
     }
     RETURN(make_boolean(true));
 }
@@ -1175,7 +1140,7 @@ TEST_EVAL(L"(make-string 3 #\\a)",		L"\"aaa\"");
 static size_t list_len(obj_t *list)
 {
     size_t len = 0;
-    while (list) {
+    while (!is_null(list)) {
 	len++;
 	list = pair_cdr(list);
     }
@@ -1187,7 +1152,7 @@ DEFINE_PROC(L"string")
     size_t i, len = list_len(F_SUBJ);
     AUTO_ROOT(p, F_SUBJ);
     obj_t *str = make_string(len, L'\0');
-    for (p = F_SUBJ, i = 0; p; p = pair_cdr(p), i++) {
+    for (p = F_SUBJ, i = 0; !is_null(p); p = pair_cdr(p), i++) {
 	wchar_t wc = character_value(pair_car(p));
 	string_set_char(str, i, wc);
     }
@@ -1220,7 +1185,7 @@ DEFINE_PROC(L"string=?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
 	if (!strings_are_equal(str, pair_car(p)))
 	    RETURN(make_boolean(false));
 	str = pair_car(p);
@@ -1235,7 +1200,7 @@ DEFINE_PROC(L"string<?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
 	if (strings_cmp(str, pair_car(p)) >= 0)
 	    RETURN(make_boolean(false));
 	str = pair_car(p);
@@ -1257,7 +1222,7 @@ DEFINE_PROC(L"string>?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
 	if (strings_cmp(str, pair_car(p)) <= 0)
 	    RETURN(make_boolean(false));
 	str = pair_car(p);
@@ -1273,7 +1238,7 @@ DEFINE_PROC(L"string<=?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
 	if (strings_cmp(str, pair_car(p)) > 0)
 	    RETURN(make_boolean(false));
 	str = pair_car(p);
@@ -1289,7 +1254,7 @@ DEFINE_PROC(L"string>=?")
 {
     obj_t *str = pair_car(F_SUBJ);
     obj_t *p;
-    for (p = pair_cdr(F_SUBJ); p; p = pair_cdr(p)) {
+    for (p = pair_cdr(F_SUBJ); !is_null(p); p = pair_cdr(p)) {
 	if (strings_cmp(str, pair_car(p)) < 0)
 	    RETURN(make_boolean(false));
 	str = pair_car(p);
@@ -1322,11 +1287,11 @@ DEFINE_PROC(L"string-append")
 {
     obj_t *p;
     size_t len = 0;
-    for (p = F_SUBJ; p; p = pair_cdr(p))
+    for (p = F_SUBJ; !is_null(p); p = pair_cdr(p))
 	len += string_len(pair_car(p));
     obj_t *str = make_string(len, L'\0');
     size_t pos = 0;
-    for (p = F_SUBJ; p; p = pair_cdr(p)) {
+    for (p = F_SUBJ; !is_null(p); p = pair_cdr(p)) {
 	obj_t *sub = pair_car(p);
 	size_t sub_len = string_len(sub);
 	string_set_substring(str, pos, sub_len, string_value(sub));
@@ -1359,7 +1324,7 @@ DEFINE_PROC(L"list->string")
     obj_t *str = make_string(len, L'\0');
     obj_t *p;
     size_t pos;
-    for (p = pair_car(F_SUBJ), pos = 0; p; p = pair_cdr(p), pos++)
+    for (p = pair_car(F_SUBJ), pos = 0; !is_null(p); p = pair_cdr(p), pos++)
 	string_set_char(str, pos, character_value(pair_car(p)));
     RETURN(str);
 }
@@ -1417,7 +1382,7 @@ DEFINE_PROC(L"make-vector")
 {
     size_t k = fixnum_value(pair_car(F_SUBJ));
     obj_t *fill = NIL;
-    if (pair_cdr(F_SUBJ))
+    if (!is_null(pair_cdr(F_SUBJ)))
 	fill = pair_cadr(F_SUBJ);
     RETURN(make_vector(k, fill));
 }
@@ -1490,13 +1455,13 @@ DEFINE_PROC(L"apply")
     AUTO_ROOT(args, pair_cdr(F_SUBJ));
     AUTO_ROOT(arglist, NIL);
     AUTO_ROOT(last_arg, NIL);
-    while (args) {
+    while (!is_null(args)) {
 	obj_t *arg;
-	if (pair_cdr(args))
+	if (!is_null(pair_cdr(args)))
 	    arg = make_pair(pair_car(args), NIL);
 	else
 	    arg = pair_car(args);
-	if (arglist)
+	if (!is_null(arglist))
 	    pair_set_cdr(last_arg, arg);
 	else
 	    arglist = arg;

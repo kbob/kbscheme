@@ -7,7 +7,7 @@
 
 typedef struct object obj_t; /* obj_t is abstract and never defined */
 
-#define NIL        ((obj_t *)0)
+#define NIL        ((obj_t *)1)
 
 #define UNSPECIFIED_NAME L"undef"
 #define UNSPECIFIED      (make_symbol_from_C_str(UNSPECIFIED_NAME))

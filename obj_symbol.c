@@ -79,7 +79,7 @@ obj_t *symbol_name(obj_t *symbol)
     assert_in_tospace(symbol);
     assert(is_symbol(symbol));
     AUTO_ROOT(name, fixvec1_get_ptr(symbol, 0));
-    if (!name) {
+    if (is_null(name)) {
 	size_t max_len = 12;
 	ssize_t name_len;
 	wchar_t name_buf[max_len];
@@ -88,7 +88,7 @@ obj_t *symbol_name(obj_t *symbol)
 				L"g%04d", ++gen_name_counter);
 	    assert(0 <= name_len && name_len < max_len);
 	    name = make_string_from_chars(name_buf, name_len);
-	    if (find_symbol(name))
+	    if (!is_null(find_symbol(name)))
 		continue;
 	    /* with lock */ {
 		/* verify symbol still absent */
