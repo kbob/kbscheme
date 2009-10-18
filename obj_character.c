@@ -30,7 +30,7 @@ obj_t *make_character(wchar_t value)
 bool is_character(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &character_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &character_ops;
 }
 
 wchar_t character_value(obj_t *character)

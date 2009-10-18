@@ -106,58 +106,58 @@
 	      (_ (+ i 1)))))
   (list->vector (_ 0)))
 
-  (define (_accum-cmp accum cmp obj list)
-    (accum (lambda (x) (cmp x obj)) list))
+(define (_accum-cmp accum cmp obj list)
+  (accum (lambda (x) (cmp x obj)) list))
 
-  (define (remp proc list)
-    (define (_ list result)
-      (if (null? list)
-	  (reverse result)
-	  (if (proc (car list))
-	      (_ (cdr list) result)
-	      (_ (cdr list) (cons (car list) result)))))
-    (_ list '()))
-
-  (define (remove obj list)
-    (_accum-cmp remp equal? obj list))
-
-  (define (remv obj list)
-    (_accum-cmp remp eqv? obj list))
-
-  (define (remq obj list)
-    (_accum-cmp remp eq? obj list))
-
-  (define (memp proc list)
+(define (remp proc list)
+  (define (_ list result)
     (if (null? list)
-	#f
+	(reverse result)
 	(if (proc (car list))
-	    list
-	    (memp proc (cdr list)))))
+	    (_ (cdr list) result)
+	    (_ (cdr list) (cons (car list) result)))))
+  (_ list '()))
 
-  (define (member obj list)
-    (_accum-cmp memp equal? obj list))
+(define (remove obj list)
+  (_accum-cmp remp equal? obj list))
 
-  (define (memv obj list)
-    (_accum-cmp memp eqv? obj list))
+(define (remv obj list)
+  (_accum-cmp remp eqv? obj list))
 
-  (define (memq obj list)
-    (_accum-cmp memp eq? obj list))
+(define (remq obj list)
+  (_accum-cmp remp eq? obj list))
 
-  (define (assp proc alist)
-    (if (null? alist)
-	#f
-	(if (proc (car (car alist)))
-	    (car alist)
-	    (assp proc (cdr alist)))))
+(define (memp proc list)
+  (if (null? list)
+      #f
+      (if (proc (car list))
+	  list
+	  (memp proc (cdr list)))))
 
-  (define (assoc obj alist)
-    (_accum-cmp assp equal? obj alist))
+(define (member obj list)
+  (_accum-cmp memp equal? obj list))
 
-  (define (assv obj alist)
-    (_accum-cmp assp eqv? obj alist))
+(define (memv obj list)
+  (_accum-cmp memp eqv? obj list))
 
-  (define (assq obj alist)
-    (_accum-cmp assp eq? obj alist))
+(define (memq obj list)
+  (_accum-cmp memp eq? obj list))
+
+(define (assp proc alist)
+  (if (null? alist)
+      #f
+      (if (proc (car (car alist)))
+	  (car alist)
+	  (assp proc (cdr alist)))))
+
+(define (assoc obj alist)
+  (_accum-cmp assp equal? obj alist))
+
+(define (assv obj alist)
+  (_accum-cmp assp eqv? obj alist))
+
+(define (assq obj alist)
+  (_accum-cmp assp eq? obj alist))
 
 (define (fold-left combine nil . lists)
   (define (empties? lists)
@@ -244,8 +244,9 @@
 
 ; markset	----------------------------------
 
-(define (make-markset . marks)
+#;(define (make-markset . marks)
   (apply list marks))
+  (define make-markset list)
 
 (define markset-has-mark? memq)
 
@@ -301,8 +302,8 @@
   (vector-ref wrap 2))
 
 (define (join-wraps w1 w2)
-  (make-wrap (join-marks (wrap-markset w1) (wrap-markset w2))
-             (join-substs (wrap-substset w1) (wrap-substset w2))))
+  (make-wrap (join-marksets (wrap-markset w1) (wrap-markset w2))
+             (join-substsets (wrap-substset w1) (wrap-substset w2))))
 
 ; syntax-object	-----------------------------
 
@@ -320,14 +321,23 @@
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
 (define (id-label id)
+  (notrace 'id-label (syntax-object-expr id) '=>
   (letrec* ([sym (syntax-object-expr id)]
+	    [XXX1 (notrace 'id-label 'sym sym)]
 	    [wrap (syntax-object-wrap id)]
+	    [XXX2-5 (notrace 'id-label 'wrap wrap)]
+	    [XXX2-6 (notrace 'id-label '(length wrap) (length (wrap-substset  wrap)))]
 	    [markset (wrap-markset wrap)]
+	    [XXX3 (notrace 'id-label 'markset markset)]
 	    [substset (wrap-substset wrap)]
 	    [sub (substset-find substset sym markset)])
 	   (if sub
 	       (subst-label sub)
-	       (syntax-error "undefined identifier"))))
+	       (syntax-error id
+			     (string-append
+			      "undefined identifier: "
+			      (symbol->string (syntax-object-expr id)))))))
+  )
 
 (define top-mark (make-mark))
 
@@ -335,9 +345,11 @@
   (markset-has-mark? top-mark (wrap-markset wrap)))
 
 (define (identifier? obj)
+  (notrace 'identifier? (syntax-object-expr obj) '=>
   (if (syntax-object? obj)
       (symbol? (syntax-object-expr obj))
       #f))
+  )
 
 (define (self-evaluating? obj)
   ; I want or.
@@ -354,7 +366,9 @@
 		      (bytevector? obj)))))))
 
 (define (id-binding id r)
+  (notrace 'id-binding (syntax-object-expr id) '=>
   (label-binding id (id-label id) r))
+  )
 
 (define (label-binding id label r)
   ; I want or.
@@ -414,12 +428,13 @@
   (define (exp-identifier id)
     (letrec* ([b (id-binding id r)]
 	      [bt (binding-type b)])
-	     (if (eq? bt (binding-macro))
+	     (notrace 'exp-identifier 'binding-type bt)
+	     (if (eqv? bt (binding-macro))
 		 (exp (exp-macro (binding-value b) x) r mr)
 		 (if (eqv? bt (binding-lexical))
-		     id
+		     (binding-value b)
 		     (syntax-error x "invalid syntax A")))))
- (define (exp-identifier-form x)
+  (define (exp-identifier-form x)
     (letrec* ([b (id-binding (syntax-car x) r)]
 	      [bt (binding-type b)])
 	     (if (eqv? bt (binding-macro))
@@ -430,13 +445,13 @@
 			 (exp-core (binding-value b) x r mr)
 			 (syntax-error x "invalid syntax B"))))))
   (define (exp-pair x)
-    (cons (exp (car x) r mr) (exp (cdr x) r mr)))
+    (cons (exp (syntax-car x) r mr) (exp (syntax-cdr x) r mr)))
   (define (exp-other x)
     (letrec* ([d (strip x)])
 	     (if (self-evaluating? d)
 		 x
 		 (syntax-error x "invalid syntax C"))))
-  (trace 'exp (syntax-object-expr x))
+  (notrace 'exp (syntax-object-expr x))
   ; I want cond.
   (if (identifier? x)
       (exp-identifier x)
@@ -454,6 +469,7 @@
   (p x r mr))
 
 (define (exp-exprs x* r mr)
+  (notrace 'exp-exprs (syntax-object-expr x*))
   (if (null? (syntax-object-expr x*))
       '()
       (cons (exp (syntax-car x*) r mr)
@@ -462,37 +478,79 @@
 (define (exp-quote x r mr)
   (list 'quote (strip (syntax-car (syntax-cdr x)))))
 
+; Get the arg list.
+; Make a fresh anonymous symbol and a fresh label for each.
+; Build a substition set mapping each one to a fresh label.
+; Build list
+;   (list 'lambda new-args splice-in (exp b new-env mr) for b in body)
+
 (define (exp-lambda x r mr)
-  (define new-env (make-environment r))
-  (define (make-arg name)
-    (letrec* ([label (make-label)]
-	      [new-name (make-anonymous-symbol)])
-	     (env-add-binding!
-	      new-env
-	      (make-binding new-name
-			    (binding-lexical)
-			    (binding-immutable)
-			    name))
-	     new-name))
-  (define (traverse-args al)
-    (if (null? al)
-	'()
-	(if (pair? al)
-	    (cons (make-arg (car al)) (list-args cdr al))
-	    (make-arg al))))
-  (define args (syntax-car (syntax-cdr x)))
-  (define body (syntax-cdr (syntax-cdr x)))
-  (define new-args (traverse-args args))
-  0)					; XXX
+  (letrec* ([wrap (syntax-object-wrap x)]
+	    [marks (wrap-markset wrap)]
+	    [XXX (notrace 'marks marks)]
+	    [new-ss '()]
+	    [new-env (make-environment r)]
+	    )
+	    (define (make-arg id)
+	      (letrec* ([sym (syntax-object-expr id)]
+			[label (make-label)]
+			[new-name (make-anonymous-symbol)])
+		       (env-add-binding!
+			new-env
+			(make-binding label
+				      (binding-lexical)
+				      (binding-immutable)
+				      new-name))
+		       (set! new-ss
+			     (cons
+			      (make-subst sym marks label)
+			      new-ss))
+			new-name))
+	    (define (traverse-args al)
+	      (notrace 'traverse-args al '= (syntax-object-expr al))
+	      (if (syntax-null? al)
+		  '()
+		  (if (syntax-pair? al)
+		      (cons (make-arg (syntax-car al))
+			    (traverse-args (syntax-cdr al)))
+		      (make-arg al))))
+	    (define lammie (syntax-car x))
+	    (define args (syntax-car (syntax-cdr x)))
+	    (define new-args (traverse-args args))
+	    (define new-wrap (make-wrap (make-markset) new-ss))
+	    ;(draft-print (list 'new-wrap new-wrap))
+	    ;(draft-print (list 'new-env new-env) 300)
+	    (define body (syntax-cdr (syntax-cdr x)))
+	    (define new-body (exp-exprs (extend-wrap new-wrap body) new-env mr))
+	    (cons lammie (cons new-args new-body))))
+
+(define (exp-plambda x r mr)
+  ; same as lambda except binding-lexical -> binding-pattern
+  ...)
 
 (define (exp-define x r mr)
-  ...)
+  ; name = syntax-cadr x
+  ; add_binding r name undef
+  ; definition = exp syntax-caddr x r mr
+  ; set! r.name definition
+  (letrec* ([name (syntax-car (syntax-cdr x))]
+	    [b (make-binding (syntax-car (syntax-cdr x))
+			     (binding-lexical)
+			     (binding-mutable)
+			     (undef))])
+	   (env-add-binding! b)
+	   (binding-set! b (exp (syntax-car (syntax-cdr (syntax-cdr x)))
+				r
+				mr))))
 
 (define (exp-define-syntax x r mr)
   ...)
 
 (define (exp-letrec* x r mr)
   ...)
+
+(define (syntax-null? x)
+  (null? (syntax-object-expr x)))
 
 (define (syntax-pair? x)
   (pair? (syntax-object-expr x)))
@@ -556,9 +614,10 @@
      '((quote . exp-quote)
        (syntax . exp-syntax)
        (lambda . exp-lambda)
-       (define . exp-define)
+       (plambda . exp-plambda)
+;       (define . exp-define)
        (define-syntax . exp-define-syntax)
-       (letrec* . exp-letrec*)
+;       (letrec* . exp-letrec*)
        )))
   (define (subst-one sym label)
     (make-subst sym (list top-mark) label))
@@ -615,33 +674,40 @@
 			     ss)])
 	   (cons wrap ee)))
 	   
-;(draft-print (initial-wrap-and-env *root-environment*) 10000)
-    
-
-(define (expand form env)
+(define (expandXXX form env)
   (letrec* ([wne (initial-wrap-and-env env)]
 	    [wrap (car wne)]
 	    [meta-env (cdr wne)])
 	   (syntax->datum
 	    (exp (make-syntax-object form wrap) meta-env meta-env))))
 
-123
-list
-(list 1 2 3)
-(draft-print 123)
-(if 1 2 3)
-(draft-print (if 1 2 3))
-(quote abc)
-(draft-print (quote abc))
-(draft-print (quote (a b c)))
-(syntax 123)
-(lambda () 0)
+(define (xp x)
+  (trace 'expand x '=>
+	 (expandXXX x *root-environment*)))
+
+(xp '123)
+(xp 'list)
+(xp '(list 1 2 3))
+;(xp '(draft-print 123))
+(xp '(if 1 2 3))
+;(xp '(draft-print (if 1 2 3)))
+(xp '(quote abc))
+;(xp '(draft-print (quote abc)))
+;(xp '(draft-print (quote (a b c))))
+(xp '(syntax 123))
+(xp '(lambda (a b c) (+ a b) (- b c)))
+;(exit)
 
 #|
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
 ; ; ; Standard syntax
 
 (define-syntax syntax-case
+  (lambda (x)
+    ???))
+
+(define-syntax quasiquote
+  ; see TR355 pp. 25-26.
   (lambda (x)
     ???))
 

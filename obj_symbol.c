@@ -70,7 +70,7 @@ obj_t *make_anonymous_symbol(void)
 bool is_symbol(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &symbol_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &symbol_ops;
 }
 
 obj_t *symbol_name(obj_t *symbol)
@@ -78,7 +78,7 @@ obj_t *symbol_name(obj_t *symbol)
     PUSH_ROOT(symbol);
     assert_in_tospace(symbol);
     assert(is_symbol(symbol));
-    obj_t *name = fixvec1_get_ptr(symbol, 0);
+    AUTO_ROOT(name, fixvec1_get_ptr(symbol, 0));
     if (!name) {
 	size_t max_len = 12;
 	ssize_t name_len;
@@ -93,10 +93,12 @@ obj_t *symbol_name(obj_t *symbol)
 	    /* with lock */ {
 		/* verify symbol still absent */
 		fixvec1_set_ptr(symbol, 0, name);
+		all_symbols_list = make_pair(symbol, all_symbols_list);
 	    }
 	    break;
 	}
     }
+    POP_ROOT(name);
     POP_ROOT(symbol);
     return name;
 }

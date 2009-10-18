@@ -29,7 +29,7 @@ obj_t *make_fixnum(int value)
 bool is_fixnum(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &fixnum_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &fixnum_ops;
 }
 
 int fixnum_value(obj_t *fixnum)

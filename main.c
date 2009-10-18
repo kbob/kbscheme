@@ -7,6 +7,7 @@
 #include "eval.h"
 #include "lib.h"
 #include "load.h"
+#include "main.h"
 #include "mem.h"
 #include "print.h"
 #include "proc.h"
@@ -14,6 +15,8 @@
 #include "roots.h"
 #include "test.h"
 #include "types.h"
+
+const char **main_argv;
 
 static char exec_dir[PATH_MAX + 1];
 
@@ -37,8 +40,9 @@ void init_exec_dir(const char *cmd)
     set_exec_path(exec_dir);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, const char *argv[])
 {
+    main_argv = argv;
     init_exec_dir(argv[0]);
     init_heap();
     init_roots();

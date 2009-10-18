@@ -107,3 +107,10 @@ DEFINE_PROC(L"special-form?")
     obj_t *obj = pair_car(F_SUBJ);
     RETURN(make_boolean(is_procedure(obj) && procedure_is_special_form(obj)));
 }
+
+DEFINE_SPECIAL_FORM(L"plambda")
+{
+    obj_t *params = pair_car(F_SUBJ);
+    obj_t *body = pair_cdr(F_SUBJ);
+    RETURN(make_procedure(body, params, F_ENV));
+}

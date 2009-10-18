@@ -32,5 +32,5 @@ obj_t *make_eof()
 bool is_eof(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &eof_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &eof_ops;
 }

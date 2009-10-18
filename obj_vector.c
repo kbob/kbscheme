@@ -102,7 +102,7 @@ obj_t *make_vector(size_t size, obj_t *fill)
 bool is_vector(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &vector_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &vector_ops;
 }
 
 size_t vector_len(obj_t *obj)

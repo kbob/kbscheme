@@ -84,7 +84,7 @@ bool is_frame(obj_t *obj)
 bool is_long_frame(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &long_frame_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &long_frame_ops;
 }
 
 obj_t *frame_get_parent(obj_t *frame)

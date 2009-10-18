@@ -1236,3 +1236,45 @@ Expansion procedures that manipulate wraps:
     exp-define-syntax    calls ???
     exp-letrec*          calls ???
     initial-wrap-and-env calls ...
+
+----------------------------------
+10/18/2009
+
+Environment vs. meta-environment.
+
+[bc-syntax-case] has two separate environments during expansion,
+"regular" and "meta".  Regular holds core, lexical, and macro
+bindings.  Meta contains macros.  Who holds pattern variables?
+
+[bc-syntax-case] section 11:
+
+     The run-time environment is used to process ordinary expressions
+     whose code will appear in the expander's output, while the meta
+     environment is used to process transformer expressions, e.g., on
+     the right-hand sides of letrec-syntax bindings, which are
+     evaluated and used at expansion time.  The difference between the
+     run-time and meta environments is that the meta environment does
+     not contain lexical variable bindings, since these bindings are
+     not available when the transformer is evaluated and used.
+
+The most interesting use of the environments is in exp-letrec-syntax.
+
+    (define exp-letrec-syntax
+      (lambda (x r mr)
+	(syntax-case x ()
+	  [(_ ((kwd expr)) body)
+	   (let ([label (make-label)])
+	     (let ([b (make-binding 'macro
+				    (eval (exp (add-subst #'kwd label #'expr)
+					       mr mr)))])
+	       (exp (add-subst #'kwd label #'body)
+		    (extend-env label b r)
+		    (extend-env label b mr))))])))
+   
+The macro name's binding is the expansion of the macro's body with
+both r and mr set to mr.  That binding is pushed onto both r and mr
+while expanding the letrec-syntax form's body.  So macros defined
+in the body have access to the defined macro, and so do expressions.
+
+Who holds pattern variables?
+

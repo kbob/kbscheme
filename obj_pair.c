@@ -18,7 +18,7 @@ extern obj_t *make_pair(obj_t *car, obj_t *cdr)
 bool is_pair(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &pair_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &pair_ops;
 }
 
 obj_t *pair_car(obj_t *pair)

@@ -1083,8 +1083,8 @@
 ;   delete-file
 
     ; From (rnrs programs (6))
-;   command-line			; r6rs-lib 10, Command-line access
-;   exit				;              and exit values
+    command-line			; r6rs-lib 10, Command-line access
+    exit				;              and exit values
 
     ; From (rnrs arithmetic fixnums (6))
     fixnum?
@@ -1305,7 +1305,7 @@
 	  (rnrs io ports (6))
 	; (rnrs io simple (6))
 	; (rnrs files (6))
-	; (rnrs programs (6))
+	  (rnrs programs (6))
 	  (rnrs arithmetic fixnums (6))
 	; (rnrs arithmetic flonums (rnrs 6)) (6))
 	; (rnrs arithmetic bitwise (rnrs 6)) (6))

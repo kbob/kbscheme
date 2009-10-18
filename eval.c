@@ -227,7 +227,7 @@ obj_t *eval_frame(obj_t *frame)
 {
     FRAME = frame;
     obj_t *value = NIL;
-    while (FRAME) {
+    while (!is_null(FRAME)) {
 	/* XXX mix in setjmp() and a signal flag here. */
 #if EVAL_TRACE
 	printf_unchecked("    %ls %.56O\n", block_name(F_CONT, F_ENV), F_SUBJ);

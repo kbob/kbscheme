@@ -153,7 +153,7 @@ obj_t *make_C_xformer_proc(C_procedure_t *code, obj_t *arglist, obj_t *env)
 bool is_procedure(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &proc_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &proc_ops;
 }
 
 bool procedure_is_C(obj_t *proc)

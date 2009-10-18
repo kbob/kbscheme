@@ -18,7 +18,7 @@ extern obj_t *make_syntax(obj_t *expr, obj_t *wrap)
 bool is_syntax(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &syntax_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &syntax_ops;
 }
 
 obj_t *syntax_expr(obj_t *syntax)

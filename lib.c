@@ -54,7 +54,7 @@ obj_t *library_namespec(obj_t *lib)
 
 static bool lists_are_equiv(obj_t *a, obj_t *b)
 {
-    while (a && b) {
+    while (!is_null(a) && !is_null(b)) {
 	obj_t *car_a = pair_car(a);
 	obj_t *car_b = pair_car(b);
 	if (car_a != car_b &&
@@ -67,13 +67,13 @@ static bool lists_are_equiv(obj_t *a, obj_t *b)
 	a = pair_cdr(a);
 	b = pair_cdr(b);
     }
-    return !a && !b;
+    return is_null(a) && is_null(b);
 }
 
 static obj_t *lookup_library(obj_t *namespec)
 {
     obj_t *p;
-    for (p = library_list; p; p = pair_cdr(p)) {
+    for (p = library_list; !is_null(p); p = pair_cdr(p)) {
 	obj_t *lib = pair_car(p);
 	if (lists_are_equiv(namespec, library_namespec(lib)))
 	    return lib;
@@ -84,7 +84,7 @@ static obj_t *lookup_library(obj_t *namespec)
 obj_t *find_library(obj_t *namespec_list)
 {
     obj_t *lib = lookup_library(namespec_list);
-    if (!lib) {
+    if (is_null(lib)) {
 	lib = make_library(namespec_list);
 	PUSH_ROOT(lib);
 	library_list = make_pair(lib, library_list);
@@ -166,7 +166,7 @@ static void eval_library_form(obj_t *form)
 
     AUTO_ROOT(working_env, NIL);
     AUTO_ROOT(import_list, pair_cdadddr(form));
-    while (import_list) {
+    while (!is_null(import_list)) {
 	/*
          * Not implementing full import matching - import spec must
          * exactly match library name, and full namespace is imported.
@@ -179,7 +179,7 @@ static void eval_library_form(obj_t *form)
     }
     POP_ROOT(import_list);
     AUTO_ROOT(body, pair_cddddr(form));
-    while (body) {
+    while (!is_null(body)) {
 	(void) eval(pair_car(body), working_env);
 	body = pair_cdr(body);
     }

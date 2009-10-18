@@ -693,13 +693,12 @@ static obj_t *parse(instream_t *in)
 	    }
 	    if (pp->p_action)
 		stack_push(&actions, *pp->p_action);
-	    
 	} else {
 	    if (sym == TOK_EOF)
 		break;
 	    /* XXX raise an exception here. */
 	    assert(sym == tok && "syntax error");
-	    if (yylval)
+	    if (!is_null(yylval))
 		stack_push(&actions, yylval);
 	    if (!stack_is_empty(actions) &&
 		fixnum_value(stack_top(stack)) == TOK_EOF)
@@ -718,7 +717,7 @@ static obj_t *build_vector(obj_t *list)
     PUSH_ROOT(list);
     obj_t *p = list;
     size_t i, size = 0;
-    while (p) {
+    while (!is_null(p)) {
 	size++;
 	p = pair_cdr(p);
     }
@@ -737,7 +736,7 @@ static obj_t *build_bytevec(obj_t *list)
     PUSH_ROOT(list);
     obj_t *p = list;
     size_t i, size = 0;
-    while (p) {
+    while (!is_null(p)) {
 	size++;
 	p = pair_cdr(p);
     }
@@ -813,7 +812,7 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
     assert(stack_is_empty(vstack));
 
     bool success = false;
-    if (reg) {
+    if (!is_null(reg)) {
 	assert(pair_cdr(reg) == NIL);
 	*obj_out = pair_car(reg);
 	success = true;

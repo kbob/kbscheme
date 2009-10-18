@@ -49,7 +49,7 @@ obj_t *make_string_from_chars(const wchar_t *value, size_t len)
 bool is_string(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &string_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &string_ops;
 }
 
 size_t string_len(obj_t *string)

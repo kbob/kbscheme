@@ -91,7 +91,7 @@ obj_t *make_bytevector(size_t size, byte_t fill)
 bool is_bytevector(obj_t *obj)
 {
     assert_in_tospace(obj);
-    return obj && OBJ_MEM_OPS(obj) == &bytevector_ops;
+    return !is_null(obj) && OBJ_MEM_OPS(obj) == &bytevector_ops;
 }
 
 size_t bytevector_len(obj_t *obj)
