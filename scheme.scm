@@ -428,7 +428,6 @@
   (define (exp-identifier id)
     (letrec* ([b (id-binding id r)]
 	      [bt (binding-type b)])
-	     (notrace 'exp-identifier 'binding-type bt)
 	     (if (eqv? bt (binding-macro))
 		 (exp (exp-macro (binding-value b) x) r mr)
 		 (if (eqv? bt (binding-lexical))
@@ -695,7 +694,7 @@
 ;(xp '(draft-print (quote abc)))
 ;(xp '(draft-print (quote (a b c))))
 (xp '(syntax 123))
-(xp '(lambda (a b c) (+ a b) (- b c)))
+(xp '(lambda (a b) (cons b a)))
 ;(exit)
 
 #|

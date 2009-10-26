@@ -1270,7 +1270,7 @@ The most interesting use of the environments is in exp-letrec-syntax.
 	       (exp (add-subst #'kwd label #'body)
 		    (extend-env label b r)
 		    (extend-env label b mr))))])))
-   
+
 The macro name's binding is the expansion of the macro's body with
 both r and mr set to mr.  That binding is pushed onto both r and mr
 while expanding the letrec-syntax form's body.  So macros defined
@@ -1278,3 +1278,125 @@ in the body have access to the defined macro, and so do expressions.
 
 Who holds pattern variables?
 
+Pattern variables certainly aren't needed at eval time -- they've
+already been replaced long before.  They're needed at expansion
+time when syntax replaces them.  So I guess they go into meta.
+
+I think the next question is, to what is a pattern variable bound?  If
+there's no ellipsis, it's bound to the form that it matches.  If there
+is an ellipsis, then it's bound to <matched-form, ellipsis-count>.
+
+[Tr356], section 4, paragraph 2:
+
+     For pattern variable names, [the compile-time environment] holds
+     the nesting depths, i.e., the number of levels of nested ellipses
+     by which the pattern variable was followed.
+
+So let's write something that parses patterns and produces pattern bindings.
+
+For concreteness, a pattern binding would be
+    name = (label)
+    type = BT_PATTERN
+    mutable = no
+    value = (cons ellipsis-count list-of-values)
+
+----------------------------------
+10/20/2009
+
+Pattern matcher.
+
+def match(pat, form):
+    # return True/False, env frame
+    if pattern is null and form is null:
+        return env
+    if pattern is '_':
+       return True, {}
+    if pattern in literals:
+       return form == pattern, {}
+    if pattern is symbol:
+       return True, env + {pattern: (ellipsis-count, form)}
+    if pattern is pair and (cadr pattern is '...':
+       return match(pat, form, ellipsis_count+1) + (
+    if pattern is pair:
+       return match(
+
+
+pattern = (a ... b)
+form = (1 2 3)
+bind a: 1, 2
+     b: 3
+
+    if (cadr pattern) == '...':
+        bind (car pattern) -> (reverse (cdr (reverse (cdr form))))
+
+----------------------------------
+10/25/2009
+
+This generates a syntax error when expanded.
+
+(define-syntax my-macro
+  (lambda (x)
+    (syntax-case x ()
+      [((a ...) ...)
+       (syntax (a ...))])))
+
+The problem is that a in the pattern is followed by two ellipses,
+but a in the template (argument to syntax) is followed by one.
+This is legal.
+
+       (syntax (b ... ...))])))
+
+"For a pattern variable followed by an ellipsis, the generated name is
+bound to a list of the corresponding forms; for two levels of
+ellipses, a list of lists of the corresponding forms; and so on."
+([tr256], page 28)
+
+I think it also needs a count of the number of ellipses.
+
+----
+10:30 PM
+
+I've written a pattern matcher in Scheme.  It runs under Chicken
+Scheme.  I can match a pattern and build a (simple linked-list)
+environment that has all the pattern variables bound.  The value of a
+pattern variable is (<level> . <list-of-values>).  <level> is the
+number of nested ellipses following the variable, and <list-of-values>
+is what it says.
+
+For example, if
+    pattern = (_ (x y ...) ...)
+    form    = (m (a (b c) (d e f)))
+then
+    x is bound to (1 . (a b d))
+    y is bound to (2 . (() (c) (e f)))
+which makes sense.
+
+Aside from vectors, this recognizes all the patterns of r6rs syntax-case.
+
+However, it doesn't do any alpha-substitution, and I'm convinced I
+need to use ribbed environments.  So that's coming.
+
+Ten minutes later, I have two answers.
+
+vectors:
+   [(and (vector? pattern) (vector? form))
+    (_ (vector->list form) (vector->list pattern) ...)]
+
+environments:
+  match constructs one rib.  So it's easy to prepend it to a ribbed
+  environment after it's constructed.
+
+I still need to use real binding objects instead of cons cells,
+but that's a localized change.
+
+[later] Okay, vectors work.
+
+[later] Okay, bindings work.
+
+Ribbed environments will be in match's caller.
+
+The form is a syntax object, though.  So I'll need to sprinkle magic
+unwrapping dust throughout.  Nonetheless, progress has been made.
+
+[later, 1:10 AM] magic unwrapping dust has been sprinkled.  Time
+to commit it to git.
