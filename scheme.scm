@@ -113,9 +113,10 @@
   (define (_ list result)
     (if (null? list)
 	(reverse result)
-	(if (proc (car list))
-	    (_ (cdr list) result)
-	    (_ (cdr list) (cons (car list) result)))))
+	(_ (cdr list)
+	   (if (proc (car list))
+	       result
+	       (cons (car list) result)))))
   (_ list '()))
 
 (define (remove obj list)
@@ -447,6 +448,7 @@
     (cons (exp (syntax-car x) r mr) (exp (syntax-cdr x) r mr)))
   (define (exp-other x)
     (letrec* ([d (strip x)])
+	     (notrace 'exp-other (syntax-object-expr x))
 	     (if (self-evaluating? d)
 		 x
 		 (syntax-error x "invalid syntax C"))))
@@ -457,7 +459,7 @@
       (if (identifier-form? x)
 	  (exp-identifier-form x)
 	  (if (syntax-pair? x)
-	      (exp-pair x)
+	      (exp-exprs x r mr)
 	      (exp-other x)))))
 
 (define (exp-macro p x)
@@ -682,19 +684,23 @@
 
 (define (xp x)
   (trace 'expand x '=>
-	 (expandXXX x *root-environment*)))
+	 (expandXXX x *root-environment*))
+  (newline))
 
-(xp '123)
-(xp 'list)
-(xp '(list 1 2 3))
-;(xp '(draft-print 123))
-(xp '(if 1 2 3))
-;(xp '(draft-print (if 1 2 3)))
-(xp '(quote abc))
-;(xp '(draft-print (quote abc)))
-;(xp '(draft-print (quote (a b c))))
+(define (xpe x)
+  (letrec* ([v (trace 'expand x '=>
+		      (expandXXX x *root-environment*))])
+	   (trace 'eval v '=> (eval v *root-environment*))
+	   (newline)))
+
+(xpe '123)
+(xpe 'list)
+(xpe '(list 1 2 3))
+(xpe '(if 1 2 3))
+(xpe '(quote abc))
 (xp '(syntax 123))
-(xp '(lambda (a b) (cons b a)))
+(xpe '(lambda (a b) (cons b a)))
+(xpe '((lambda (a b) (cons b a)) 1 2))
 ;(exit)
 
 #|

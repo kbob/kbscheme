@@ -28,7 +28,8 @@ obj_t *make_binding(obj_t         *name,
 		    obj_t         *value)
 {
     assert_in_tospace(name);
-    assert(type == BT_CORE || type == BT_LEXICAL || type == BT_MACRO);
+    assert(type == BT_CORE || type == BT_LEXICAL ||
+	   type == BT_MACRO || type == BT_PATTERN);
     assert(mutability == M_MUTABLE || mutability == M_IMMUTABLE);
     assert_in_tospace(value);
     PUSH_ROOT(name);

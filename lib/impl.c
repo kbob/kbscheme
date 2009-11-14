@@ -2,6 +2,8 @@
 #include "proc.h"
 #include "types.h"
 
+#include <stdio.h>			/* XXX */
+
 LIBRARY(L"(implementation)");
 
 DEFINE_PROC(L"make-binding")
@@ -56,6 +58,11 @@ DEFINE_PROC(L"binding-macro")
     RETURN(make_fixnum(BT_MACRO));
 }
 
+DEFINE_PROC(L"binding-pattern")
+{
+    RETURN(make_fixnum(BT_PATTERN));
+}
+
 DEFINE_PROC(L"binding-mutable")
 {
     RETURN(make_fixnum(M_MUTABLE));
@@ -108,9 +115,21 @@ DEFINE_PROC(L"special-form?")
     RETURN(make_boolean(is_procedure(obj) && procedure_is_special_form(obj)));
 }
 
+DEFINE_PROC(L"transformer?")
+{
+    obj_t *obj = pair_car(F_SUBJ);
+    RETURN(make_boolean(is_procedure(obj) && procedure_is_xformer(obj)));
+}
+
 DEFINE_SPECIAL_FORM(L"plambda")
 {
     obj_t *params = pair_car(F_SUBJ);
     obj_t *body = pair_cdr(F_SUBJ);
     RETURN(make_procedure(body, params, F_ENV));
+}
+
+DEFINE_PROC(L"newline")
+{
+    printf("\n");
+    RETURN(UNSPECIFIED);
 }

@@ -183,7 +183,7 @@ DEFINE_EXTERN_BLOCK(b_accum_operator)
     obj_t *proc = VALUE;
     obj_t *args = pair_cdr(F_SUBJ);
     assert(is_procedure(proc));
-    assert(!(procedure_is_xformer(proc)));
+    //assert(!(procedure_is_xformer(proc)));
     if (procedure_is_special_form(proc) || is_null(args))
 	return apply_procedure(proc, args);
     PUSH_ROOT(proc);

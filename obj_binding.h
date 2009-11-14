@@ -6,7 +6,8 @@
 typedef enum binding_type {
     BT_CORE,
     BT_LEXICAL,
-    BT_MACRO
+    BT_MACRO,
+    BT_PATTERN
 } binding_type_t;
 
 typedef enum mutability {
