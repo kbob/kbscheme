@@ -1400,3 +1400,56 @@ unwrapping dust throughout.  Nonetheless, progress has been made.
 
 [later, 1:10 AM] magic unwrapping dust has been sprinkled.  Time
 to commit it to git.
+
+----------------------------------
+11/16/2009
+
+Spent 11/14 sprinkling more magic unwrapping dust.  I think it's
+pretty close now.
+
+Now I'm looking at implementing the syntax keyword.  syntax expands a
+template, substituting pattern variables from the environment and
+expanding ellipses.
+
+Here are the constraints on ellipses that syntax needs to enforce.
+
+  Let S be a subtemplate preceding an ellipsis.
+  Label each pattern variable V in S with the number of ellipses following it.
+  If V.depth > ellipsis count,
+    raise a syntax violation, "not enough ellipses".
+  For i in 1 to V.depth,
+    If the ellipsis already has a repeat count and it's different,
+       raise a syntax violation, "ellipsis count mismatch".
+    Label following ellipsis i with repeat count matching V's at that depth.
+  If any ellipses are unlabeled, raise a syntax violation, "too many ellipses".
+
+I feel like that should be intermingled with the actual expansion process.
+
+Pseudo Pythonscheme...
+
+    def expand(tmpl, pos=0, depth=0):
+	if template is a pattern variable:
+	    if v.depth > depth:
+		raise SyntaxViolation('not enough ellipses')
+	    return v[pos]	# sort of...
+	if template is a scalar:
+	    return template
+	if (and (pair? tmpl) (free-identifier=? (car tmpl) '...)):
+	    unless (and (pair (cdr tmpl)) (null? cddr tmpl)):
+		raise SyntaxViolation('misplaced ellipsis')
+	    return expand_no_ellipses((cadr tmpl), pos, depth)
+	if (and (pair? tmpl)
+		(pair? (cdr tmpl))
+		(free-identifier=? (cadr tmpl) '...))
+	    out = []
+	    subt = (car tmpl)
+	    for subpos in range((repeat_count subt)):
+		out.append(expand(subt, subpos, depth + 1))
+	    out.append(expand (cddr tmpl, pos, depth))
+	    return out
+	if (pair? tmpl):
+	    return (cons (expand (car tmpl) pos depth)
+	    	   	 (expand (cdr tmpl) pos depth)
+
+So there it is.  I have an algorithm.  Now I need to translate it
+into scheme and debug it.

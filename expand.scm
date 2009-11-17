@@ -40,7 +40,9 @@
 (define (make-binding name type mutability value)
   (cons name value))
 
-(define (binding-immutable) 1)
+(define (binding-immutable) 0)
+(define (binding-mutable) 1)
+(define (binding-lexical) 1)
 (define (binding-pattern) 3)
 
 ; trace		----------------------------------
@@ -219,6 +221,9 @@
 (define (syntax-pair? obj)
   (and (syntax-object? obj) (pair? (syntax-object-expr obj))))
 
+(define (syntax-null? obj)
+  (and (syntax-object? obj) (null? (syntax-object-expr obj))))
+
 (define (syntax-car x)
   (extend-wrap
    (syntax-object-wrap x)
@@ -268,32 +273,58 @@
 
 #;(free-identifier=? (make-syntax-object 'a #f) (make-syntax-object 'b #f))
 
-; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
+; environment	-----------------------------
 
-#;(define (memfree-ident= i a)
-  (memp (lambda (x) (free-identifier=? i x))
-	a))
+(define (make-environment parent)
+  (cons '() parent))
+
+(define env-bindings car)
+(define env-parent cdr)
+(define env-set-bindings! set-car!)
+
+(define (push-environment bindings env)
+  (cons bindings env))
+
+(define (binding-name binding)
+  (car binding))
+
+(define (binding-value binding)
+  (cdr binding))
+
+(define (env-add-binding! env binding)
+  (env-set-bindings! env (cons binding (env-bindings env))))
+
+(define (env-lookup env name)
+  (define (_ seg env)
+    (if (null? seg)
+	(if (null? env)
+	    #f
+	    (_ (car env) (cdr env)))
+	(let ([binding (car seg)])
+	  (if (eq? (binding-name binding) name)
+	      binding
+		     (_ (cdr seg) env)))))
+  (_ '() env))
 
 (define (ext-env name value env)
   (cons (make-binding name (binding-pattern) (binding-immutable) value)
 	env))
+
+; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
 
 (define (merge-envs head-env tail-env)
   (notrace 'merge-envs head-env tail-env)
   (if (null? head-env)
       tail-env
       (let* ([newn (caar head-env)]
-	     [newl (cadar head-env)]
+	     [level (cadar head-env)]
 	     [newv (cddar head-env)]
 	     [oldn (caar tail-env)]
-	     #;[oldl (cadar tail-env)]
 	     [oldv (cddar tail-env)]
 	     [mrgv (cons newv oldv)]
-	     [mrga (cons newn (cons newl mrgv))])
+	     [mrga (cons newn (cons level mrgv))])
 	(notrace 'merge-envs newn oldn)
-	#;(notrace 'merge-envs newl oldl)
 	(assert (eq? newn oldn))
-	;(assert (eqv? newl oldl))
 	(cons mrga (merge-envs (cdr head-env) (cdr tail-env))))))
 
 #;(write (merge-envs '((a 0 . x) (b 0 . y))
@@ -399,88 +430,96 @@
       ])
     )
     )
-
+  (notrace 'match (sox pattern) (sox form) literals 'env)
   (_ pattern form env 0 #t))
 
-(define (strip x)
-  (if (syntax-object? x)
-      (if (top-marked? (syntax-object-wrap x))
-	  (syntax-object-expr x)
-	  (strip (syntax-object-expr x)))
-      (if (pair? x)
-	  (let ([a (strip (car x))]
-		[d (strip (cdr x))])
-	    (if (and (eq? a (car x)) (eq? d (cdr x)))
-		x
+(define (syntax->datum syntax-object)
+  (if (syntax-object? syntax-object)
+      (if (top-marked? (syntax-object-wrap syntax-object))
+	  (syntax-object-expr syntax-object)
+	  (syntax->datum (syntax-object-expr syntax-object)))
+      (if (pair? syntax-object)
+	  (let ([a (syntax->datum (car syntax-object))]
+		[d (syntax->datum (cdr syntax-object))])
+	    (if (and (eq? a (car syntax-object)) (eq? d (cdr syntax-object)))
+		syntax-object
 		(cons a d)))
-	  ; XXX handle vector too
-	  x)))
+	  (if (vector? syntax-object)
+	      (let* ([l (vector->list syntax-object)]
+		     [s (syntax->datum l)])
+		(if (eq? s l)
+		    l
+		    (list->vector s)))
+	      syntax-object))))
+
+(define (datum->syntax template-id datum)
+  (make-syntax-object datum (syntax-object-wrap template)))
 
 (define (null-wrap x)
   (make-syntax-object x
 		      (make-wrap (make-markset top-mark) (make-substset))))
 
-#;(write (strip (match (null-wrap '(_ a k b))
-	      (null-wrap '(m 3 k 4))
-	      '(k)
-	      '(boo))))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '(_ a k b))
-			      (null-wrap '(m 3 k 4))
-			      '(k)
-			      '(boo)))
+(write (syntax->datum (match (null-wrap '(_ a k b))
+			     (null-wrap '(m 3 k 4))
+			     '(k)
+			     '(boo))))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '(_ a k b))
+				      (null-wrap '(m 3 k 4))
+				      '(k)
+				      '(boo)))
 		'((a . (0 . 3)) (b . (0 . 4)) boo)))
 
-#;(write (strip (match (null-wrap '(_ a ...))
-		     (null-wrap '(m x y z))
-		     '()
-		     '((boo . (0 #t))))))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '(_ a ...))
-			      (null-wrap '(m x y z))
-			      '()
-			      '((boo . (0 . #t)))))
+(write (syntax->datum (match (null-wrap '(_ a ...))
+			     (null-wrap '(m x y z))
+			     '()
+			     '((boo . (0 #t))))))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '(_ a ...))
+				      (null-wrap '(m x y z))
+				      '()
+				      '((boo . (0 . #t)))))
 		'((a . (1 . (x y z))) (boo . (0 . #t)))))
 
-#;(write (strip (match (null-wrap '(_ a ...))
-		     (null-wrap '(m x y z))
-		     '()
-		     'boo)))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '(_ a ...))
-			      (null-wrap '(m x y z))
-			      '()
-			      '()))
+(write (syntax->datum (match (null-wrap '(_ a ...))
+			     (null-wrap '(m x y z))
+			     '()
+			     'boo)))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '(_ a ...))
+				      (null-wrap '(m x y z))
+				      '()
+				      '()))
 		'((a . (1 . (x y z))))))
 
-#;(write (strip (match (null-wrap '(_ a ... b))
-		     (null-wrap '(m x y z w))
-		     '()
-		     '((boo . (0 . #t))))))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '(_ a ... b))
-			      (null-wrap '(m x y z w))
-			      '()
-			      '((boo . (0 . #t)))))
+(write (syntax->datum (match (null-wrap '(_ a ... b))
+			     (null-wrap '(m x y z w))
+			     '()
+			     '((boo . (0 . #t))))))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '(_ a ... b))
+				      (null-wrap '(m x y z w))
+				      '()
+				      '((boo . (0 . #t)))))
 		'((a . (1 . (x y z))) (b . (0 . w)) (boo . (0 . #t)))))
 
-#;(write (strip (match (null-wrap '(_ k (x y ...) ...))
-		     (null-wrap '(m k (a) (b c) (d e f)))
-		     '(k)
-		     '(boo))))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '(_ k (x y ...) ...))
-			      (null-wrap '(m k (a) (b c) (d e f)))
-			      '(k)
-			      '(boo)))
+(write (syntax->datum (match (null-wrap '(_ k (x y ...) ...))
+			     (null-wrap '(m k (a) (b c) (d e f)))
+			     '(k)
+			     '(boo))))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '(_ k (x y ...) ...))
+				      (null-wrap '(m k (a) (b c) (d e f)))
+				      '(k)
+				      '(boo)))
 		'((x 1 a b d) (y 2 () (c) (e f)) boo)))
 	
-#;(write (strip (match (null-wrap '#(_ x ... z))
-		     (null-wrap '#(m a b c))
-		     '()
-		     '(boo))))
-#;(newline)
-(assert (equal? (strip (match (null-wrap '#(_ x ... z))
+(write (syntax->datum (match (null-wrap '#(_ x ... z))
+			     (null-wrap '#(m a b c))
+			     '()
+			     '(boo))))
+(newline)
+(assert (equal? (syntax->datum (match (null-wrap '#(_ x ... z))
 			      (null-wrap '#(m a b c))
 			      '()
 			      '(boo)))
@@ -488,27 +527,52 @@
 
 ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
 
+(define (exp-syntax x r mr)
+  walk tree.  For each symbol, if it's in mr,
+  substitute its bound value.
+  
+)
+
+; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
+
+(define (XXeval expr env)
+  (trace 'eval expr env '=>
+	 (cond
+	  [(eq? expr #t) #t]
+	  [else (eval expr (null-environment 5))])))
+
 (define (exp-syntax-case x r mr)
-  (let ([expr (syntax-cadr x)]
-	[literals (syntax-caddr x)]
+  (trace 'exp-syntax-case (sox x) 'r 'mr)
+  (assert (syntax-object? x))
+  (assert (eq? (sox (syntax-car x)) 'syntax-case))
+  (let* ([expr (binding-value (env-lookup e 'x))]
+	[literals (syntax-object-expr (syntax-caddr x))]
 	[clauses (syntax-cdddr x)])
     (define (_ clauses)
-      (if (null? clauses)
-	  (syntax-error "...")
+      (if (syntax-null? clauses)
+	  (syntax-error "syntax-case: no pattern matched")
 	  (let* ([clause (syntax-car clauses)]
-		 [pattern (syntax-object-expr (syntax-car clause))]
+		 [pattern (syntax-car clause)]
 		 [has-fender (pair? (syntax-cddr clause))]
-		 [fender (if has-fender (syntax-cadr clause) (lambda () #f))]
+		 [fender (if has-fender (syntax-cadr clause) '#t)]
 		 [out-expr ((if has-fender syntax-caddr syntax-cadr) clause)]
-		 [e (match pattern x literals '())]
-		 [ee (cons e mr)])
-	    (if (and e (eval fender ee))
-		(eval out-expr ee)
+		 [e (match pattern expr literals '())]
+		 [ee (push-environment e mr)])
+	    (trace 'Kilroy)
+	    (if (and e (XXeval fender ee))
+		(XXeval (syntax-object-expr out-expr) ee)
 		(_ (syntax-cdr clauses))))))
     (_ clauses)))
 		    
-(write (exp-syntax-case (null-wrap '(syntax-case x '() ((_) #t)))
-			'()
+
+(define b (make-binding 'x
+			(binding-lexical)
+			(binding-mutable)
+			(null-wrap '(foo))))
+(set! e (make-environment '()))
+(env-add-binding! e b)
+(write (exp-syntax-case (null-wrap '(syntax-case x (l i t) ((_) "foo")))
+			e
 			'()))
 (newline)
 (exit)
@@ -522,7 +586,7 @@
 	    [has-fender (pair? (cddr rule))]
 	    [fender (and has-fender (cadr rule))]
 	    [out-expr ((if has-fender caddr cadr) rule)]
-	    [e (strip (match (caar rules) form literals '()))])
+	    [e (syntax->datum (match (caar rules) form literals '()))])
 	(if (and e (or (not has-fender) (eval fender e)))
 	    (list out-expr e)
 	    (find-rule form (cdr rules) name literals)))))

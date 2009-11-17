@@ -211,7 +211,7 @@
 
 (define (syntax-error object message)
   (draft-print (list message object))
-  (error #f "~a ~s" message (strip object)))
+  (error #f "~a ~s" message (syntax->datum object)))
 
 ; label		----------------------------------
 
@@ -398,7 +398,7 @@
 ; My special forms:
 ;       define		?
 ;       define-syntax	?
-;       quote		strip
+;       quote		syntax->datum
 ;       lambda		extend env
 ;       letrec*		extend env
 ;       if		expand
@@ -407,7 +407,7 @@
 
 ; Dybvig's core forms:
 ;     quote
-;y       calls strip
+;y       calls syntax->datum
 ;     if
 ;y       calls exp
 ;     lambda
@@ -447,7 +447,7 @@
   (define (exp-pair x)
     (cons (exp (syntax-car x) r mr) (exp (syntax-cdr x) r mr)))
   (define (exp-other x)
-    (letrec* ([d (strip x)])
+    (letrec* ([d (syntax->datum x)])
 	     (notrace 'exp-other (syntax-object-expr x))
 	     (if (self-evaluating? d)
 		 x
@@ -477,7 +477,7 @@
 	    (exp-exprs (syntax-cdr x*) r mr))))
 
 (define (exp-quote x r mr)
-  (list 'quote (strip (syntax-car (syntax-cdr x)))))
+  (list 'quote (syntax->datum (syntax-car (syntax-cdr x)))))
 
 ; Get the arg list.
 ; Make a fresh anonymous symbol and a fresh label for each.
@@ -571,21 +571,24 @@
 (define (exp-syntax x r mr)
   (syntax-car (syntax-cdr x)))
 
-(define (strip x)
+(define (syntax->datum x)
   (if (syntax-object? x)
       (if (top-marked? (syntax-object-wrap x))
 	  (syntax-object-expr x)
-	  (strip (syntax-object-expr x)))
+	  (syntax->datum (syntax-object-expr x)))
       (if (pair? x)
-	  (letrec* ([a (strip (car x))]
-		    [d (strip (cdr x))])
+	  (letrec* ([a (syntax->datum (car x))]
+		    [d (syntax->datum (cdr x))])
 		   (if (if (eq? a (car x)) (eq? d (cdr x)) #f)
 		       x
 		       (cons a d)))
-	  ; XXX handle vector too
-	  x)))
-
-(define syntax->datum strip)
+	  (if (vector? x)
+	      (letrec* ([l (vector->list x)]
+			[s (syntax->datum l)])
+		       (if (eq? s l)
+			   l
+			   (list->vector s)))
+	      x))))
 
 ; The sne cache is a list of ((env1 . bindings) . (substset . env2)),
 ; where env1 is the eval-time env and env2 is the expand-time env.
