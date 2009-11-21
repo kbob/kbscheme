@@ -1434,10 +1434,12 @@ Pseudo Pythonscheme...
 	    return v[pos]	# sort of...
 	if template is a scalar:
 	    return template
+	# (... tmpl)
 	if (and (pair? tmpl) (free-identifier=? (car tmpl) '...)):
-	    unless (and (pair (cdr tmpl)) (null? cddr tmpl)):
+	    unless (and (pair? (cdr tmpl)) (null? (cddr tmpl))):
 		raise SyntaxViolation('misplaced ellipsis')
 	    return expand_no_ellipses((cadr tmpl), pos, depth)
+	# (subtmpl ... rest)
 	if (and (pair? tmpl)
 		(pair? (cdr tmpl))
 		(free-identifier=? (cadr tmpl) '...))
@@ -1453,3 +1455,201 @@ Pseudo Pythonscheme...
 
 So there it is.  I have an algorithm.  Now I need to translate it
 into scheme and debug it.
+
+----------------------------------
+11/18/2009
+
+In the pseudocode above the pos variable isn't quite right.
+We need to know the position in every list.  And some of the
+lists are too short.
+
+Example.
+
+	(define-syntax my-macro
+	  (lambda (x)
+	    (syntax-case x ()
+	      [(_ ( x y ...) ...) #''((y ... x) ...)])))
+
+	(write (my-macro (a) (b c d e)))
+	(newline)
+
+pattern   = (_ (x y ...) ...)
+input     = (my-macro (a) (b c d e))
+template  = (quote ((y ... x) ...))
+
+The template should expand (ignoring the syntax wrapping) to
+
+expansion = ((a) (c d e b))
+
+The pattern matcher puts these bindings into the environment.
+
+    x -> (1 . (a b))
+    y -> (2 . (() (c d e)))
+
+So we call
+    expand
+	tmpl=(quote ((y ... x) ...))
+	pos=()
+	depth=0
+
+which calls 
+    expand
+	tmpl=((y ... x) ...)
+	pos=()
+	depth=0
+
+which calls
+    repeat_count
+        tmpl=((y ... x) ...)
+	pos=()
+	depth=0
+
+We want repeat_count to return 2.  The top-level output has two
+elements, because y's value list has two elements at top level.
+
+repeat_count calls
+    repeat_count
+	tmpl=(y ... x)
+	depth=1
+
+    repeat_count
+        tmpl=y
+	depth=2 (because y precedes an ellipsis)
+	returns 2 (because y has two values at depth 2)
+
+Let
+    a = (car (binding-value y))
+    if a == depth: return (length (cdr (binding-value y)))
+    if a > depth: raise SyntaxViolation('not enough ellipses')
+    if a < depth: return #f
+
+    repeat_count
+        tmpl=...
+	pos=()
+	depth=1
+	returns #f (this subtemplate doesn't care)
+
+    repeat_count
+        tmpl=x
+	pos=()
+	depth=1
+	returns #f (because x's depth is less than 2)
+
+    repeat_count
+        tmpl=()
+	pos=()
+	depth=1
+	returns #f (this subtemplate doesn't care)
+
+Merging the non-false answers gives 2.
+If all answers are false, raise SyntaxViolation('too many ellipses')
+If answers conflict, raise SyntaxViolation('???')
+
+So the subtemplate (y ... x) will be expanded twice.
+
+First (left) expansion:
+
+    expand
+        tmpl=(y ... x)
+	pos=(0)
+	depth=1
+
+calls
+    repeat_count
+        tmpl=y
+	pos=(0)
+	depth=1
+
+Which returns 0, because (length (list-ref (cdr (binding-value y)) 0)) is 0.
+So expand expands y zero times.  Then it looks past the ellipsis.
+
+    expand
+	tmpl=(x)
+	pos=(0)
+	depth=1
+
+calls
+    expand
+        tmpl=x
+	pos=(0)
+	depth=1
+
+and we look up (list-ref (cdr (binding-value x)) 0)
+        => a
+
+Then expand(tmpl=(x), pos=(0), depth=1) => (a)
+     expand(tmpl=(y ... x), pos=(0), depth=1) => (a)
+
+Now we do the second expansion of (y ... x).
+
+    expand
+	tmpl=(y ... x)
+	pos=(1)
+	depth=1
+
+calls
+    repeat_count
+        tmpl=y
+	pos=(1)
+	depth=2
+    
+which returns 3, because (length (list-ref (cdr (binding-value y) 1))) is 3.
+
+So we'll expand y three times.
+
+    expand
+	tmpl=y
+	pos=(0 1)
+	depth=2
+    => c, because (cdr (binding_value y))[1][0] == c
+
+    expand
+	tmpl=y
+	pos=(1 1)
+	depth=2
+    => d, because (cdr (binding_value y))[1][1] == d
+
+    expand
+	tmpl=y
+	pos=(2 1)
+	depth=2
+    => e, because (cdr (binding_value y))[1][1] == e
+
+Then do the tail.
+
+    expand
+	tmpl=(x)
+	pos=(1)
+	depth=1
+
+calls
+    expand
+	tmpl=x
+	pos=(1)
+	depth=1
+    => b, because (cdr (binding_value x))[1] == b
+
+and
+    expand
+        tmpl=()
+	...
+    => ()
+
+So expand(tmpl=(y ... x), pos=(1), depth=1) => (c d e b)
+
+Back to the second-level expand, it now expands the tail, which
+is just (), and return the final result, ((a) (c d e b).
+
+And the toplevel just wraps quote around that.
+
+That was a lot of typing.  The lowest-level routined needed
+takes a list and extracts the corresponding element.
+
+	(define (multi-ref list indices)
+	  (if (null? indices)
+	      list
+	      (multi-ref (list-ref list (car indices)) (cdr indices))))
+
+	(assert (equal? 'c (multi-ref '((a b) (c d)) '(1 0))))
+
+Note that indices is the reverse of pos above.
