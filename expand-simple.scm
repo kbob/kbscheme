@@ -41,7 +41,7 @@
              (apply fold-left combine nil (cdrs lists))
              (cars lists))))
 
-; trace         ----------------------------------
+; trace		----------------------------------
 
 (define (last list)
   (if (null? list)
@@ -63,7 +63,7 @@
 (define (notrace . exps)
   (last exps))
 
-; binding       ----------------------------------
+; binding	----------------------------------
 
 (define (binding-immutable) 0)
 (define (binding-mutable) 1)
@@ -103,14 +103,14 @@
   (assert (binding? binding))
   (vector-ref binding 4))
 
-; tagged-vector  ---------------------------------
+; tagged-vector	 ---------------------------------
 
 (define (tagged-vector? tag obj)
   (if (if (vector? obj)
             (> (vector-length obj) 0) #f)
        (eq? (vector-ref obj 0) tag) #f))
 
-; label         ----------------------------------
+; label		----------------------------------
 
 (define *lc* 0)
 
@@ -121,7 +121,7 @@
 (define (label? obj)
   (tagged-vector? 'label obj))
 
-; mark          ----------------------------------
+; mark		----------------------------------
 
 (define *mc* 0)
 
@@ -132,7 +132,7 @@
 (define (mark? obj)
   (tagged-vector? 'mark obj))
 
-; markset       ----------------------------------
+; markset	----------------------------------
 
 (define make-markset list)
 
@@ -148,7 +148,7 @@
     (lambda (m) (markset-has-mark? m marks)))
   (append (remp (in m1) m2) (remp (in m2) m1)))
 
-; subst         ----------------------------------
+; subst		----------------------------------
 
 (define (make-subst sym markset label)
   (vector 'subst sym markset label))
@@ -165,7 +165,7 @@
 (define (subst-label sub)
   (vector-ref sub 3))
 
-; substset      ----------------------------------
+; substset	----------------------------------
 
 (define make-substset list)
 
@@ -181,7 +181,7 @@
                    sub
                    (substset-find (cdr substset) sym markset)))))
 
-; wrap          ----------------------------------
+; wrap		----------------------------------
 
 (define (make-wrap markset substset)
   (vector 'wrap markset substset))
@@ -203,7 +203,7 @@
   (make-syntax-object x
                       (make-wrap (make-markset top-mark) (make-substset))))
 
-; ???            ---------------------------------
+; ???		----------------------------------
 
 (define top-mark (make-mark))
 
@@ -223,7 +223,7 @@
 (define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
-; syntax-object -----------------------------
+; syntax-object	 ---------------------------------
 
 (define (make-syntax-object expr wrap)
   (vector 'syntax-object expr wrap))
@@ -244,7 +244,7 @@
   (if (syntax-object? obj)
        (vector? (syntax-object-expr obj)) #f))
 
-; syntax-pair   -----------------------------
+; syntax-pair	----------------------------------
 
 (define (syntax-pair? obj)
   (if (syntax-object? obj) (pair? (syntax-object-expr obj)) #f))
@@ -280,7 +280,7 @@
    (syntax-object-wrap x)
    (vector->list (syntax-object-expr x))))
 
-; identifier    -----------------------------
+; identifier	----------------------------------
 
 (define (identifier? obj)
   (if (syntax-object? obj)
@@ -300,7 +300,7 @@
           a
           (memfree-id=? id (syntax-cdr a)))))
 
-; environment   -----------------------------
+; environment	----------------------------------
 
 (define (make-environment parent)
   (cons '() parent))

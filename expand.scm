@@ -197,7 +197,7 @@
   (make-syntax-object x
 		      (make-wrap (make-markset top-mark) (make-substset))))
 
-; ???		 ---------------------------------
+; ???		----------------------------------
 
 (define top-mark (make-mark))
 
@@ -217,7 +217,7 @@
 (define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
-; syntax-object	-----------------------------
+; syntax-object	 ---------------------------------
 
 (define (make-syntax-object expr wrap)
   (vector 'syntax-object expr wrap))
@@ -238,7 +238,7 @@
   (and (syntax-object? obj)
        (vector? (syntax-object-expr obj))))
 
-; syntax-pair	-----------------------------
+; syntax-pair	----------------------------------
 
 (define (syntax-pair? obj)
   (and (syntax-object? obj) (pair? (syntax-object-expr obj))))
@@ -274,7 +274,7 @@
    (syntax-object-wrap x)
    (vector->list (syntax-object-expr x))))
 
-; identifier	-----------------------------
+; identifier	----------------------------------
 
 (define (identifier? obj)
   (and (syntax-object? obj)
@@ -294,7 +294,7 @@
 	  a
 	  (memfree-id=? id (syntax-cdr a)))))
 
-; environment	-----------------------------
+; environment	----------------------------------
 
 (define (make-environment parent)
   (cons '() parent))
