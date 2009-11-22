@@ -1,7 +1,5 @@
 ; Chicken help
 
-;(define free-identifier=? eq?)		; close enough
-
 (define (memp p a)
   (cond
    [(null? a) #f]
@@ -193,7 +191,11 @@
 
 (define (join-wraps w1 w2)
   (make-wrap (join-marksets (wrap-markset w1) (wrap-markset w2))
-             (join-substsets (wrap-substset w1) (wrap-substset w2))))
+	     (join-substsets (wrap-substset w1) (wrap-substset w2))))
+
+(define (null-wrap x)
+  (make-syntax-object x
+		      (make-wrap (make-markset top-mark) (make-substset))))
 
 ; ???		 ---------------------------------
 
@@ -214,21 +216,6 @@
 
 (define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
-
-#;(define (id-label id)
-  (notrace 'id-label (syntax-object-expr id) '=>
-  (letrec* ([sym (syntax-object-expr id)]
-	    [wrap (syntax-object-wrap id)]
-	    [markset (wrap-markset wrap)]
-	    [substset (wrap-substset wrap)]
-	    [sub (substset-find substset sym markset)])
-	   (if sub
-	       (subst-label sub)
-	       (syntax-error id
-			     (string-append
-			      "undefined identifier: "
-			      (symbol->string (syntax-object-expr id)))))))
-  )
 
 ; syntax-object	-----------------------------
 
@@ -286,15 +273,6 @@
   (extend-wrap
    (syntax-object-wrap x)
    (vector->list (syntax-object-expr x))))
-
-;(define syntax-pair? pair?)
-;(define syntax-car car)
-;(define syntax-cdr cdr)
-;(define syntax-cadr cadr)
-;(define syntax-cddr cddr)
-;(define syntax-caddr caddr)
-;(define syntax-cdddr cdddr)
-;(define syntax-vector->syntax-list vector->list)
 
 ; identifier	-----------------------------
 
@@ -382,6 +360,20 @@
 (define wildcard (top-wrap '_))
 (define ellipsis (top-wrap '...))
 
+(define (car-ellipsis? x)
+  (and (syntax-pair? x)
+       (identifier? (syntax-car x))
+       (free-identifier=? (syntax-car x) ellipsis)))
+
+(define (cadr-ellipsis? form)
+  (and (syntax-pair? form)
+       (syntax-pair? (syntax-cdr form))
+       (identifier? (syntax-cadr form))
+       (free-identifier=? (syntax-cadr form) ellipsis)))
+
+(assert	     (cadr-ellipsis? (null-wrap '(a ... b))))
+(assert (not (cadr-ellipsis? (null-wrap '(a . b)))))
+
 (define (match pattern form literals)
 
   (define (pattern-var-initial-bindings pattern level)
@@ -399,8 +391,7 @@
 				     (cons level '()))
 		       r)]))]
        [(syntax-pair? pattern)
-	(if (and (pair? (syntax-cdr pattern))
-		 (free-identifier=? (syntax-cadr pattern) ellipsis))
+	(if (cadr-ellipsis? pattern)
 	    (_ (syntax-car pattern)
 	       (+ level 1)
 	       (_ (syntax-cddr pattern) level r))
@@ -442,9 +433,9 @@
     )
     )
 
-  (define (_ pattern form env level ellipsis-ok)
-    (notrace 'match (sox pattern) (sox form) 'env level ellipsis-ok)
-    (notrace 'match (sox pattern) (sox form) 'env level ellipsis-ok '=>
+  (define (_ pattern form env level ellipsis-ok?)
+    (notrace 'match (sox pattern) (sox form) 'env level ellipsis-ok?)
+    (notrace 'match (sox pattern) (sox form) 'env level ellipsis-ok? '=>
     (cond
      [(identifier? pattern)
       (notrace 'match 'identifier pattern)
@@ -457,9 +448,7 @@
      [(syntax-pair? pattern)
       (notrace 'match 'pair)
       (cond
-       [(and ellipsis-ok
-	     (syntax-pair? (syntax-cdr pattern))
-	     (eq? (syntax-object-expr (syntax-cadr pattern)) '...))
+       [(and ellipsis-ok? (cadr-ellipsis? pattern))
 	(notrace 'match 'pair 'case 1)
 	(match-ellipsis (syntax-car pattern)
 			(syntax-cddr pattern)
@@ -472,23 +461,23 @@
 		    (syntax-cdr form)
 		    env
 		    level
-		    ellipsis-ok)])
+		    ellipsis-ok?)])
 	  (and e (_ (syntax-car pattern)
 		    (syntax-car form)
 		    e
 		    level
-		    ellipsis-ok)))]
+		    ellipsis-ok?)))]
        [else #f])]
      [(and (syntax-vector? pattern) (syntax-vector? form))
       (_ (syntax-vector->syntax-list pattern)
 	 (syntax-vector->syntax-list form)
 	 env
 	 level
-	 ellipsis-ok)]
+	 ellipsis-ok?)]
      [else
       (notrace 'match 'other (sox pattern) (sox form) '=>
-      (and (equal? (syntax-object-expr form)
-		   (syntax-object-expr pattern))
+      (and (eqv? (syntax-object-expr form)
+		 (syntax-object-expr pattern))
 	   env)
       )
       ])
@@ -497,6 +486,12 @@
   (notrace 'match (sox pattern) (sox form) literals 'env)
   (_ pattern form '() 0 #t))
 
+(define (scons pair left right)
+  (if (and (eq? left (car pair))
+	   (eq? right (cdr pair)))
+      pair
+      (cons left right)))
+
 (define (syntax->datum syntax-object)
   (notrace 's->d syntax-object)
   (if (syntax-object? syntax-object)
@@ -504,11 +499,9 @@
 	  (syntax-object-expr syntax-object)
 	  (syntax->datum (syntax-object-expr syntax-object)))
       (if (pair? syntax-object)
-	  (let ([a (syntax->datum (car syntax-object))]
-		[d (syntax->datum (cdr syntax-object))])
-	    (if (and (eq? a (car syntax-object)) (eq? d (cdr syntax-object)))
-		syntax-object
-		(cons a d)))
+	  (scons syntax-object
+		 (syntax->datum (car syntax-object))
+		 (syntax->datum (cdr syntax-object)))
 	  (if (vector? syntax-object)
 	      (let* ([l (vector->list syntax-object)]
 		     [s (syntax->datum l)])
@@ -519,10 +512,6 @@
 
 (define (datum->syntax template-id datum)
   (make-syntax-object datum (syntax-object-wrap template-id)))
-
-(define (null-wrap x)
-  (make-syntax-object x
-		      (make-wrap (make-markset top-mark) (make-substset))))
 
 (define-syntax pattern-bindings
   (syntax-rules '()
@@ -543,6 +532,17 @@
 	      (list (binding-name b) (car v) (cdr v)))
 	    (bindings-short-names (cdr bs)))))
     
+(define (bindings-equal? bsl bsr)
+  (cond
+   [(pair? bsl)
+    (and (pair? bsr)
+	 (bindings-equal? (car bsl) (car bsr))
+	 (bindings-equal? (cdr bsl) (cdr bsr)))]
+   [(vector? bsl)
+    (and (vector? bsr)
+	 (bindings-equal? (vector->list bsl) (vector->list bsr)))]
+   [else
+    (eqv? bsl bsr)]))
 
 (define-syntax test-match
   (syntax-rules '(=>)
@@ -553,10 +553,11 @@
 					   (null-wrap 'form)
 					   (null-wrap '(k))))])
 	 (apply notrace 'match 'pattern 'form '=> (bindings-short-names actual))
-	 (unless (equal? actual (pattern-bindings expected ...))
+	 (unless (bindings-equal? actual (pattern-bindings expected ...))
 		 (trace 'match 'pattern 'form '=> actual)
-		 (assert (equal? actual
-				 (pattern-bindings expected ...))))))]))
+		 (assert (bindings-equal?
+			  actual
+			  (pattern-bindings expected ...))))))]))
 
 (test-match (_ a k b)   (m 3 k 4) => (a 0 3) (b 0 4))
 (test-match (_ a ...)   (m x y z) => (a 1 (x y z)))
@@ -621,20 +622,6 @@
 		"foo"))
 
 ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
-
-(define (car-ellipsis? x)
-  (and (syntax-pair? x)
-       (identifier? (syntax-car x))
-       (free-identifier=? (syntax-car x) ellipsis)))
-
-(define (cadr-ellipsis? form)
-  (and (syntax-pair? form)
-       (syntax-pair? (syntax-cdr form))
-       (identifier? (syntax-cadr form))
-       (free-identifier=? (syntax-cadr form) ellipsis)))
-
-(assert      (cadr-ellipsis? (null-wrap '(a ... b))))
-(assert (not (cadr-ellipsis? (null-wrap '(a . b)))))
 
 (define (multi-ref list indices)
   (if (null? indices)
@@ -734,7 +721,7 @@
   (and (identifier? x)
        (pattern-binding? (env-lookup mr (syntax-object-expr x)))))
 
-(define (expand tmpl pos depth ellipsis-ok? mr)
+(define (expand tmpl mr)
   (define (_ tmpl pos ellipsis-ok?)
     (notrace 'expand (syntax-object-expr tmpl) pos ellipsis-ok?)
     (cond
@@ -773,7 +760,7 @@
     [(_ input => expected)
      (begin
        (notrace 'test-expand 'input '=>? 'expected)
-       (let ([actual (syntax->datum (expand (null-wrap 'input) '() 0 #t e))])
+       (let ([actual (syntax->datum (expand (null-wrap 'input) e))])
 	 (notrace 'expand 'input '=> actual)
 	 (unless (equal? actual 'expected)
 		 (trace 'expand 'input '=> actual)
@@ -791,6 +778,6 @@
 (test-expand (... (pat ...))     => (p ...))
 
 (define (exp-syntax x r mr)
-  (expand x '() 0 #t mr))
+  (expand x mr))
 
 (exit)
