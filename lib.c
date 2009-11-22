@@ -173,7 +173,7 @@ static void eval_library_form(obj_t *form)
          */
 	obj_t *namespec = pair_car(import_list);
 	obj_t *lib = lookup_library(namespec);
-	assert(lib);
+	assert(!is_null(lib));
 	working_env = join_envs(library_env(lib), working_env);
 	import_list = pair_cdr(import_list);
     }

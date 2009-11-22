@@ -101,7 +101,7 @@
 
 static inline bool stack_is_empty(const obj_t *stack)
 {
-    return stack == NIL;
+    return is_null(stack);
 }
 
 static inline void stack_push(obj_t **stack, obj_t *elem)
@@ -813,7 +813,7 @@ static bool build(bool init, obj_t *actions, obj_t **obj_out)
 
     bool success = false;
     if (!is_null(reg)) {
-	assert(pair_cdr(reg) == NIL);
+	assert(is_null(pair_cdr(reg)));
 	*obj_out = pair_car(reg);
 	success = true;
     }
