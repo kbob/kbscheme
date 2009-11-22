@@ -173,11 +173,12 @@
 ;   string-copy
 ;;;;vector?				; r6rs 11.13 Vectors
 ;;;;make-vector
+    vector
 ;;;;vector-length
 ;;;;vector-ref
 ;;;;vector-set!
-;   vector->list
-;   list->vector
+    vector->list
+    list->vector
 ;   vector-fill!
 ;   vector-map
 ;   vector-for-each
@@ -376,6 +377,8 @@
     (_ list '()))
 
   (define (for-each proc . lists)
+    ; XXX should require at least one list.
+    ; XXX should fail if lists have different lengths. (See for-all.)
     (define (cars lists)
       (if (null? lists)
 	  '()
@@ -405,6 +408,26 @@
 	    (apply proc (chars index strings))
 	    (_ (+ index 1)))))
     (_ 0))
+
+  (define (vector . objs)
+    (list->vector objs))
+
+  (define (vector->list vec)
+    (define (_ index tail)
+      (if (< index 0)
+	  tail
+	  (_ (- index 1) (cons (vector-ref vec index) tail))))
+    (_ (- (vector-length vec) 1) '()))
+
+  (define (list->vector l)
+    (define vec (make-vector (length l)))
+    (define (_ index tail)
+      (if (null? tail)
+	  vec
+	  (begin
+	    (vector-set! vec index (car tail))
+	    (_ (+ index 1) (cdr tail)))))
+    (_ 0 l))
 
   (define-syntax syntax-rules
     (lambda (template-stx)
@@ -456,7 +479,7 @@
  (rnrs lists (6))
  (export
 ;   find				; r6rs-lib 3, Lists
-;   for-all
+    for-all
 ;   exists
 ;   filter
 ;   partition
@@ -479,6 +502,42 @@
  (import
   (draft)
   (rnrs base (6)))
+
+  (define (for-all proc . lists)
+    ; XXX should require at least one list.
+    (define (any-nulls? lists)
+      (if (null? lists)
+	  #f
+	  (if (null? (car lists))
+	      #t
+	      (any-nulls? (cdr lists)))))
+    (define (all-nulls? lists)
+      (if (null? lists)
+	  #t
+	  (if (null? (car lists))
+	      (all-nulls? (cdr lists))
+	      #f)))
+    (define (nulls? lists)
+      (if (any-nulls? lists)
+          (if (all-nulls? lists)
+              #t
+              (error-uneven-list-lengths))
+          #f))
+    (define (cars lists)
+      (if (null? lists)
+	  '()
+	  (cons (caar lists) (cars (cdr lists)))))
+    (define (cdrs lists)
+      (if (null? lists)
+	  '()
+	  (cons (cdar lists) (cdrs (cdr lists)))))
+    (if (nulls? lists)
+        #t
+	(if (nulls? (cdr lists))
+	    (apply proc (cars lists))
+	    (if (apply proc (cars lists))
+		(apply for-all proc (cdrs lists))
+		#f))))
 
   ; XXX use this when we have macros.
   #;(define-syntax _accum-cmp
@@ -706,11 +765,12 @@
     string-copy
     vector?				; r6rs 11.13 Vectors
     make-vector
+    vector
     vector-length
     vector-ref
     vector-set!
-;   vector->list
-;   list->vector
+    vector->list
+    list->vector
 ;   vector-fill!
 ;   vector-map
 ;   vector-for-each
@@ -824,7 +884,7 @@
 
     ; From (rnrs lists (6))
 ;   find				; r6rs-lib 3, Lists
-;   for-all
+    for-all
 ;   exists
 ;   filter
 ;   partition
@@ -1291,6 +1351,10 @@
     draft-read
     draft-print
 ;   mu
+
+    ; From (implementation)
+    write
+    newline
   )
   (import (rnrs base (6))
 	  (rnrs unicode (6))
@@ -1315,6 +1379,7 @@
 	  (rnrs eval (6))
 	  (rnrs mutable-pairs (6))
 	  (draft)
+	  (implementation)
   )
 )
 

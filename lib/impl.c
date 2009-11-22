@@ -1,8 +1,9 @@
 #include "obj_syntax.h"
 #include "proc.h"
 #include "types.h"
+#include "uprintf.h"
 
-#include <stdio.h>			/* XXX */
+#include <stdio.h>
 
 LIBRARY(L"(implementation)");
 
@@ -126,6 +127,12 @@ DEFINE_SPECIAL_FORM(L"plambda")
     obj_t *params = pair_car(F_SUBJ);
     obj_t *body = pair_cdr(F_SUBJ);
     RETURN(make_procedure(body, params, F_ENV));
+}
+
+DEFINE_PROC(L"write")
+{
+    printf_unchecked("%O", pair_car(F_SUBJ));
+    RETURN(UNSPECIFIED);
 }
 
 DEFINE_PROC(L"newline")

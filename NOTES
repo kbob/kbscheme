@@ -1653,3 +1653,32 @@ takes a list and extracts the corresponding element.
 	(assert (equal? 'c (multi-ref '((a b) (c d)) '(1 0))))
 
 Note that indices is the reverse of pos above.
+
+----------------------------------
+11/21/2009
+
+expand.scm is more or less complete.  expand can handle pattern
+variables and ellipses.  Here are the unit tests.  (Note that I
+actually USED a Scheme macro for something!)
+
+The environment is set up as though...
+
+   lex lexically bound to lex
+   pat -> p
+   p3  -> (p3 ...)
+   
+
+(test-expand lex                 => lex)
+(test-expand pat                 => p)
+(test-expand (lex . pat)         => (lex . p))
+(test-expand (p3 ...)            => (a b c))
+(test-expand (p3 ... pat)        => (a b c p))
+(test-expand (p3 ... p3 ... pat) => (a b c a b c p))
+(test-expand ((p3x ... pat) ...) => ((p) (a p) (a b p)))
+(test-expand (... ...)           => ...)
+(test-expand (x y (... ...))     => (x y ...))
+(test-expand (... (pat ...))     => (p ...))
+
+
+Now it's time to start rewriting to remove the non-core Scheme constructs
+so it'll run in my Scheme.

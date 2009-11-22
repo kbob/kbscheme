@@ -375,7 +375,7 @@ DEFINE_SPECIAL_FORM(L"letrec*")
     AUTO_ROOT(bindings, list_reverse(pair_car(F_SUBJ)));
     AUTO_ROOT(cont, make_short_frame(F_PARENT, begin, pair_cdr(F_SUBJ), env));
     AUTO_ROOT(var, NIL);
-    while (bindings != NIL) {
+    while (!is_null(bindings)) {
 	var = pair_caar(bindings);
 	env_bind(env, var, BT_LEXICAL, M_MUTABLE, NIL);
 	cont = make_short_frame(cont, b_letrecstar_continue, var, env);
@@ -1348,10 +1348,10 @@ TEST_EVAL(L"(define s \"asdf\")\n"
 
 /* 11.13.  Vectors
  *
+ * (vector? obj)				# procedure
+ *
  * (make-vector k)				# procedure
  * (make-vector k fill)				# procedure
- *
- * (vector? obj)				# procedure
  *
  * (vector obj ...)				# procedure
  *
@@ -1389,6 +1389,22 @@ DEFINE_PROC(L"make-vector")
 
 TEST_EVAL(L"(make-vector 3)",	L"#(() () ())");
 TEST_EVAL(L"(make-vector 3 4)",	L"#(4 4 4)");
+
+#if 0
+DEFINE_PROC(L"vector")
+{
+    int i, n = list_length(F_SUBJ);
+    obj_t *vec = make_vector(n, NIL);
+    obj_t *p = F_SUBJ;
+    for (i = 0; i < n; i++) {
+	vector_set(vec, i, pair_car(p));
+	p = pair_cdr(p);
+    }
+    RETURN(vec);
+}
+
+TEST_EVAL(L"(vector 'a 'b 'c)",		L"#(a b c)");
+#endif
 
 DEFINE_PROC(L"vector-length")
 {
