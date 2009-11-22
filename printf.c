@@ -28,17 +28,19 @@ static int print_obj(FILE *stream,
     return b - a;
 }
 
-static int obj_arginfo(const struct printf_info *info, size_t n, int *argtypes)
+static int obj_arginfo(const struct printf_info *info, size_t n, int *argtypes, int *size)
 {
-    if (n > 0)
+    if (n > 0) {
 	argtypes[0] = PA_POINTER;
+	size[0] = sizeof (obj_t *);
+    }
     return 1;
 }
 
 __attribute__((constructor))
 static void extend_printf(void)
 {
-    register_printf_function('O', print_obj, obj_arginfo);
+    register_printf_specifier('O', print_obj, obj_arginfo);
 }
 
 int printf_unchecked(const char *format, ...)
