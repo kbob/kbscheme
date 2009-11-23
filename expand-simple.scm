@@ -275,7 +275,7 @@
   (syntax-cdr (syntax-cdr (syntax-cdr x))))
 
 (define (syntax-vector->syntax-list x)
-  (trace 'sv->sl x)
+  (notrace 'sv->sl x)
   (extend-wrap
    (syntax-object-wrap x)
    (vector->list (syntax-object-expr x))))
@@ -588,53 +588,52 @@
             '(m a b c d)
             '=>
             '(x 1 (a b)) '(y 0 c) '(z 0 d))
-(exit)
 
 ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
 
 (define (XXeval expr env)
   (notrace 'eval expr env '=>
-           (cond
-            [(eq? expr #t) #t]
-            [else (eval expr (null-environment 5))])))
+           (if (eq? expr #t)
+               #t
+               (eval expr (null-environment 5)))))
 
 (define (exp-syntax-case x r mr)
   (notrace 'exp-syntax-case (sox x) 'r 'mr)
   (assert (syntax-object? x))
   (assert (eq? (sox (syntax-car x)) 'syntax-case))
-  (let* ([expr (binding-value (env-lookup e 'x))]
-        [literals (syntax-object-expr (syntax-caddr x))]
-        [clauses (syntax-cdddr x)])
-    (define (_ clauses)
-      (if (syntax-null? clauses)
-          (syntax-error "syntax-case: no pattern matched")
-          (let* ([clause (syntax-car clauses)]
-                 [pattern (syntax-car clause)]
-                 [has-fender (pair? (syntax-cddr clause))]
-                 [fender (if has-fender (syntax-cadr clause) '#t)]
-                 [out-expr ((if has-fender syntax-caddr syntax-cadr) clause)]
-                 [e (match pattern expr literals)]
-                 [ee (push-environment e mr)])
-            (if (if e (XXeval fender ee) #f)
-                ; XXX strip syntax from result.
-                (XXeval (syntax-object-expr out-expr) ee)
-                (_ (syntax-cdr clauses))))))
-    (_ clauses)))
+  (define expr (binding-value (env-lookup e 'x)))
+  (define literals (syntax-object-expr (syntax-caddr x)))
+  (define clauses (syntax-cdddr x))
+  (define (_ clauses)
+    (if (syntax-null? clauses)
+        (syntax-error "syntax-case: no pattern matched")
+        (begin
+          (define clause (syntax-car clauses))
+          (define pattern (syntax-car clause))
+          (define has-fender (pair? (syntax-cddr clause)))
+          (define fender (if has-fender (syntax-cadr clause) '#t))
+          (define out-expr ((if has-fender syntax-caddr syntax-cadr) clause))
+          (define eee (match pattern expr literals))
+          (define ee (push-environment eee mr))
+          (if (if eee (XXeval fender ee) #f)
+              (XXeval (syntax-object-expr out-expr) ee)
+              (_ (syntax-cdr clauses))))))
+  (_ clauses))
 
 (define b (make-binding 'x
                         (binding-lexical)
                         (binding-mutable)
                         (null-wrap '(foo))))
-(set! e (make-environment '()))
+(define e (make-environment '()))
 (env-add-binding! e b)
 #;(writeln (exp-syntax-case (null-wrap '(syntax-case x (l i t) ((_) "foo")))
                           e
                           '()))
-(assert (equal? (exp-syntax-case
-                 (null-wrap '(syntax-case x (l i t) ((_) "foo")))
-                 e
-                 '())
-                "foo"))
+(assert (string=? (exp-syntax-case
+                   (null-wrap '(syntax-case x (l i t) ((_) "foo")))
+                   e
+                   '())
+                  "foo"))
 
 ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
 
@@ -648,7 +647,7 @@
       list
       (multi-ref (list-ref list (car indices)) (cdr indices))))
 
-(assert (equal? 'c (multi-ref '((a b) (c d)) '(1 0))))
+(assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
 
 (define (sub-binding binding pos)
   (assert (>= (car (binding-value binding)) (length pos)))
@@ -657,27 +656,41 @@
       #f))
 
 (define (sub-binding binding pos)
-  (let* ([val (binding-value binding)]
-         [vdepth (car val)]
-         [vvals (cdr val)])
-    (cond
-     [(zero? vdepth) vvals]
-     [(>= vdepth (length pos)) (multi-ref vvals (reverse pos))]
-     [else (multi-ref vvals (list-tail (reverse-pos) vdepth))])))
+  ((lambda (val)
+     ((lambda (vdepth)
+        ((lambda (vvals)
+           (if (zero? vdepth)
+               vvals
+               (if (>= vdepth (length pos))
+                   (multi-ref vvals (reverse pos))
+                   (multi-ref vvals (list-tail (reverse pos) vdepth)))))
+         (cdr val)))
+      (car val)))
+   (binding-value binding)))
 
-(define-syntax pat
-  (syntax-rules ()
-      [(_ name value)
-       (make-binding 'name (binding-pattern) (binding-immutable) 'value)]))
-(define-syntax lex
-  (syntax-rules ()
-      [(_ value)
-       (make-binding 'lex (binding-lexical) (binding-mutable) 'value)]))
+(define (pat name value)
+  (make-binding name (binding-pattern) (binding-immutable) value))
 
-(assert (equal? '(a b) (sub-binding (pat x (1 . (a b)))         '())))
-(assert (equal? 'b     (sub-binding (pat x (1 . (a b)))         '(1))))
-(assert (equal? 'c     (sub-binding (pat x (2 . ((a b) (c d)))) '(0 1))))
-(assert (equal? 'p     (sub-binding (pat pat (0 . p))           '(0))))
+(define (lex value)
+  (make-binding 'lex (binding-lexical) (binding-mutable) value))
+
+(define (struct-eqv? l r)
+  (if (pair? l)
+      (if (pair? r)
+          (if (struct-eqv? (car l) (car r))
+              (struct-eqv? (cdr l) (cdr r))
+              #f)
+          #f)
+      (if (vector? l)
+          (if (vector? r)
+              (struct-eqv? (vector->list l) (vector->list r))
+              #f)
+          (eqv? l r))))
+
+(assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
+(assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
+(assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d)))) '(0 1))))
+(assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
 
 (define (make-syntax-violation message)
   (display message)
@@ -685,40 +698,42 @@
   &syntax)
 
 (define (combine-counts m n)
-  (cond
-   [(if m n #f)
-    (if (eqv? m n)
-        m
-        (raise (make-syntax-violation "variables don't match ellipses")))]
-   [m m]
-   [n n]
-   [else (raise (make-syntax-violation "too many ellipses"))]))
-
+  (if m
+      (if n
+          (if (eqv? m n)
+              m
+              (raise (make-syntax-violation "variables don't match ellipses")))
+          m)
+      (if n
+          n
+          (raise (make-syntax-violation "too many ellipses")))))
+              
 (define (repeat-count tmpl pos mr)
   (notrace 'repeat-count (syntax->datum tmpl) pos)
-  (cond
-   [(identifier? tmpl)
-    (let ([binding (env-lookup mr (syntax-object-expr tmpl))])
-      (if (if (pattern-binding? binding)
-               (> (car (binding-value binding)) (length pos)) #f)
-          (length (sub-binding binding pos))
-          #f))]
-   [(car-ellipsis? tmpl) #f]
-   [(cadr-ellipsis? tmpl)
-    (combine-counts
-     (repeat-count (syntax-car tmpl) pos mr)
-     (repeat-count (syntax-cddr tmpl) pos mr))]
-   [(pair? tmpl)
-    (combine-counts
-     (repeat-count (car tmpl) pos mr)
-     (repeat-count (cdr tmpl) pos mr))]
-   [else #f]))
+  (if (identifier? tmpl)
+      ((lambda (binding)
+         (if (if (pattern-binding? binding)
+                 (> (car (binding-value binding)) (length pos)) #f)
+             (length (sub-binding binding pos))
+             #f))
+       (env-lookup mr (syntax-object-expr tmpl)))
+      (if (car-ellipsis? tmpl)
+          #f
+          (if (cadr-ellipsis? tmpl)
+              (combine-counts
+               (repeat-count (syntax-car tmpl) pos mr)
+               (repeat-count (syntax-cddr tmpl) pos mr))
+              (if (pair? tmpl)
+                  (combine-counts
+                   (repeat-count (car tmpl) pos mr)
+                   (repeat-count (cdr tmpl) pos mr))
+                  #f)))))
 
 (define e (make-environment '()))
 (env-add-binding! e (lex 42))
-(env-add-binding! e (pat pat (0 . p)))
-(env-add-binding! e (pat p3 (1 . (a b c))))
-(env-add-binding! e (pat p3x (2 . (() (a) (a b)))))
+(env-add-binding! e (pat 'pat '(0 . p)))
+(env-add-binding! e (pat 'p3  '(1 . (a b c))))
+(env-add-binding! e (pat 'p3x '(2 . (() (a) (a b)))))
 
 (assert (eqv? #f (repeat-count (null-wrap '())  '(1)   e)))
 (assert (eqv? #f (repeat-count (null-wrap '0)   '(1)   e)))
@@ -737,65 +752,76 @@
 
 (define (pattern-variable? x mr)
   (notrace 'pattern-variable? x 'mr)
-  (notrace '-- 'env-lookup (env-lookup mr (syntax-object-expr x)))
+  (notrace '- 'env-lookup (env-lookup mr (syntax-object-expr x)))
   (if (identifier? x)
        (pattern-binding? (env-lookup mr (syntax-object-expr x))) #f))
 
 (define (expand tmpl mr)
   (define (_ tmpl pos ellipsis-ok?)
     (notrace 'expand (syntax-object-expr tmpl) pos ellipsis-ok?)
-    (cond
-     [(identifier? tmpl)
-      (cond
-       [(pattern-variable? tmpl mr)
-        (let ([binding (env-lookup mr (syntax-object-expr tmpl))])
-          (if (> (car (binding-value binding)) (length pos))
-              (raise (make-syntax-violation "not enough ellipses")))
-          (datum->syntax tmpl (sub-binding binding pos)))]
-       [else tmpl])]
-     [(if ellipsis-ok? (car-ellipsis? tmpl) #f) ; (... tmpl)
-      (let ([expr (syntax-object-expr tmpl)])
-        (unless (if (pair? (cdr expr)) (null? (cddr expr)) #f)
-                (raise (make-syntax-violation "misplaced ellipsis"))))
-      (_ (syntax-cadr tmpl) pos #f)]
-     [(if ellipsis-ok? (cadr-ellipsis? tmpl) #f) ; (subtmpl ... . rest)
-      (let loop ([count (- (repeat-count (syntax-car tmpl) pos mr) 1)]
-                 [rest (_ (syntax-cddr tmpl) pos #t)])
-        (if (< count 0)
-            rest
-            (loop (- count 1)
-                  (cons (_ (syntax-car tmpl) (cons count pos) #t) rest))))]
-     [(syntax-pair? tmpl)
-      (cons (_ (syntax-car tmpl) pos ellipsis-ok?)
-            (_ (syntax-cdr tmpl) pos ellipsis-ok?))]
-     [(syntax-vector? tmpl) 
-      (syntax-list->syntax-vector
-       (_ (syntax-vector->syntax-list tmpl) pos ellipsis-ok?))]
-     [(syntax-null? tmpl) '()]
-     [else tmpl]))
+    (if (identifier? tmpl)
+        (if (pattern-variable? tmpl mr)
+            ((lambda (binding)
+               (if (> (car (binding-value binding)) (length pos))
+                   (raise (make-syntax-violation "not enough ellipses")))
+               (datum->syntax tmpl (sub-binding binding pos)))
+             (env-lookup mr (syntax-object-expr tmpl)))
+            tmpl)
+        (if (if ellipsis-ok? (car-ellipsis? tmpl) #f) ; (... tmpl)
+            (begin
+              ((lambda (expr)
+                 (if (if (pair? (cdr expr)) (not (null? (cddr expr))) #t)
+                         (raise (make-syntax-violation "misplaced ellipsis"))))
+               (syntax-object-expr tmpl))
+              (_ (syntax-cadr tmpl) pos #f))
+            (if (if ellipsis-ok? (cadr-ellipsis? tmpl) #f) ;(subtmpl ... . rest)
+                ((lambda (loop)
+                   (set! loop
+                         (lambda (count rest)
+                           (if (< count 0)
+                               rest
+                               (loop (- count 1)
+                                     (cons (_ (syntax-car tmpl)
+                                              (cons count pos) #t)
+                                           rest)))))
+                   (loop (- (repeat-count (syntax-car tmpl) pos mr) 1)
+                         (_ (syntax-cddr tmpl) pos #t)))
+                 '())
+
+                (if (syntax-pair? tmpl)
+                    (cons (_ (syntax-car tmpl) pos ellipsis-ok?)
+                          (_ (syntax-cdr tmpl) pos ellipsis-ok?))
+                    (if (syntax-vector? tmpl)
+                        (syntax-list->syntax-vector
+                         (_ (syntax-vector->syntax-list tmpl)
+                            pos
+                            ellipsis-ok?))
+                        (if (syntax-null? tmpl)
+                            '()
+                            tmpl)))))))
   (_ tmpl '() #t))
 
-(define-syntax test-expand
-  (syntax-rules '(=>)
-    [(_ input => expected)
-     (begin
-       (notrace 'test-expand 'input '=>? 'expected)
-       (let ([actual (syntax->datum (expand (null-wrap 'input) e))])
-         (notrace 'expand 'input '=> actual)
-         (unless (equal? actual 'expected)
-                 (trace 'expand 'input '=> actual)
-                 (assert (equal? actual 'expected)))))]))
+(define (test-expand input => expected)
+  (notrace 'test-expand input '=>? expected)
+  (assert (eq? => '=>))
+  ((lambda (actual)
+     (trace 'expand input '=> actual)
+     (if (not (struct-eqv? actual expected))
+         (begin
+           (trace 'expand input '=> actual)
+           (assert (struct-eqv? actual expected)))))
+   (syntax->datum (expand (null-wrap input) e))))
 
-(test-expand lex                 => lex)
-(test-expand pat                 => p)
-(test-expand (lex . pat)         => (lex . p))
-(test-expand (p3 ...)            => (a b c))
-(test-expand (p3 ... pat)        => (a b c p))
-(test-expand (p3 ... p3 ... pat) => (a b c a b c p))
-(test-expand ((p3x ... pat) ...) => ((p) (a p) (a b p)))
-(test-expand (... ...)           => ...)
-(test-expand (x y (... ...))     => (x y ...))
-(test-expand (... (pat ...))     => (p ...))
+(test-expand 'lex                 '=> 'lex)
+(test-expand 'pat                 '=> 'p)
+(test-expand '(lex . pat)         '=> '(lex . p))
+(test-expand '(p3 ...)            '=> '(a b c))
+(test-expand '(p3 ... pat)        '=> '(a b c p))
+(test-expand '(p3 ... p3 ... pat) '=> '(a b c a b c p))
+(test-expand '((p3x ... pat) ...) '=> '((p) (a p) (a b p)))
+(test-expand '(... ...)           '=> '...)
+(test-expand '(x y (... ...))     '=> '(x y ...))
+(test-expand '(... (pat ...))     '=> '(p ...))
 
 (define (exp-syntax x r mr)
   (expand x mr))

@@ -140,7 +140,7 @@
     append
     reverse
 ;   list-tail
-;   list-ref
+   list-ref
 ;   map
     for-each
 ;;;;symbol?				; r6rs 11.10 Symbols
@@ -375,6 +375,11 @@
           tail
           (_ (cdr list) (cons (car list) tail))))
     (_ list '()))
+
+  (define (list-ref list k)
+    (if (= k 0)
+	(car list)
+	(list-ref (cdr list) (- k 1))))
 
   (define (for-each proc . lists)
     ; XXX should require at least one list.
@@ -732,7 +737,7 @@
     append
     reverse
 ;   list-tail
-;   list-ref
+   list-ref
 ;   map
     for-each
     symbol?				; r6rs 11.10 Symbols
@@ -1348,6 +1353,7 @@
 
     ; From (draft)
     draft-environment
+    null-environment
     draft-read
     draft-print
 ;   mu

@@ -44,6 +44,9 @@ DEFINE_PROC(L"draft-environment")
     RETURN(library_env(r6rs_library()));
 }
 
+ALIAS_NAME(&current_library_, L"draft-environment",
+	   &current_library_, L"null-environment");
+
 #if 0
 
 DEFINE_BLOCK(b_continue_mu)
