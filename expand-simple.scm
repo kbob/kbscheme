@@ -359,14 +359,19 @@
                       (make-wrap (make-markset top-mark) (make-substset))))
 (define-syntax _
   (lambda (x)
-    (raise (make-syntax-error "wildcard illegal as expression"))))
+    (syntax-error "wildcard illegal as expression")))
   
 (define-syntax ...
   (lambda (x)
-    (raise (make-syntax-error "ellipsis illegal as expression"))))
+    (syntax-error "ellipsis illegal as expression")))
   
 (define wildcard (top-wrap '_))
 (define ellipsis (top-wrap '...))
+
+(define (car-ellipsis? x)
+  (if (if (syntax-pair? x)
+            (identifier? (syntax-car x)) #f)
+       (free-identifier=? (syntax-car x) ellipsis) #f))
 
 (define (cadr-ellipsis? form)
   (if (if (if (syntax-pair? form)
@@ -519,12 +524,13 @@
                  (syntax->datum (car syntax-object))
                  (syntax->datum (cdr syntax-object)))
           (if (vector? syntax-object)
-              (begin
-                (define l (vector->list syntax-object))
-                (define s (syntax->datum l))
-                (if (eq? s l)
-                    syntax-object
-                    (list->vector s)))
+              ((lambda (l)
+                 ((lambda (s)
+                    (if (eq? s l)
+                        syntax-object
+                        (list->vector s)))
+                  (syntax->datum l)))
+               (vector->list syntax-object))
               syntax-object))))
 
 (define (datum->syntax template-id datum)
@@ -547,25 +553,25 @@
               (list (binding-name b) (car v) (cdr v)))
             (bindings-short-names (cdr bs)))))
     
-(define (bindings-equal? bsl bsr)
-  (if (pair? bsl)
-      (if (pair? bsr)
-          (if (bindings-equal? (car bsl) (car bsr))
-              (bindings-equal? (cdr bsl) (cdr bsr))
+(define (struct-eqv? l r)
+  (if (pair? l)
+      (if (pair? r)
+          (if (struct-eqv? (car l) (car r))
+              (struct-eqv? (cdr l) (cdr r))
               #f)
           #f)
-      (if (vector? bsl)
-          (if (vector? bsr)
-              (bindings-equal? (vector->list bsl) (vector->list bsr))
+      (if (vector? l)
+          (if (vector? r)
+              (struct-eqv? (vector->list l) (vector->list r))
               #f)
-          (eqv? bsl bsr))))
+          (eqv? l r))))
 
 (define (test-match pattern form => . expecteds)
   (notrace 'match pattern form '=>? expecteds)
   (assert (eq? => '=>))
   (define (report actual)
     (apply trace 'match pattern form '=> (bindings-short-names actual))
-    (if (not (bindings-equal? actual (pattern-bindings expecteds)))
+    (if (not (struct-eqv? actual (pattern-bindings expecteds)))
         (begin
           (apply trace 'match pattern form '=> (bindings-short-names actual))
           (error))))
@@ -637,23 +643,12 @@
 
 ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ; * ;
 
-(define (car-ellipsis? x)
-  (if (if (syntax-pair? x)
-            (identifier? (syntax-car x)) #f)
-       (free-identifier=? (syntax-car x) ellipsis) #f))
-
 (define (multi-ref list indices)
   (if (null? indices)
       list
       (multi-ref (list-ref list (car indices)) (cdr indices))))
 
 (assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
-
-(define (sub-binding binding pos)
-  (assert (>= (car (binding-value binding)) (length pos)))
-  (if (>= (car (binding-value binding)) (length pos))
-      (multi-ref (cdr (binding-value binding)) (reverse pos))
-      #f))
 
 (define (sub-binding binding pos)
   ((lambda (val)
@@ -674,39 +669,25 @@
 (define (lex value)
   (make-binding 'lex (binding-lexical) (binding-mutable) value))
 
-(define (struct-eqv? l r)
-  (if (pair? l)
-      (if (pair? r)
-          (if (struct-eqv? (car l) (car r))
-              (struct-eqv? (cdr l) (cdr r))
-              #f)
-          #f)
-      (if (vector? l)
-          (if (vector? r)
-              (struct-eqv? (vector->list l) (vector->list r))
-              #f)
-          (eqv? l r))))
-
 (assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
 (assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
 (assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d)))) '(0 1))))
 (assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
 
-(define (make-syntax-violation message)
-  (display message)
-  (newline)
-  &syntax)
+(define (syntax-error message)
+  (writeln message)
+  (raise (make-syntax-violation message)))
 
 (define (combine-counts m n)
   (if m
       (if n
           (if (eqv? m n)
               m
-              (raise (make-syntax-violation "variables don't match ellipses")))
+              (syntax-error "variables don't match ellipses"))
           m)
       (if n
           n
-          (raise (make-syntax-violation "too many ellipses")))))
+          (syntax-error "too many ellipses"))))
               
 (define (repeat-count tmpl pos mr)
   (notrace 'repeat-count (syntax->datum tmpl) pos)
@@ -763,7 +744,7 @@
         (if (pattern-variable? tmpl mr)
             ((lambda (binding)
                (if (> (car (binding-value binding)) (length pos))
-                   (raise (make-syntax-violation "not enough ellipses")))
+                   (syntax-error "not enough ellipses"))
                (datum->syntax tmpl (sub-binding binding pos)))
              (env-lookup mr (syntax-object-expr tmpl)))
             tmpl)
@@ -771,7 +752,7 @@
             (begin
               ((lambda (expr)
                  (if (if (pair? (cdr expr)) (not (null? (cddr expr))) #t)
-                         (raise (make-syntax-violation "misplaced ellipsis"))))
+                         (syntax-error "misplaced ellipsis")))
                (syntax-object-expr tmpl))
               (_ (syntax-cadr tmpl) pos #f))
             (if (if ellipsis-ok? (cadr-ellipsis? tmpl) #f) ;(subtmpl ... . rest)

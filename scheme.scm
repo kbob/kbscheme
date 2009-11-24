@@ -1,3 +1,7 @@
+; Debug Support	====================================
+
+; trace		----------------------------------
+
 (define (last list)
   (if (null? list)
       '()
@@ -7,16 +11,20 @@
 	      (last (cdr list)))
 	  list)))
 
+(define (writeln exp)                   ; Oh, Pascal!
+  (draft-print exp 76)
+  #;(draft-print exp))
+
 (define (trace . exps)
-  (draft-print exps 76)
-  ;(draft-print exps)
+  (writeln exps)
   (last exps))
 
 (define (notrace . exps)
      (last exps))
 
-; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-; ; ; Standard procedures
+; Standard Procedures  =============================
+
+; list utilities  --------------------------------
 
 (define (list . args)
   args)
@@ -72,39 +80,12 @@
     (if (null? lists)
 	'()
 	(cons (cdr (car lists)) (cdrs (cdr lists)))))
-  (define (_ proc lists result)
+  (define (_ lists result)
     (if (null? (car lists))
 	(reverse result)
-	(_ proc (cdrs lists) (cons (apply proc (cars lists)) result))))
-  (_ proc lists '())
+	(_ (cdrs lists) (cons (apply proc (cars lists)) result))))
+  (_ lists '())
 )
-
-(define (list->vector list)
-  (define v (make-vector (length list)))
-  (define (vset! i list)
-    (if (null? list)
-	(if #f #f)
-	(begin
-	  (vector-set! v i (car list))
-	  (vset! (+ i 1) (cdr list)))))
-  (vset! 0 list)
-  v)
-
-(define (vector . objs)
-  (list->vector objs))
-
-(define (vector-map proc . vectors)
-  (define (vector-refs vectors i)
-    (if (null? vectors)
-	'()
-	(cons (vector-ref (car vectors) i)
-	      (vector-refs (cdr vectors) i))))
-  (define (_ i)
-    (if (= i (vector-length (car vectors)))
-	'()
-	(cons (apply proc (vector-refs vectors i))
-	      (_ (+ i 1)))))
-  (list->vector (_ 0)))
 
 (define (_accum-cmp accum cmp obj list)
   (accum (lambda (x) (cmp x obj)) list))
@@ -179,10 +160,54 @@
 	     (apply fold-left combine nil (cdrs lists))
 	     (cars lists))))
 
-; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-; ; ; Environments
+(define (scons pair left right)
+  (if (if (eq? left (car pair))
+          (eq? right (cdr pair))
+          #f)
+      pair
+      (cons left right)))
 
-(define *root-environment* (the-environment))
+; vector utilities  ------------------------------
+
+(define (vector . objs)
+  (list->vector objs))
+
+(define (vector->list vec)
+  (define (_ index tail)
+    (if (< index 0)
+	tail
+	(_ (- index 1) (cons (vector-ref vec index) tail))))
+  (_ (- (vector-length vec) 1) '()))
+
+(define (list->vector l)
+  (define vec (make-vector (length l)))
+  (define (_ index tail)
+    (if (null? tail)
+	vec
+	(begin
+	  (vector-set! vec index (car tail))
+	  (_ (+ index 1) (cdr tail)))))
+  (_ 0 l))
+
+(define (vector-map proc . vectors)
+  (define (vector-refs vectors i)
+    (if (null? vectors)
+	'()
+	(cons (vector-ref (car vectors) i)
+	      (vector-refs (cdr vectors) i))))
+  (define (_ i)
+    (if (= i (vector-length (car vectors)))
+	'()
+	(cons (apply proc (vector-refs vectors i))
+	      (_ (+ i 1)))))
+  (list->vector (_ 0)))
+
+; binding	----------------------------------
+
+(define (pattern-binding? x)
+  (if (binding? x) (eqv? (binding-type x) (binding-pattern)) #f))
+
+; environment	----------------------------------
 
 (define (make-environment parent)
   (cons '() parent))
@@ -191,27 +216,49 @@
 (define env-parent cdr)
 (define env-set-bindings! set-car!)
 
+(define (push-environment bindings env)
+  (cons bindings env))
+
 (define (env-add-binding! env binding)
   (env-set-bindings! env (cons binding (env-bindings env))))
 
 (define (env-lookup env name)
   (define (_ seg env)
     (if (null? seg)
-	(if (null? env)
-	    #f
-	    (_ (car env) (cdr env)))
-	(letrec* ([binding (car seg)])
-		 (if (eq? (binding-name binding) name)
-		     binding
-		     (_ (cdr seg) env)))))
+        (if (null? env)
+            #f
+            (_ (car env) (cdr env)))
+        ((lambda (binding)
+           (if (eq? (binding-name binding) name)
+               binding
+               (_ (cdr seg) env)))
+         (car seg))))
   (_ '() env))
 
-; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
-; ; ; Expander
+(define (ext-env name value env)
+  ; N.B., not a standard env.
+  (cons (make-binding name (binding-pattern) (binding-immutable) value)
+        env))
+
+; Expander	====================================
+
+; errors	----------------------------------
+
+(define (assert assertion)
+  (if assertion
+      (if #f #f)
+      (raise "assertion failed:" assertion)))
 
 (define (syntax-error object message)
   (draft-print (list message object))
   (error #f "~a ~s" message (syntax->datum object)))
+
+; tagged-vector	 ---------------------------------
+
+(define (tagged-vector? tag obj)
+  (if (if (vector? obj)
+            (> (vector-length obj) 0) #f)
+       (eq? (vector-ref obj 0) tag) #f))
 
 ; label		----------------------------------
 
@@ -219,14 +266,10 @@
 
 (define (make-label)
   (set! *lc* (+ *lc* 1))
-  (cons "label" *lc*))
+  (vector 'label *lc*))
 
 (define (label? obj)
-  (if (pair? obj)
-      (if (string? (car obj))
-	  (string=? "label" (car obj))
-	  #f)
-      #f))
+  (tagged-vector? 'label obj))
 
 ; mark		----------------------------------
 
@@ -234,14 +277,10 @@
 
 (define (make-mark)
   (set! *mc* (+ *mc* 1))
-  (cons "mark" *mc*))
+  (vector 'mark *mc*))
 
 (define (mark? obj)
-  (if (pair? obj)
-      (if (string? (car obj))
-	  (string=? (car obj) "mark")
-	  #f)
-      #f))
+  (tagged-vector? 'mark obj))
 
 ; markset	----------------------------------
 
@@ -261,10 +300,13 @@
     (lambda (m) (markset-has-mark? m marks)))
   (append (remp (in m1) m2) (remp (in m2) m1)))
 
-; subst		----------------------------------
+; substitution	----------------------------------
 
 (define (make-subst sym markset label)
-  (vector "subst" sym markset label))
+  (vector 'subst sym markset label))
+
+(define (subst? obj)
+  (tagged-vector? 'subst obj))
 
 (define (subst-sym sub)
   (vector-ref sub 1))
@@ -294,7 +336,10 @@
 ; wrap		----------------------------------
 
 (define (make-wrap markset substset)
-  (vector "wrap" markset substset))
+  (vector 'wrap markset substset))
+
+(define (wrap? obj)
+  (tagged-vector? 'wrap obj))
 
 (define (wrap-markset wrap)
   (vector-ref wrap 1))
@@ -306,7 +351,59 @@
   (make-wrap (join-marksets (wrap-markset w1) (wrap-markset w2))
              (join-substsets (wrap-substset w1) (wrap-substset w2))))
 
+(define (null-wrap x)
+  (make-syntax-object x
+                      (make-wrap (make-markset top-mark) (make-substset))))
+
 ; syntax-object	-----------------------------
+
+(define (syntax-pair? obj)
+  (if (syntax-object? obj) (pair? (syntax-object-expr obj) #f)))
+
+(define (syntax-null? obj)
+  (if (syntax-object? obj) (null? (syntax-object-expr obj) #f)))
+
+(define (syntax-vector? obj)
+  (if (syntax-object? obj) (vector? (syntax-object-expr obj) #f)))
+
+(define (syntax-car x)
+  (extend-wrap
+   (syntax-object-wrap x)
+   (car (syntax-object-expr x))))
+
+(define (syntax-cdr x)
+  (extend-wrap
+   (syntax-object-wrap x)
+   (cdr (syntax-object-expr x))))
+
+(define (syntax-cadr x)
+  (syntax-car (syntax-cdr x)))
+
+(define (syntax-cddr x)
+  (syntax-cdr (syntax-cdr x)))
+
+(define (syntax-caddr x)
+  (syntax-car (syntax-cdr (syntax-cdr x))))
+
+(define (syntax-cdddr x)
+  (syntax-cdr (syntax-cdr (syntax-cdr x))))
+
+(define (syntax-vector->syntax-list x)
+  (notrace 'sv->sl x)
+  (extend-wrap
+   (syntax-object-wrap x)
+   (vector->list (syntax-object-expr x))))
+
+(define (syntax-list->syntax-vector x)
+  (notrace 'sl->sv x)
+  (extend-wrap
+   (syntax-object-wrap x)
+   (list->vector (syntax-object-expr x))))
+
+(define top-mark (make-mark))
+
+(define (top-marked? wrap)
+  (markset-has-mark? top-mark (wrap-markset wrap)))
 
 (define (extend-wrap wrap x)
   (if (syntax-object? x)
@@ -321,13 +418,35 @@
 (define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
+; identifier	----------------------------------
+
+(define (identifier? obj)
+  (if (syntax-object? obj)
+      (symbol? (syntax-object-expr obj))
+      #f))
+
+(define (free-identifier=? x y)
+  (trace 'free-identifier=? x y)
+  (assert (identifier? x))
+  (assert (identifier? y))
+  (trace 'free-identifier=? x y '=>
+	 (eq? (id-label x) (id-label y))))
+
+(define (memfree-id=? id a)
+  (notrace 'memfree-id=? id a)
+  (if (syntax-null? a)
+      #f
+      (if (free-identifier=? id (syntax-car a))
+          a
+          (memfree-id=? id (syntax-cdr a)))))
+
 (define (id-label id)
   (notrace 'id-label (syntax-object-expr id) '=>
   (letrec* ([sym (syntax-object-expr id)]
 	    [XXX1 (notrace 'id-label 'sym sym)]
 	    [wrap (syntax-object-wrap id)]
 	    [XXX2-5 (notrace 'id-label 'wrap wrap)]
-	    [XXX2-6 (notrace 'id-label '(length wrap) (length (wrap-substset  wrap)))]
+	    [XXXz (notrace 'id-label 'len-wrap (length (wrap-substset wrap)))]
 	    [markset (wrap-markset wrap)]
 	    [XXX3 (notrace 'id-label 'markset markset)]
 	    [substset (wrap-substset wrap)]
@@ -338,18 +457,6 @@
 			     (string-append
 			      "undefined identifier: "
 			      (symbol->string (syntax-object-expr id)))))))
-  )
-
-(define top-mark (make-mark))
-
-(define (top-marked? wrap)
-  (markset-has-mark? top-mark (wrap-markset wrap)))
-
-(define (identifier? obj)
-  (notrace 'identifier? (syntax-object-expr obj) '=>
-  (if (syntax-object? obj)
-      (symbol? (syntax-object-expr obj))
-      #f))
   )
 
 (define (self-evaluating? obj)
@@ -568,27 +675,32 @@
 
 (define (syntax x) '())
 
+; XXX replace
 (define (exp-syntax x r mr)
   (syntax-car (syntax-cdr x)))
 
-(define (syntax->datum x)
-  (if (syntax-object? x)
-      (if (top-marked? (syntax-object-wrap x))
-	  (syntax-object-expr x)
-	  (syntax->datum (syntax-object-expr x)))
-      (if (pair? x)
-	  (letrec* ([a (syntax->datum (car x))]
-		    [d (syntax->datum (cdr x))])
-		   (if (if (eq? a (car x)) (eq? d (cdr x)) #f)
-		       x
-		       (cons a d)))
-	  (if (vector? x)
-	      (letrec* ([l (vector->list x)]
-			[s (syntax->datum l)])
-		       (if (eq? s l)
-			   l
-			   (list->vector s)))
-	      x))))
+(define (syntax->datum syntax-object)
+  (notrace 's->d syntax-object)
+  (if (syntax-object? syntax-object)
+      (if (top-marked? (syntax-object-wrap syntax-object))
+          (syntax-object-expr syntax-object)
+          (syntax->datum (syntax-object-expr syntax-object)))
+      (if (pair? syntax-object)
+          (scons syntax-object
+                 (syntax->datum (car syntax-object))
+                 (syntax->datum (cdr syntax-object)))
+          (if (vector? syntax-object)
+              ((lambda (l)
+                 ((lambda (s)
+                    (if (eq? s l)
+                        syntax-object
+                        (list->vector s)))
+                  (syntax->datum l)))
+               (vector->list syntax-object))
+              syntax-object))))
+
+(define (datum->syntax template-id datum)
+  (make-syntax-object datum (syntax-object-wrap template-id)))
 
 ; The sne cache is a list of ((env1 . bindings) . (substset . env2)),
 ; where env1 is the eval-time env and env2 is the expand-time env.
@@ -607,7 +719,8 @@
 		 (set-cdr! a sne))
 	       (set! *sne-cache*
 		     (list (cons (cons env (env-bindings env)) sne))))))
-	       
+
+(define *root-environment* (the-environment))
 
 (define (initial-wrap-and-env env)
   (define specials
@@ -846,6 +959,7 @@
 (define *libraries* '())
 
 (define (lists-equal? a b)
+  ; XXX someday this will just be equal?.
   (if (pair? a)
       (if (pair? b)
 	  (if (lists-equal? (car a) (car b))

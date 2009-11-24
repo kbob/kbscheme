@@ -631,12 +631,6 @@
 (assert (equal? 'c (multi-ref '((a b) (c d)) '(1 0))))
 
 (define (sub-binding binding pos)
-  (assert (>= (car (binding-value binding)) (length pos)))
-  (if (>= (car (binding-value binding)) (length pos))
-      (multi-ref (cdr (binding-value binding)) (reverse pos))
-      #f))
-
-(define (sub-binding binding pos)
   (let* ([val (binding-value binding)]
 	 [vdepth (car val)]
 	 [vvals (cdr val)])

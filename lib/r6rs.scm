@@ -180,7 +180,7 @@
     vector->list
     list->vector
 ;   vector-fill!
-;   vector-map
+    vector-map
 ;   vector-for-each
 ;   error				; r6rs 11.14 Errors and violations
 ;   assert
@@ -433,6 +433,21 @@
 	    (vector-set! vec index (car tail))
 	    (_ (+ index 1) (cdr tail)))))
     (_ 0 l))
+
+  (define (vector-map proc . vectors)
+    ; XXX should require at least one vector.
+    ; XXX should check that all vector are the same length.
+    (define (vector-refs vectors i)
+      (if (null? vectors)
+	  '()
+	  (cons (vector-ref (car vectors) i)
+		(vector-refs (cdr vectors) i))))
+    (define (_ i)
+      (if (= i (vector-length (car vectors)))
+	  '()
+	  (cons (apply proc (vector-refs vectors i))
+		(_ (+ i 1)))))
+    (list->vector (_ 0)))
 
   (define-syntax syntax-rules
     (lambda (template-stx)
@@ -777,7 +792,7 @@
     vector->list
     list->vector
 ;   vector-fill!
-;   vector-map
+    vector-map
 ;   vector-for-each
 ;   error				; r6rs 11.14 Errors and violations
 ;   assert

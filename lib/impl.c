@@ -16,6 +16,11 @@ DEFINE_PROC(L"make-binding")
     RETURN(make_binding(name, type, mutability, value));
 }
 
+DEFINE_PROC(L"binding?")
+{
+    RETURN(make_boolean(is_binding(pair_car(F_SUBJ))));
+}
+
 DEFINE_PROC(L"get-binding")
 {
     obj_t *sym = pair_car(F_SUBJ);

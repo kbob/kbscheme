@@ -7,11 +7,11 @@
 #include "proc.h"
 #include "roots.h"
 #include "test.h"
+#include "uprintf.h"
 
 #define EVAL_TRACE 0
 #if EVAL_TRACE
     #include <stdio.h>
-    #include "uprintf.h"
 #endif
 
 THREAD_EXTERN_ROOT(FRAME);
@@ -144,8 +144,10 @@ obj_t *apply_procedure(obj_t *proc, obj_t *args)
     AUTO_ROOT(formals, procedure_args(proc));
     AUTO_ROOT(actuals, args);
     while (!is_null(formals) || !is_null(actuals)) {
-	if (is_null(formals))
+	if (is_null(formals)) {
+	    printf_unchecked("calling %O\n", proc);
 	    RAISE("too many args");
+	}
 	obj_t *formal, *actual;
 	if (is_pair(formals)) {
 	    if (is_null(actuals))
