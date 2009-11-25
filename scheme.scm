@@ -160,12 +160,13 @@
 	     (apply fold-left combine nil (cdrs lists))
 	     (cars lists))))
 
-(define (scons pair left right)
-  (if (if (eq? left (car pair))
-          (eq? right (cdr pair))
-          #f)
-      pair
-      (cons left right)))
+(define (scons pair carfn cdrfn)
+  ((lambda (a d)
+     (if (if (eq? a (car pair)) (eq? d (cdr pair)) #f)
+	 pair
+	 (cons a d)))
+   (carfn (car pair))
+   (cdrfn (cdr pair))))
 
 ; vector utilities  ------------------------------
 
@@ -235,8 +236,7 @@
          (car seg))))
   (_ '() env))
 
-(define (ext-env name value env)
-  ; N.B., not a standard env.
+(define (extend-frame name value env)
   (cons (make-binding name (binding-pattern) (binding-immutable) value)
         env))
 
@@ -250,7 +250,8 @@
       (raise "assertion failed:" assertion)))
 
 (define (syntax-error object message)
-  (draft-print (list message object))
+  (writeln (list message object))
+  (writeln (list message (syntax-object-expr object)))
   (error #f "~a ~s" message (syntax->datum object)))
 
 ; tagged-vector	 ---------------------------------
@@ -262,39 +263,49 @@
 
 ; label		----------------------------------
 
-(define *lc* 0)
-
-(define (make-label)
-  (set! *lc* (+ *lc* 1))
-  (vector 'label *lc*))
+(define make-label
+  ((lambda (n)
+     (lambda ()
+       (set! n (+ n 1))
+       (vector 'label n)))
+   0))
 
 (define (label? obj)
   (tagged-vector? 'label obj))
 
 ; mark		----------------------------------
 
-(define *mc* 0)
-
-(define (make-mark)
-  (set! *mc* (+ *mc* 1))
-  (vector 'mark *mc*))
+(define make-mark
+  ((lambda (n)
+     (lambda ()
+       (set! n (+ n 1))
+       (vector 'mark n)))
+   0))
 
 (define (mark? obj)
   (tagged-vector? 'mark obj))
 
 ; markset	----------------------------------
 
-#;(define (make-markset . marks)
-  (apply list marks))
-  (define make-markset list)
+(define make-markset list)
 
 (define markset-has-mark? memq)
 
+; XXX simplify.  We know both marksets are in the same order.
+#;(define (marksets-equal? m1 m2)
+  (if (null? m1)
+      (null? m2)
+      (if (null? m2)
+	  #f
+	  (if (eq? (car m1) (car m2))
+	      (marksets-equal? (cdr m1) (cdr m2))
+	      #f))))
 (define (marksets-equal? m1 m2)
   (if (eqv? (length m1) (length m2))
       (null? (join-marksets m1 m2))
       #f))
 
+; XXX goes away.
 (define (join-marksets m1 m2)
   (define (in marks)
     (lambda (m) (markset-has-mark? m marks)))
@@ -317,7 +328,8 @@
 (define (subst-label sub)
   (vector-ref sub 3))
 
-; substset	----------------------------------
+; substitution set  ------------------------------
+; XXX goes away
 
 (define make-substset list)
 
@@ -334,23 +346,55 @@
 		   (substset-find (cdr substset) sym markset)))))
 
 ; wrap		----------------------------------
+; XXX changes.  Intermingle wraps and substitutions.
 
+; XXX goes away.
 (define (make-wrap markset substset)
   (vector 'wrap markset substset))
 
+; XXX goes away
 (define (wrap? obj)
   (tagged-vector? 'wrap obj))
 
+; XXX goes away
 (define (wrap-markset wrap)
   (vector-ref wrap 1))
 
+; XXX goes away
 (define (wrap-substset wrap)
   (vector-ref wrap 2))
 
+(define (wrap-marks wrap)
+  (if (null? wrap)
+      '()
+      ((lambda (w0)
+	 (if (mark? w0)
+	     (cons w0 (wrap-marks (cdr wrap)))
+	     (wrap-marks (cdr wrap))))
+       (car wrap))))
+
+; XXX rewrite
+#;(define (join-wraps wrap1 wrap2)
+  (if (null? wrap1)
+      wrap2
+      (if (null? wrap2)
+	  wrap1
+	  ((lambda (f)
+	     (set! f
+		   (lambda (w w*)
+		     (if (null? w*)
+			 (if (if (mark? w) (eq? (car wrap2 w)) #f)
+			     (cdr wrap2)
+			     (cons w wrap2))
+			 (cons w (f (car w*) (cdr w*)))))))
+	   '()))))
 (define (join-wraps w1 w2)
   (make-wrap (join-marksets (wrap-markset w1) (wrap-markset w2))
              (join-substsets (wrap-substset w1) (wrap-substset w2))))
 
+; XXX rewrite (and rename)
+#;(define (null-wrap x)
+  (make-syntax-object x (list top-mark)))
 (define (null-wrap x)
   (make-syntax-object x
                       (make-wrap (make-markset top-mark) (make-substset))))
@@ -402,6 +446,13 @@
 
 (define top-mark (make-mark))
 
+; XXX rewrite
+#;(define (top-marked? wrap)
+  (if (null? wrap)
+      #f
+      (if (eq? (car wrap) top-mark)
+	  #t
+	  (top-marked? (cdr wrap)))))
 (define (top-marked? wrap)
   (markset-has-mark? top-mark (wrap-markset wrap)))
 
@@ -412,9 +463,13 @@
        (join-wraps wrap (syntax-object-wrap x)))
       (make-syntax-object x wrap)))
 
+; XXX can't use make-wrap or make-substset
+#;(define (add-mark mark x)
+  (extend-wrap (list mark) x))
 (define (add-mark mark x)
   (extend-wrap (make-wrap (make-markset mark) (make-substset)) x))
 
+; XXX goes away.
 (define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
@@ -426,10 +481,10 @@
       #f))
 
 (define (free-identifier=? x y)
-  (trace 'free-identifier=? x y)
+  (notrace 'free-identifier=? x y)
   (assert (identifier? x))
   (assert (identifier? y))
-  (trace 'free-identifier=? x y '=>
+  (notrace 'free-identifier=? x y '=>
 	 (eq? (id-label x) (id-label y))))
 
 (define (memfree-id=? id a)
@@ -440,6 +495,30 @@
           a
           (memfree-id=? id (syntax-cdr a)))))
 
+; XXX rewrite.
+#;(define (id-label id)
+  (trace 'id-label (syntax-object-expr id) (syntax-object-wrap id))
+  (trace 'id-label id '=>
+  ((lambda (sym wrap)
+     ((lambda (search)
+	(set! search
+	      (lambda (wrap mark*)
+		(if (null? wrap)
+		    (syntax-error id "undefined identifier")
+		    ((lambda (w0)
+		       (if (mark? w0)
+			   (search (cdr wrap) (cdr mark*))
+			   (if (and (eq? (subst-sym w0) sym)
+				    (same-marks? (subst-mark* w0) mark*))
+			       (subst-label w0)
+			       (search (cdr wrap) mark*))))
+		     (car wrap)))))
+	(search wrap (wrap-marks wrap)))
+      '())
+     )
+   (syntax-object-expr id)
+   (syntax-object-wrap id)))
+)
 (define (id-label id)
   (notrace 'id-label (syntax-object-expr id) '=>
   (letrec* ([sym (syntax-object-expr id)]
@@ -447,9 +526,12 @@
 	    [wrap (syntax-object-wrap id)]
 	    [XXX2-5 (notrace 'id-label 'wrap wrap)]
 	    [XXXz (notrace 'id-label 'len-wrap (length (wrap-substset wrap)))]
+	    ; XXX wrap-markset goes away.
 	    [markset (wrap-markset wrap)]
 	    [XXX3 (notrace 'id-label 'markset markset)]
+	    ; XXX wrap-substset goes away.
 	    [substset (wrap-substset wrap)]
+	    ; XXX substset-find goes away.
 	    [sub (substset-find substset sym markset)])
 	   (if sub
 	       (subst-label sub)
@@ -625,6 +707,8 @@
 	    (define lammie (syntax-car x))
 	    (define args (syntax-car (syntax-cdr x)))
 	    (define new-args (traverse-args args))
+	    ; XXX can't use make-wrap
+	    #;(define new-wrap new-ss)
 	    (define new-wrap (make-wrap (make-markset) new-ss))
 	    ;(draft-print (list 'new-wrap new-wrap))
 	    ;(draft-print (list 'new-env new-env) 300)
@@ -686,7 +770,8 @@
           (syntax-object-expr syntax-object)
           (syntax->datum (syntax-object-expr syntax-object)))
       (if (pair? syntax-object)
-          (scons syntax-object
+	  (scons syntax-object syntax->datum syntax->datum)
+          #;(scons syntax-object
                  (syntax->datum (car syntax-object))
                  (syntax->datum (cdr syntax-object)))
           (if (vector? syntax-object)
@@ -787,6 +872,8 @@
   (letrec* ([sne (initial-sne env)]
 	    [ss (car sne)]
 	    [ee (cdr sne)]
+	    ; XXX can't use make-wrap
+	    #;[wrap (list top-mark)]
 	    [wrap (make-wrap (make-markset top-mark)
 			     ss)])
 	   (cons wrap ee)))

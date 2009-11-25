@@ -329,7 +329,7 @@
          (car seg))))
   (_ '() env)))
 
-(define (ext-env name value env)
+(define (extend-frame name value env)
   (cons (make-binding name (binding-pattern) (binding-immutable) value)
         env))
 
@@ -461,9 +461,9 @@
                            #f
                            (if (memfree-id=? pattern literals)
                                (if (free-identifier=? form pattern) env #f)
-                               (ext-env (syntax-object-expr pattern)
-                                         (cons level form)
-                                         env)))))
+                               (extend-frame (syntax-object-expr pattern)
+                                             (cons level form)
+                                             env)))))
                  (if (syntax-pair? pattern)
                      (begin
                        (notrace 'match 'pair)
