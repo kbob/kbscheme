@@ -127,13 +127,6 @@ DEFINE_PROC(L"transformer?")
     RETURN(make_boolean(is_procedure(obj) && procedure_is_xformer(obj)));
 }
 
-DEFINE_SPECIAL_FORM(L"plambda")
-{
-    obj_t *params = pair_car(F_SUBJ);
-    obj_t *body = pair_cdr(F_SUBJ);
-    RETURN(make_procedure(body, params, F_ENV));
-}
-
 DEFINE_PROC(L"write")
 {
     printf_unchecked("%O", pair_car(F_SUBJ));
