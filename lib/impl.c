@@ -38,6 +38,11 @@ DEFINE_PROC(L"binding-type")
     RETURN(make_fixnum(binding_type(pair_car(F_SUBJ))));
 }
 
+DEFINE_PROC(L"binding-mutability")
+{
+    RETURN(make_fixnum(binding_is_mutable(pair_car(F_SUBJ))));
+}
+
 DEFINE_PROC(L"binding-value")
 {
     RETURN(binding_value(pair_car(F_SUBJ)));

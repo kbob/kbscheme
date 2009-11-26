@@ -21,9 +21,12 @@ bool is_syntax(obj_t *obj)
     return !is_null(obj) && OBJ_MEM_OPS(obj) == &syntax_ops;
 }
 
+#include "uprintf.h"
 obj_t *syntax_expr(obj_t *syntax)
 {
     assert_in_tospace(syntax);
+    if (!is_syntax(syntax))
+	printf_unchecked("syntax_expr: passed %O\n", syntax);
     assert(is_syntax(syntax));
     return fixvec2_get_ptr(syntax, 0);
 }

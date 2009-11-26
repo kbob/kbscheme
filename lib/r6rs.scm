@@ -1295,8 +1295,8 @@
 ;   identifier?				; r6rs-lib 12.5, Identifier predicates
 ;   bound-identifier=?
 ;   free-identifier=?
-    syntax->datum			; r6rs-lib 12.6, Syntax-object and
-    datum->syntax			;                datum conversion
+;   syntax->datum			; r6rs-lib 12.6, Syntax-object and
+;   datum->syntax			;                datum conversion
 ;   generate-temporaries		; r6rs-lib 12.7, ... temporaries
 ;   with-syntax				; r6rs-lib 12.8, Derived forms
 ;   quasisyntax				;                and procedures
