@@ -27,6 +27,11 @@
 
 ; Standard Procedures  =============================
 
+; numbers	----------------------------------
+
+(define (zero? n)
+  (= n 0))
+
 ; list utilities  --------------------------------
 
 (define (caar pair) (car (car pair)))
@@ -104,9 +109,12 @@
   (_ list '()))
 
 (define (list-tail list k)
-  (if (= k 0)
+  (if (zero? k)
       list
       (list-tail (cdr list) (- k 1))))
+
+(define (list-ref list k)
+  (car (list-tail list k)))
 
 (define (map proc . lists)
   (define (cars lists)
@@ -545,11 +553,13 @@
 
 ; syntax-case pattern matching  ------------------
 
-(define ... '...)
-(define _ '_)
-
 (define wildcard (null-wrap '_))
 (define ellipsis (null-wrap '...))
+
+(define (car-ellipsis? x)
+  (if (if (syntax-pair? x)
+            (identifier? (syntax-car x)) #f)
+       (free-identifier=? (syntax-car x) ellipsis) #f))
 
 (define (cadr-ellipsis? form)
   (if (if (if (syntax-pair? form)
@@ -789,6 +799,164 @@
             '(x 1 (a b)) '(y 0 c) '(z 0 d))
 
 ; syntax expansion  ------------------------------
+
+(define (pat name value)
+  (make-binding name (binding-pattern) (binding-immutable) value))
+
+(define (lex value)
+  (make-binding 'lex (binding-lexical) (binding-mutable) value))
+
+(define (multi-ref list indices)
+  (if (null? indices)
+      list
+      (multi-ref (list-ref list (car indices)) (cdr indices))))
+
+(assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
+
+(define (sub-binding binding pos)
+  ((lambda (val)
+     ((lambda (vdepth)
+        ((lambda (vvals)
+           (if (zero? vdepth)
+               vvals
+               (if (>= vdepth (length pos))
+                   (multi-ref vvals (reverse pos))
+                   (multi-ref vvals (list-tail (reverse pos) vdepth)))))
+         (cdr val)))
+      (car val)))
+   (binding-value binding)))
+
+(assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
+(assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
+(assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d)))) '(0 1))))
+(assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
+
+(define (combine-counts m n)
+  (if m
+      (if n
+          (if (eqv? m n)
+              m
+              (syntax-error "variables don't match ellipses"))
+          m)
+      (if n
+          n
+          (syntax-error "too many ellipses"))))
+              
+(define (repeat-count tmpl pos mr)
+  (notrace 'repeat-count (syntax->datum tmpl) pos)
+  (if (identifier? tmpl)
+      ((lambda (binding)
+         (if (if (pattern-binding? binding)
+                 (> (car (binding-value binding)) (length pos)) #f)
+             (length (sub-binding binding pos))
+             #f))
+       (env-lookup mr (syntax-object-expr tmpl)))
+      (if (car-ellipsis? tmpl)
+          #f
+          (if (cadr-ellipsis? tmpl)
+              (combine-counts
+               (repeat-count (syntax-car tmpl) pos mr)
+               (repeat-count (syntax-cddr tmpl) pos mr))
+              (if (pair? tmpl)
+                  (combine-counts
+                   (repeat-count (car tmpl) pos mr)
+                   (repeat-count (cdr tmpl) pos mr))
+                  #f)))))
+
+(define e (make-environment '()))
+(env-add-binding! e (lex 42))
+(env-add-binding! e (pat 'pat '(0 . p)))
+(env-add-binding! e (pat 'p3  '(1 . (a b c))))
+(env-add-binding! e (pat 'p3x '(2 . (() (a) (a b)))))
+
+(assert (eqv? #f (repeat-count (null-wrap '())  '(1)   e)))
+(assert (eqv? #f (repeat-count (null-wrap '0)   '(1)   e)))
+(assert (eqv? #f (repeat-count (null-wrap 'x)   '(1)   e)))
+(assert (eqv? #f (repeat-count (null-wrap 'lex) '(1)   e)))
+(assert (eqv? #f (repeat-count (null-wrap 'pat) '()    e)))
+(assert (eqv? #f (repeat-count (null-wrap 'pat) '(1)   e)))
+(assert (eqv?  3 (repeat-count (null-wrap 'p3)  '()    e)))
+(assert (eqv? #f (repeat-count (null-wrap 'p3)  '(0)   e)))
+
+(assert (eqv?  3 (repeat-count (null-wrap 'p3x) '()    e)))
+(assert (eqv?  0 (repeat-count (null-wrap 'p3x) '(0)   e)))
+(assert (eqv?  1 (repeat-count (null-wrap 'p3x) '(1)   e)))
+(assert (eqv?  2 (repeat-count (null-wrap 'p3x) '(2)   e)))
+(assert (eqv? #f (repeat-count (null-wrap 'p3x) '(0 0) e)))
+
+(define (pattern-variable? x mr)
+  (notrace 'pattern-variable? x 'mr)
+  (notrace '- 'env-lookup (env-lookup mr (syntax-object-expr x)))
+  (if (identifier? x)
+       (pattern-binding? (env-lookup mr (syntax-object-expr x))) #f))
+
+(define (expand-syntax tmpl mr)
+  (define (_ tmpl pos ellipsis-ok?)
+    (notrace 'expand-syntax (syntax-object-expr tmpl) pos ellipsis-ok?)
+    (if (identifier? tmpl)
+        (if (pattern-variable? tmpl mr)
+            ((lambda (binding)
+               (if (> (car (binding-value binding)) (length pos))
+                   (syntax-error "not enough ellipses"))
+               (datum->syntax tmpl (sub-binding binding pos)))
+             (env-lookup mr (syntax-object-expr tmpl)))
+            tmpl)
+        (if (if ellipsis-ok? (car-ellipsis? tmpl) #f) ; (... tmpl)
+            (begin
+              ((lambda (expr)
+                 (if (if (pair? (cdr expr)) (not (null? (cddr expr))) #t)
+                         (syntax-error "misplaced ellipsis")))
+               (syntax-object-expr tmpl))
+              (_ (syntax-cadr tmpl) pos #f))
+            (if (if ellipsis-ok? (cadr-ellipsis? tmpl) #f) ;(subtmpl ... . rest)
+                ((lambda (loop)
+                   (set! loop
+                         (lambda (count rest)
+                           (if (< count 0)
+                               rest
+                               (loop (- count 1)
+                                     (cons (_ (syntax-car tmpl)
+                                              (cons count pos) #t)
+                                           rest)))))
+                   (loop (- (repeat-count (syntax-car tmpl) pos mr) 1)
+                         (_ (syntax-cddr tmpl) pos #t)))
+                 '())
+
+                (if (syntax-pair? tmpl)
+                    (cons (_ (syntax-car tmpl) pos ellipsis-ok?)
+                          (_ (syntax-cdr tmpl) pos ellipsis-ok?))
+                    (if (syntax-vector? tmpl)
+                        (syntax-list->syntax-vector
+                         (_ (syntax-vector->syntax-list tmpl)
+                            pos
+                            ellipsis-ok?))
+                        (if (syntax-null? tmpl)
+                            '()
+                            tmpl)))))))
+  (_ tmpl '() #t))
+
+(define (test-expand input => expected)
+  (trace 'test-expand input '=>? expected)
+  (assert (eq? => '=>))
+  ((lambda (actual)
+     (trace 'expand-syntax input '=> actual)
+     (if (not (struct-eqv? actual expected))
+         (begin
+           (trace 'expand-syntax input '=> actual)
+           (assert (struct-eqv? actual expected)))))
+   (syntax->datum (expand-syntax (null-wrap input) e))))
+
+(test-expand 'lex                 '=> 'lex)
+(test-expand 'pat                 '=> 'p)
+(test-expand '(lex . pat)         '=> '(lex . p))
+(test-expand '(p3 ...)            '=> '(a b c))
+(test-expand '(p3 ... pat)        '=> '(a b c p))
+(test-expand '(p3 ... p3 ... pat) '=> '(a b c a b c p))
+(test-expand '((p3x ... pat) ...) '=> '((p) (a p) (a b p)))
+(test-expand '(... ...)           '=> '...)
+(test-expand '(x y (... ...))     '=> '(x y ...))
+(test-expand '(... (pat ...))     '=> '(p ...))
+(newline)
 
 ; expander	----------------------------------
 
