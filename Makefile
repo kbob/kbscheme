@@ -21,7 +21,7 @@ scheme_cfiles := main.c charbuf.c env.c eval.c expand.c io.c lib.c	\
   scheme_libs := librnrs
 scheme_ldlibs := -Wl,--no-whole-archive -lreadline
 
-     CPPFLAGS := -D_GNU_SOURCE -iquote. -I/usr/local/include
+     CPPFLAGS := -D_GNU_SOURCE -iquote. 
        CFLAGS := -g -Wall -Werror
       LDFLAGS := -Wl,--whole-archive
       libtype := static
