@@ -150,8 +150,10 @@ obj_t *apply_procedure(obj_t *proc, obj_t *args)
 	}
 	obj_t *formal, *actual;
 	if (is_pair(formals)) {
-	    if (is_null(actuals))
+	    if (is_null(actuals)) {
+		printf_unchecked("proc=%O\n", proc);
 		RAISE("not enough args");
+	    }
 	    formal  = pair_car(formals);
 	    formals = pair_cdr(formals);
 	    actual  = pair_car(actuals);
