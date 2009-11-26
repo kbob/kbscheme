@@ -22,6 +22,8 @@
 (define (notrace . exps)
      (last exps))
 
+(define sox syntax-object-expr)
+
 ; Standard Procedures  =============================
 
 ; list utilities  --------------------------------
@@ -70,6 +72,11 @@
 	tail
 	(_ (cdr list) (cons (car list) tail))))
   (_ list '()))
+
+(define (list-tail list k)
+  (if (= k 0)
+      list
+      (list-tail (cdr list) (- k 1))))
 
 (define (map proc . lists)
   (define (cars lists)
@@ -240,6 +247,13 @@
   (cons (make-binding name (binding-pattern) (binding-immutable) value)
         env))
 
+(define *root-environment* (the-environment))
+; begin XXX
+(define *tail-environment* (make-environment '()))
+(env-set-bindings! *tail-environment* (list-tail (env-bindings (the-environment)) 145))
+;(draft-print (list '*tail-env* *tail-environment*) 1000)
+; end   XXX
+
 ; Expander	====================================
 
 ; errors	----------------------------------
@@ -252,7 +266,7 @@
 (define (syntax-error object message)
   (writeln (list message object))
   (writeln (list message (syntax-object-expr object)))
-  (error #f "~a ~s" message (syntax->datum object)))
+  (exit))
 
 ; tagged-vector	 ---------------------------------
 
@@ -292,21 +306,21 @@
 (define markset-has-mark? memq)
 
 ; XXX simplify.  We know both marksets are in the same order.
-#;(define (marksets-equal? m1 m2)
+(define (same-marks? m1 m2)
   (if (null? m1)
       (null? m2)
       (if (null? m2)
 	  #f
 	  (if (eq? (car m1) (car m2))
-	      (marksets-equal? (cdr m1) (cdr m2))
+	      (same-marks? (cdr m1) (cdr m2))
 	      #f))))
-(define (marksets-equal? m1 m2)
+#;(define (marksets-equal? m1 m2)
   (if (eqv? (length m1) (length m2))
       (null? (join-marksets m1 m2))
       #f))
 
 ; XXX goes away.
-(define (join-marksets m1 m2)
+#;(define (join-marksets m1 m2)
   (define (in marks)
     (lambda (m) (markset-has-mark? m marks)))
   (append (remp (in m1) m2) (remp (in m2) m1)))
@@ -331,11 +345,11 @@
 ; substitution set  ------------------------------
 ; XXX goes away
 
-(define make-substset list)
+#;(define make-substset list)
 
-(define join-substsets append)
+#;(define join-substsets append)
 
-(define (substset-find substset sym markset)
+#;(define (substset-find substset sym markset)
   (if (null? substset)
       #f
       (letrec* ([sub (car substset)])
@@ -349,19 +363,19 @@
 ; XXX changes.  Intermingle wraps and substitutions.
 
 ; XXX goes away.
-(define (make-wrap markset substset)
+#;(define (make-wrap markset substset)
   (vector 'wrap markset substset))
 
 ; XXX goes away
-(define (wrap? obj)
+#;(define (wrap? obj)
   (tagged-vector? 'wrap obj))
 
 ; XXX goes away
-(define (wrap-markset wrap)
+#;(define (wrap-markset wrap)
   (vector-ref wrap 1))
 
 ; XXX goes away
-(define (wrap-substset wrap)
+#;(define (wrap-substset wrap)
   (vector-ref wrap 2))
 
 (define (wrap-marks wrap)
@@ -374,7 +388,7 @@
        (car wrap))))
 
 ; XXX rewrite
-#;(define (join-wraps wrap1 wrap2)
+(define (join-wraps wrap1 wrap2)
   (if (null? wrap1)
       wrap2
       (if (null? wrap2)
@@ -386,16 +400,17 @@
 			 (if (if (mark? w) (eq? (car wrap2 w)) #f)
 			     (cdr wrap2)
 			     (cons w wrap2))
-			 (cons w (f (car w*) (cdr w*)))))))
+			 (cons w (f (car w*) (cdr w*))))))
+	     (f (car wrap1) (cdr wrap1)))
 	   '()))))
-(define (join-wraps w1 w2)
+#;(define (join-wraps w1 w2)
   (make-wrap (join-marksets (wrap-markset w1) (wrap-markset w2))
              (join-substsets (wrap-substset w1) (wrap-substset w2))))
 
 ; XXX rewrite (and rename)
-#;(define (null-wrap x)
-  (make-syntax-object x (list top-mark)))
 (define (null-wrap x)
+  (make-syntax-object x (list top-mark)))
+#;(define (null-wrap x)
   (make-syntax-object x
                       (make-wrap (make-markset top-mark) (make-substset))))
 
@@ -447,13 +462,13 @@
 (define top-mark (make-mark))
 
 ; XXX rewrite
-#;(define (top-marked? wrap)
+(define (top-marked? wrap)
   (if (null? wrap)
       #f
       (if (eq? (car wrap) top-mark)
 	  #t
 	  (top-marked? (cdr wrap)))))
-(define (top-marked? wrap)
+#;(define (top-marked? wrap)
   (markset-has-mark? top-mark (wrap-markset wrap)))
 
 (define (extend-wrap wrap x)
@@ -464,13 +479,13 @@
       (make-syntax-object x wrap)))
 
 ; XXX can't use make-wrap or make-substset
-#;(define (add-mark mark x)
-  (extend-wrap (list mark) x))
 (define (add-mark mark x)
+  (extend-wrap (list mark) x))
+#;(define (add-mark mark x)
   (extend-wrap (make-wrap (make-markset mark) (make-substset)) x))
 
 ; XXX goes away.
-(define (add-subst subst x)
+#;(define (add-subst subst x)
   (extend-wrap (make-wrap (make-markset) (make-substset subst)) x))
 
 ; identifier	----------------------------------
@@ -496,30 +511,36 @@
           (memfree-id=? id (syntax-cdr a)))))
 
 ; XXX rewrite.
-#;(define (id-label id)
-  (trace 'id-label (syntax-object-expr id) (syntax-object-wrap id))
-  (trace 'id-label id '=>
+(define (id-label id)
+  (notrace 'id-label (sox id) (syntax-object-wrap id))
   ((lambda (sym wrap)
+     (notrace 'id-label sym wrap)
      ((lambda (search)
 	(set! search
 	      (lambda (wrap mark*)
+		(notrace 'search 'wrap wrap)
+		(notrace 'search 'mark* mark*)
 		(if (null? wrap)
 		    (syntax-error id "undefined identifier")
 		    ((lambda (w0)
 		       (if (mark? w0)
 			   (search (cdr wrap) (cdr mark*))
-			   (if (and (eq? (subst-sym w0) sym)
-				    (same-marks? (subst-mark* w0) mark*))
+			   (if (if (notrace 'eq? (subst-sym w0) sym '=>
+					  (eq? (subst-sym w0) sym)
+					  )
+				   (notrace 'same-marks? (subst-markset w0) mark* '=>
+				   (same-marks? (subst-markset w0) mark*)
+				   )
+				   #f)
 			       (subst-label w0)
 			       (search (cdr wrap) mark*))))
 		     (car wrap)))))
 	(search wrap (wrap-marks wrap)))
-      '())
-     )
+      '()))
    (syntax-object-expr id)
    (syntax-object-wrap id)))
-)
-(define (id-label id)
+
+#;(define (id-label id)
   (notrace 'id-label (syntax-object-expr id) '=>
   (letrec* ([sym (syntax-object-expr id)]
 	    [XXX1 (notrace 'id-label 'sym sym)]
@@ -556,7 +577,7 @@
 		      (bytevector? obj)))))))
 
 (define (id-binding id r)
-  (notrace 'id-binding (syntax-object-expr id) '=>
+  (notrace 'id-binding (sox id) '=>
   (label-binding id (id-label id) r))
   )
 
@@ -637,11 +658,11 @@
     (cons (exp (syntax-car x) r mr) (exp (syntax-cdr x) r mr)))
   (define (exp-other x)
     (letrec* ([d (syntax->datum x)])
-	     (notrace 'exp-other (syntax-object-expr x))
+	     (notrace 'exp-other (sox x))
 	     (if (self-evaluating? d)
 		 x
 		 (syntax-error x "invalid syntax C"))))
-  (notrace 'exp (syntax-object-expr x))
+  (notrace 'exp (sox x))
   ; I want cond.
   (if (identifier? x)
       (exp-identifier x)
@@ -659,7 +680,7 @@
   (p x r mr))
 
 (define (exp-exprs x* r mr)
-  (notrace 'exp-exprs (syntax-object-expr x*))
+  (notrace 'exp-exprs (sox x*))
   (if (null? (syntax-object-expr x*))
       '()
       (cons (exp (syntax-car x*) r mr)
@@ -668,13 +689,46 @@
 (define (exp-quote x r mr)
   (list 'quote (syntax->datum (syntax-car (syntax-cdr x)))))
 
-; Get the arg list.
-; Make a fresh anonymous symbol and a fresh label for each.
-; Build a substition set mapping each one to a fresh label.
-; Build list
-;   (list 'lambda new-args splice-in (exp b new-env mr) for b in body)
-
 (define (exp-lambda x r mr)
+
+  (define (map-improper proc im)
+    (if (null? im)
+	'()
+	(if (pair? im)
+	    (cons (proc (car im))
+		  (map-improper proc (cdr im)))
+	    (proc im))))
+
+  (define (listize im)
+    (if (null? im)
+	'()
+	(if (pair? im)
+	    (cons (car im) (listize (cdr im)))
+	    (cons im '()))))
+
+  (define (bind-var label var)
+    (make-binding label (binding-lexical) (binding-mutable) var))
+
+  (define (subst-var var label)
+    (make-subst var (wrap-marks (syntax-object-wrap x)) label))
+
+  (letrec* ([lammie (syntax-car x)]
+	    [args (syntax-cadr x)]
+	    [arg-names (syntax->datum args)]
+	    [arg-name-list (listize arg-names)]
+	    [body (syntax-cddr x)]
+	    [labels (map (lambda (x) (make-label)) arg-name-list)]
+	    [new-args (map-improper (lambda (x) (make-anonymous-symbol))
+				    arg-names)]
+	    [new-vars (listize new-args)]
+	    [bindings (map bind-var labels new-vars)]
+	    [substs (map subst-var arg-name-list labels)]
+	    [new-env (push-environment bindings r)]
+	    [new-body (extend-wrap substs body)])
+	   (cons lammie (cons new-args (exp new-body new-env mr)))))
+
+
+#;(define (exp-lambda x r mr)
   (letrec* ([wrap (syntax-object-wrap x)]
 	    [marks (wrap-markset wrap)]
 	    [XXX (notrace 'marks marks)]
@@ -741,18 +795,18 @@
 (define (exp-letrec* x r mr)
   ...)
 
-(define (syntax-null? x)
+#;(define (syntax-null? x)
   (null? (syntax-object-expr x)))
 
-(define (syntax-pair? x)
+#;(define (syntax-pair? x)
   (pair? (syntax-object-expr x)))
 
-(define (syntax-car x)
+#;(define (syntax-car x)
   (extend-wrap
    (syntax-object-wrap x)
    (car (syntax-object-expr x))))
 
-(define (syntax-cdr x)
+#;(define (syntax-cdr x)
   (extend-wrap
    (syntax-object-wrap x)
    (cdr (syntax-object-expr x))))
@@ -805,7 +859,8 @@
 	       (set! *sne-cache*
 		     (list (cons (cons env (env-bindings env)) sne))))))
 
-(define *root-environment* (the-environment))
+(define (make-lexical-binding name value)
+  (make-binding name (binding-lexical) (binding-mutable) value))
 
 (define (initial-wrap-and-env env)
   (define specials
@@ -833,9 +888,13 @@
 	 (make-binding label (binding-lexical) (binding-immutable) sym))))
   (define (make-one-sne binding)
     (define label (make-label))
+    (notrace 'make-one-sne '=>
     (cons (subst-one (binding-name binding) label)
 	  (bind-one binding label)))
+    )
+  (define top-mark-list (list top-mark))
   (define (make-frame-sne bindings cached parent-substset)
+    (notrace 'make-frame-sne '=>
     (if (null? bindings)
 	(list parent-substset '())
 	(if (if cached (eq? bindings (cdr (car cached))) #f)
@@ -847,10 +906,11 @@
 		     (cons
 		      (cons (car first-sne) (car rest-snes))
 		      (cons (cdr first-sne) (cdr rest-snes)))))))
+    )
   (define (parent-ss env)
     (letrec* ([parent (env-parent env)])
 	     (if (null? parent)
-		 '()
+		 top-mark-list
 		 (cdr (cdr (make-env-sne parent))))))
   (define (make-env-sne env)
     (letrec* ([cached (snec-lookup env)]
@@ -863,21 +923,24 @@
 			  (snec-update! env (env-bindings env) new-wne)
 			  new-wne))))
   (define (initial-sne env)
+    (notrace 'initial-sne '=>
     (if (null? env)
-	'(() ())
+	(notrace 'null 'env '=> '((top-mark) ())
+	       )
 	(letrec* ([first-ewne (make-env-sne env)]
 		  [rest-ewne (initial-sne (env-parent env))])
 		 (cons (car first-ewne)
 		       (cons (cdr first-ewne) (cdr rest-ewne))))))
+    )
   (letrec* ([sne (initial-sne env)]
 	    [ss (car sne)]
 	    [ee (cdr sne)]
 	    ; XXX can't use make-wrap
-	    #;[wrap (list top-mark)]
-	    [wrap (make-wrap (make-markset top-mark)
+	    [wrap ss]
+	    #;[wrap (make-wrap (make-markset top-mark)
 			     ss)])
 	   (cons wrap ee)))
-	   
+
 (define (expandXXX form env)
   (letrec* ([wne (initial-wrap-and-env env)]
 	    [wrap (car wne)]
@@ -902,7 +965,7 @@
 (xpe '(if 1 2 3))
 (xpe '(quote abc))
 (xp '(syntax 123))
-(xpe '(lambda (a b) (cons b a)))
+(xpe '(lambda (a . b) (cons b a)))
 (xpe '((lambda (a b) (cons b a)) 1 2))
 ;(exit)
 
