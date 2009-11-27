@@ -140,8 +140,8 @@
     append
     reverse
 ;   list-tail
-   list-ref
-;   map
+    list-ref
+    map
     for-each
 ;;;;symbol?				; r6rs 11.10 Symbols
 ;;;;symbol->string
@@ -381,8 +381,22 @@
 	(car list)
 	(list-ref (cdr list) (- k 1))))
 
-  (define (for-each proc . lists)
-    ; XXX should require at least one list.
+  (define (map proc list . lists)
+    (define (cars lists)
+      (if (null? lists)
+	  '()
+	  (cons (car (car lists)) (cars (cdr lists)))))
+    (define (cdrs lists)
+      (if (null? lists)
+	  '()
+	  (cons (cdr (car lists)) (cdrs (cdr lists)))))
+    (define (_ lists result)
+      (if (null? (car lists))
+	  (reverse result)
+	  (_ (cdrs lists) (cons (apply proc (cars lists)) result))))
+    (_ (cons list lists) '()))
+
+  (define (for-each proc list . lists)
     ; XXX should fail if lists have different lengths. (See for-all.)
     (define (cars lists)
       (if (null? lists)
@@ -392,14 +406,15 @@
       (if (null? lists)
 	  '()
 	  (cons (cdar lists) (cdrs (cdr lists)))))
-    (if (null? (car lists))
-	(if #f #f)
-	(begin
-	  (apply proc (cars lists))
-	  (apply for-each proc (cdrs lists)))))
+    (define (_ lists)
+      (if (null? list)
+	  (if #f #f)
+	  (begin
+	    (apply proc (cars lists))
+	    (_ (cdrs lists)))))
+    (_ (cons list lists)))
 
-  (define (string-for-each proc . strings)
-    (define str (car strings))
+  (define (string-for-each proc string . strings)
     (define (chars index strings)
       (if (null? strings)
 	  '()
@@ -407,10 +422,10 @@
 	   (string-ref (car strings) index)
 	   (chars index (cdr strings)))))
     (define (_ index)
-      (if (>= index (string-length str))
+      (if (>= index (string-length string))
 	  (if #f #f)
 	  (begin
-	    (apply proc (chars index strings))
+	    (apply proc (chars index (cons string strings)))
 	    (_ (+ index 1)))))
     (_ 0))
 
@@ -434,18 +449,17 @@
 	    (_ (+ index 1) (cdr tail)))))
     (_ 0 l))
 
-  (define (vector-map proc . vectors)
-    ; XXX should require at least one vector.
-    ; XXX should check that all vector are the same length.
+  (define (vector-map proc vector . vectors)
+    ; XXX should check that all vectors are the same length.
     (define (vector-refs vectors i)
       (if (null? vectors)
 	  '()
 	  (cons (vector-ref (car vectors) i)
 		(vector-refs (cdr vectors) i))))
     (define (_ i)
-      (if (= i (vector-length (car vectors)))
+      (if (= i (vector-length vector))
 	  '()
-	  (cons (apply proc (vector-refs vectors i))
+	  (cons (apply proc (vector-refs (cons vector vectors) i))
 		(_ (+ i 1)))))
     (list->vector (_ 0)))
 
@@ -523,8 +537,7 @@
   (draft)
   (rnrs base (6)))
 
-  (define (for-all proc . lists)
-    ; XXX should require at least one list.
+  (define (for-all proc list . lists)
     (define (any-nulls? lists)
       (if (null? lists)
 	  #f
@@ -551,13 +564,15 @@
       (if (null? lists)
 	  '()
 	  (cons (cdar lists) (cdrs (cdr lists)))))
-    (if (nulls? lists)
-        #t
-	(if (nulls? (cdr lists))
-	    (apply proc (cars lists))
-	    (if (apply proc (cars lists))
-		(apply for-all proc (cdrs lists))
-		#f))))
+    (define (_ lists)
+      (if (nulls? lists)
+	  #t
+	  (if (nulls? (cdr lists))
+	      (apply proc (cars lists))
+	      (if (apply proc (cars lists))
+		  (apply for-all proc (cdrs lists))
+		  #f))))
+    (_ (cons list lists)))
 
   ; XXX use this when we have macros.
   #;(define-syntax _accum-cmp
@@ -752,8 +767,8 @@
     append
     reverse
 ;   list-tail
-   list-ref
-;   map
+    list-ref
+    map
     for-each
     symbol?				; r6rs 11.10 Symbols
     symbol->string
