@@ -269,13 +269,14 @@
   (env-set-bindings! env (cons binding (env-bindings env))))
 
 (define (env-lookup env name)
+  (notrace 'env-lookup name)
   (define (_ seg env)
     (if (null? seg)
         (if (null? env)
             #f
             (_ (car env) (cdr env)))
         ((lambda (binding)
-           (if (eq? (binding-name binding) name)
+           (if (eq? (binding-name (notrace 'binding binding)) name)
                binding
                (_ (cdr seg) env)))
          (car seg))))
@@ -334,9 +335,9 @@
 
 ; markset	----------------------------------
 
-(define make-markset list)
+#;(define make-markset list)
 
-(define markset-has-mark? memq)
+#;(define markset-has-mark? memq)
 
 (define (same-marks? m1 m2)
   (if (null? m1)
@@ -785,7 +786,7 @@
 			  #f)
 		      #f))))))
 
-(define (test-match pattern form => . expecteds)
+#;(define (test-match pattern form => . expecteds)
   (notrace 'match pattern form '=>? expecteds)
   (assert (eq? => '=>))
   (define (report actual)
@@ -798,7 +799,7 @@
                                 (null-wrap form)
                                 (null-wrap '(k))))))
 
-#;(define (test-match . args) #f)
+(define (test-match . args) #f)
 
 (test-match '(_ a k b)   '(m 3 k 4) '=> '(a 0 3) '(b 0 4))
 (test-match '(_ a ...)   '(m x y z) '=> '(a 1 (x y z)))
@@ -909,6 +910,7 @@
        (pattern-binding? (env-lookup mr (syntax-object-expr x))) #f))
 
 (define (expand-syntax tmpl mr)
+  (notrace 'expand-syntax (sox tmpl) mr)
   (define (_ tmpl pos ellipsis-ok?)
     (notrace 'expand-syntax (syntax-object-expr tmpl) pos ellipsis-ok?)
     (if (identifier? tmpl)
@@ -953,7 +955,7 @@
                             tmpl)))))))
   (_ tmpl '() #t))
 
-(define (test-expand input => expected)
+#;(define (test-expand input => expected)
   (notrace 'test-expand input '=>? expected)
   (assert (eq? => '=>))
   ((lambda (actual)
@@ -964,7 +966,7 @@
            (assert (struct-eqv? actual expected)))))
    (syntax->datum (expand-syntax (null-wrap input) e))))
 
-#;(define (test-expand . args) #f)
+(define (test-expand . args) #f)
 
 (test-expand 'lex                 '=> 'lex)
 (test-expand 'pat                 '=> 'p)
@@ -1076,6 +1078,7 @@
 
 ; exp-lambda:
 ;   expand body with wraps var -> label, env (label: name) + r, meta-env mr.
+
 (define (exp-lambda x r mr)
   ; XXX flatten body
   ; XXX convert internal define to letrec*
@@ -1152,14 +1155,16 @@
 		      (push-environment bindings r)
 		      (push-environment bindings mr)))))
 
-
 #;(define (exp-define-syntax x r mr) ...)
 
 #;(define (exp-letrec* x r mr) ...)
 
-; XXX replace
 (define (exp-syntax x r mr)
-  (syntax-car (syntax-cdr x)))
+  (XXX-test-env 'exp-syntax r)
+  (XXX-test-env 'exp-syntax mr)
+  (if (= 2 (length (syntax-object-expr x)))
+  (expand-syntax (syntax-cadr x) mr)
+  (syntax-error x "invalid syntax")))
 
 (define (syntax x) (syntax-error "can't eval syntax"))
 (define (letrec-syntax x) (syntax-error "can't eval letrec-syntax"))
@@ -1184,6 +1189,25 @@
 
 (define (make-lexical-binding name value)
   (make-binding name (binding-lexical) (binding-mutable) value))
+
+(define (XXX-test-frame label frame)
+  (define (_ x)
+    (if (null? x)
+	#t
+	(if (if (pair? x) (binding? (car x)))
+	    #t
+	    (trace 'bad-frame x #f))))
+	
+  (trace 'test-frame 'begin label)
+  (assert (_ frame))
+  (trace 'test-frame 'done label)
+  frame)
+
+(define (XXX-test-env label env)
+  (trace 'test-env 'begin label)
+  (trace 'test-env 'found (env-lookup env 'nonexistent))
+  (trace 'test-env 'done label)
+  env)
 
 (define (initial-wrap-and-env env)
   (define specials
@@ -1216,7 +1240,7 @@
   (define top-mark-list (list top-mark))
   (define (make-frame-sne bindings cached parent-substset)
     (if (null? bindings)
-	(list parent-substset '())
+	(cons parent-substset '())
 	(if (if cached (eq? bindings (cdr (car cached))) #f)
 	    (cdr cached)
 	    (letrec* ([first-sne (make-one-sne (car bindings))]
@@ -1252,6 +1276,7 @@
 
 (define (expandXXX form env)
   (letrec* ([wne (initial-wrap-and-env env)]
+	    [XXX (XXX-test-env 'initial (cdr wne))]
 	    [wrap (car wne)]
 	    [meta-env (cdr wne)])
 	   (syntax->datum
@@ -1268,15 +1293,18 @@
 	   (trace 'eval v '=> (eval v *root-environment*))
 	   (newline)))
 
-(xpe '123)
-(xpe 'list)
-(xpe '(list 1 2 3))
-(xpe '(if 1 2 3))
-(xpe '(quote abc))
-(xp '(syntax 123))
-(xpe '(lambda (a . b) (cons b a)))
-(xpe '((lambda (a b) (cons b a)) 1 2))
-(xpe '(letrec-syntax ([my-macro (lambda (x) (syntax-cadr x))]) (my-macro 123)))
+;(xpe '123)
+;(xpe 'list)
+;(xpe '(list 1 2 3))
+;(xpe '(if 1 2 3))
+;(xpe '(quote abc))
+;(xpe '(lambda (a . b) (cons b a)))
+;(xpe '((lambda (a b) (cons b a)) 1 2))
+;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
+;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
+(xpe '(syntax 123))
+(xpe '(syntax '(a 1)))
+(xpe '(syntax (list 1 2)))
 ;(exit)
 
 #|
