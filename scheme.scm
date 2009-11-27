@@ -384,7 +384,7 @@
 	     (set! f
 		   (lambda (w w*)
 		     (if (null? w*)
-			 (if (if (mark? w) (eq? (car wrap2 w)) #f)
+			 (if (if (mark? w) (eq? (car wrap2) w) #f)
 			     (cdr wrap2)
 			     (cons w wrap2))
 			 (cons w (f (car w*) (cdr w*))))))
@@ -436,6 +436,22 @@
   (extend-wrap
    (syntax-object-wrap x)
    (list->vector (syntax-object-expr x))))
+
+(define (syntax-map proc . stx-lists)
+  (define (syntax-cars stx-lists)
+    (if (null? stx-lists)
+	'()
+	(cons (syntax-car (car stx-lists)) (syntax-cars (cdr stx-lists)))))
+  (define (syntax-cdrs stx-lists)
+    (if (null? stx-lists)
+	'()
+	(cons (syntax-cdr (car stx-lists)) (syntax-cdrs (cdr stx-lists)))))
+  (define (_ stx-lists result)
+    (if (syntax-null? (car stx-lists))
+	(reverse result)
+	(_ (syntax-cdrs stx-lists)
+	   (cons (apply proc (syntax-cars stx-lists)) result))))
+  (_ stx-lists '()))
 
 (define top-mark (make-mark))
 
@@ -773,7 +789,7 @@
   (notrace 'match pattern form '=>? expecteds)
   (assert (eq? => '=>))
   (define (report actual)
-    (apply trace 'match pattern form '=> (bindings-short-names actual))
+    ;(apply trace 'match pattern form '=> (bindings-short-names actual))
     (if (not (struct-eqv? actual (pattern-bindings expecteds)))
         (begin
           (apply trace 'match pattern form '=> (bindings-short-names actual))
@@ -781,6 +797,8 @@
   (report (syntax->datum (match (null-wrap pattern)
                                 (null-wrap form)
                                 (null-wrap '(k))))))
+
+#;(define (test-match . args) #f)
 
 (test-match '(_ a k b)   '(m 3 k 4) '=> '(a 0 3) '(b 0 4))
 (test-match '(_ a ...)   '(m x y z) '=> '(a 1 (x y z)))
@@ -936,15 +954,17 @@
   (_ tmpl '() #t))
 
 (define (test-expand input => expected)
-  (trace 'test-expand input '=>? expected)
+  (notrace 'test-expand input '=>? expected)
   (assert (eq? => '=>))
   ((lambda (actual)
-     (trace 'expand-syntax input '=> actual)
+     (notrace 'expand-syntax input '=> actual)
      (if (not (struct-eqv? actual expected))
          (begin
            (trace 'expand-syntax input '=> actual)
            (assert (struct-eqv? actual expected)))))
    (syntax->datum (expand-syntax (null-wrap input) e))))
+
+#;(define (test-expand . args) #f)
 
 (test-expand 'lex                 '=> 'lex)
 (test-expand 'pat                 '=> 'p)
@@ -956,7 +976,7 @@
 (test-expand '(... ...)           '=> '...)
 (test-expand '(x y (... ...))     '=> '(x y ...))
 (test-expand '(... (pat ...))     '=> '(p ...))
-(newline)
+;(newline)
 
 ; expander	----------------------------------
 
@@ -1054,6 +1074,8 @@
 (define (exp-quote x r mr)
   (list 'quote (syntax->datum (syntax-car (syntax-cdr x)))))
 
+; exp-lambda:
+;   expand body with wraps var -> label, env (label: name) + r, meta-env mr.
 (define (exp-lambda x r mr)
   ; XXX flatten body
   ; XXX convert internal define to letrec*
@@ -1099,22 +1121,48 @@
 			     (binding-lexical)
 			     (binding-mutable)
 			     (undef))])
-	   (env-add-binding! b)
-	   (binding-set! b (exp (syntax-car (syntax-cdr (syntax-cdr x)))
-				r
-				mr))))
+	   (env-add-binding! r b)
+	   (binding-set! b (exp (syntax-caddr x) r mr))))
 
-(define (exp-define-syntax x r mr)
-  ...)
+; exp-letrec-syntax:
+;   expand macro bodies with wraps keyword -> label, env mr, meta-env mr.
+;   expand body with wraps    keyword -> label + original wraps,
+;                    env      (label: expanded macro) + r,
+;                    meta-env (label: expanded macro) + mr.
 
-(define (exp-letrec* x r mr)
-  ...)
+(define (exp-letrec-syntax x r mr)
+  (define (subst-var var label)
+    (make-subst var (wrap-marks (syntax-object-wrap x)) label))
+  (define (bind-keyword label keyword)
+    (make-binding label (binding-macro) (binding-immutable) keyword))
+  (letrec* ([keywords (map car (syntax-object-expr (syntax-cadr x)))]
+	    [exprs (syntax-map syntax-cadr (syntax-cadr x))]
+	    [body (syntax-cddr x)]
+	    [labels (map (lambda (x) (make-label)) keywords)]
+	    [substs (map subst-var keywords labels)]
+	    [expand-macro (lambda (x)
+			    (eval
+			     (syntax->datum
+			      (exp (extend-wrap substs x) mr mr))
+			     (the-environment)))]
+	    [expanded-macros (map expand-macro exprs)]
+	    [bindings (map bind-keyword labels expanded-macros)])
+	   (cons 'begin
+		 (exp (extend-wrap substs body)
+		      (push-environment bindings r)
+		      (push-environment bindings mr)))))
 
-(define (syntax x) '())
+
+#;(define (exp-define-syntax x r mr) ...)
+
+#;(define (exp-letrec* x r mr) ...)
 
 ; XXX replace
 (define (exp-syntax x r mr)
   (syntax-car (syntax-cdr x)))
+
+(define (syntax x) (syntax-error "can't eval syntax"))
+(define (letrec-syntax x) (syntax-error "can't eval letrec-syntax"))
 
 ; The sne cache is a list of ((env1 . bindings) . (wrap . env2)),
 ; where env1 is the eval-time env and env2 is the expand-time env.
@@ -1147,8 +1195,9 @@
        (syntax . exp-syntax)
        (lambda . exp-lambda)
 ;       (define . exp-define)
-       (define-syntax . exp-define-syntax)
+;       (define-syntax . exp-define-syntax)
 ;       (letrec* . exp-letrec*)
+	(letrec-syntax . exp-letrec-syntax)
        )))
   (define (subst-one sym label)
     (make-subst sym (list top-mark) label))
@@ -1227,6 +1276,7 @@
 (xp '(syntax 123))
 (xpe '(lambda (a . b) (cons b a)))
 (xpe '((lambda (a b) (cons b a)) 1 2))
+(xpe '(letrec-syntax ([my-macro (lambda (x) (syntax-cadr x))]) (my-macro 123)))
 ;(exit)
 
 #|
