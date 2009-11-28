@@ -116,7 +116,7 @@
 (define (list-ref list k)
   (car (list-tail list k)))
 
-(define (map proc . lists)
+(define (map proc list . lists)
   (define (cars lists)
     (if (null? lists)
 	'()
@@ -129,8 +129,7 @@
     (if (null? (car lists))
 	(reverse result)
 	(_ (cdrs lists) (cons (apply proc (cars lists)) result))))
-  (_ lists '())
-)
+  (_ (cons list lists) '()))
 
 (define (_accum-cmp accum cmp obj list)
   (accum (lambda (x) (cmp x obj)) list))
@@ -584,8 +583,8 @@
             (identifier? (syntax-cadr form)) #f)
        (free-identifier=? (syntax-cadr form) ellipsis) #f))
 
-(assert      (cadr-ellipsis? (null-wrap '(a ... b))))
-(assert (not (cadr-ellipsis? (null-wrap '(a . b)))))
+;(assert      (cadr-ellipsis? (null-wrap '(a ... b))))
+;(assert (not (cadr-ellipsis? (null-wrap '(a . b)))))
 
 (define (merge-envs head-env tail-env)
   (notrace 'merge-envs head-env tail-env)
@@ -830,7 +829,7 @@
       list
       (multi-ref (list-ref list (car indices)) (cdr indices))))
 
-(assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
+#;(assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
 
 (define (sub-binding binding pos)
   ((lambda (val)
@@ -845,10 +844,10 @@
       (car val)))
    (binding-value binding)))
 
-(assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
-(assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
-(assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d)))) '(0 1))))
-(assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
+;(assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
+;(assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
+;(assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d))))'(0 1))))
+;(assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
 
 (define (combine-counts m n)
   (if m
@@ -882,26 +881,29 @@
                    (repeat-count (cdr tmpl) pos mr))
                   #f)))))
 
-(define e (make-environment '()))
-(env-add-binding! e (lex 42))
-(env-add-binding! e (pat 'pat '(0 . p)))
-(env-add-binding! e (pat 'p3  '(1 . (a b c))))
-(env-add-binding! e (pat 'p3x '(2 . (() (a) (a b)))))
+(if #f
+    (begin
+      (define e (make-environment '()))
+      (env-add-binding! e (lex 42))
+      (env-add-binding! e (pat 'pat '(0 . p)))
+      (env-add-binding! e (pat 'p3  '(1 . (a b c))))
+      (env-add-binding! e (pat 'p3x '(2 . (() (a) (a b)))))
 
-(assert (eqv? #f (repeat-count (null-wrap '())  '(1)   e)))
-(assert (eqv? #f (repeat-count (null-wrap '0)   '(1)   e)))
-(assert (eqv? #f (repeat-count (null-wrap 'x)   '(1)   e)))
-(assert (eqv? #f (repeat-count (null-wrap 'lex) '(1)   e)))
-(assert (eqv? #f (repeat-count (null-wrap 'pat) '()    e)))
-(assert (eqv? #f (repeat-count (null-wrap 'pat) '(1)   e)))
-(assert (eqv?  3 (repeat-count (null-wrap 'p3)  '()    e)))
-(assert (eqv? #f (repeat-count (null-wrap 'p3)  '(0)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap '())  '(1)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap '0)   '(1)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'x)   '(1)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'lex) '(1)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'pat) '()    e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'pat) '(1)   e)))
+      (assert (eqv?  3 (repeat-count (null-wrap 'p3)  '()    e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'p3)  '(0)   e)))
 
-(assert (eqv?  3 (repeat-count (null-wrap 'p3x) '()    e)))
-(assert (eqv?  0 (repeat-count (null-wrap 'p3x) '(0)   e)))
-(assert (eqv?  1 (repeat-count (null-wrap 'p3x) '(1)   e)))
-(assert (eqv?  2 (repeat-count (null-wrap 'p3x) '(2)   e)))
-(assert (eqv? #f (repeat-count (null-wrap 'p3x) '(0 0) e)))
+      (assert (eqv?  3 (repeat-count (null-wrap 'p3x) '()    e)))
+      (assert (eqv?  0 (repeat-count (null-wrap 'p3x) '(0)   e)))
+      (assert (eqv?  1 (repeat-count (null-wrap 'p3x) '(1)   e)))
+      (assert (eqv?  2 (repeat-count (null-wrap 'p3x) '(2)   e)))
+      (assert (eqv? #f (repeat-count (null-wrap 'p3x) '(0 0) e)))
+      ))
 
 (define (pattern-variable? x mr)
   (notrace 'pattern-variable? x 'mr)
@@ -1160,8 +1162,6 @@
 #;(define (exp-letrec* x r mr) ...)
 
 (define (exp-syntax x r mr)
-  (XXX-test-env 'exp-syntax r)
-  (XXX-test-env 'exp-syntax mr)
   (if (= 2 (length (syntax-object-expr x)))
   (expand-syntax (syntax-cadr x) mr)
   (syntax-error x "invalid syntax")))
@@ -1189,25 +1189,6 @@
 
 (define (make-lexical-binding name value)
   (make-binding name (binding-lexical) (binding-mutable) value))
-
-(define (XXX-test-frame label frame)
-  (define (_ x)
-    (if (null? x)
-	#t
-	(if (if (pair? x) (binding? (car x)))
-	    #t
-	    (trace 'bad-frame x #f))))
-	
-  (trace 'test-frame 'begin label)
-  (assert (_ frame))
-  (trace 'test-frame 'done label)
-  frame)
-
-(define (XXX-test-env label env)
-  (trace 'test-env 'begin label)
-  (trace 'test-env 'found (env-lookup env 'nonexistent))
-  (trace 'test-env 'done label)
-  env)
 
 (define (initial-wrap-and-env env)
   (define specials
@@ -1276,7 +1257,6 @@
 
 (define (expandXXX form env)
   (letrec* ([wne (initial-wrap-and-env env)]
-	    [XXX (XXX-test-env 'initial (cdr wne))]
 	    [wrap (car wne)]
 	    [meta-env (cdr wne)])
 	   (syntax->datum
@@ -1302,18 +1282,14 @@
 ;(xpe '((lambda (a b) (cons b a)) 1 2))
 ;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
 ;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
-(xpe '(syntax 123))
-(xpe '(syntax '(a 1)))
-(xpe '(syntax (list 1 2)))
+;(xpe '(syntax 123))
+;(xpe '(syntax '(a 1)))
+;(xpe '(syntax (list 1 2)))
 ;(exit)
 
 #|
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;
 ; ; ; Standard syntax
-
-(define-syntax syntax-case
-  (lambda (x)
-    ???))
 
 (define-syntax quasiquote
   ; see TR355 pp. 25-26.
