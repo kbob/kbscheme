@@ -2,6 +2,9 @@
 
 ; trace		----------------------------------
 
+(define self-test? #f)
+(define self-test-verbose? #t)
+
 (define (last list)
   (if (null? list)
       '()
@@ -24,6 +27,9 @@
 
 (define sox syntax-object-expr)
 (define sow syntax-object-wrap)
+
+(define vtrace (if self-test-verbose? trace notrace))
+(define vnewline (if self-test-verbose? newline binding-mutable))
 
 ; Standard Procedures  =============================
 
@@ -316,6 +322,9 @@
        (set! n (+ n 1))
        (vector 'label n)))
    0))
+
+(define (any-label . args)
+  (make-label))
 
 (define (label? obj)
   (tagged-vector? 'label obj))
@@ -785,36 +794,42 @@
 			  #f)
 		      #f))))))
 
-#;(define (test-match pattern form => . expecteds)
-  (notrace 'match pattern form '=>? expecteds)
-  (assert (eq? => '=>))
-  (define (report actual)
-    ;(apply trace 'match pattern form '=> (bindings-short-names actual))
-    (if (not (struct-eqv? actual (pattern-bindings expecteds)))
-        (begin
-          (apply trace 'match pattern form '=> (bindings-short-names actual))
-          (error))))
-  (report (syntax->datum (match (null-wrap pattern)
-                                (null-wrap form)
-                                (null-wrap '(k))))))
+(if self-test?
+    (begin
+      (define (test-match pattern form => . expecteds)
+	(notrace 'match pattern form '=>? expecteds)
+	(assert (eq? => '=>))
+	(define (report actual)
+	  (apply vtrace 'match pattern form '=> (bindings-short-names actual))
+	  (if (not (struct-eqv? actual (pattern-bindings expecteds)))
+	      (begin
+		(apply trace
+		       'match
+		       pattern
+		       form
+		       '=>
+		       (bindings-short-names actual))
+		(error))))
+	(report (syntax->datum (match (null-wrap pattern)
+				      (null-wrap form)
+				      (null-wrap '(k))))))
 
-(define (test-match . args) #f)
-
-(test-match '(_ a k b)   '(m 3 k 4) '=> '(a 0 3) '(b 0 4))
-(test-match '(_ a ...)   '(m x y z) '=> '(a 1 (x y z)))
-(test-match '(_ a ... b) '(m x y z) '=> '(a 1 (x y)) '(b 0 z))
-(test-match '(_ (x y ...) ...)
-            '(m (a) (b c) (d e f))
-            '=>
-            '(x 1 (a b d)) '(y 2 (() (c) (e f))))
-(test-match '(_ (x ... y) ...)
-            '(m (a) (b c) (d e f))
-            '=>
-            '(x 2 (() (b) (d e))) '(y 1 (a c f)))
-(test-match '(_ x ... y z)
-            '(m a b c d)
-            '=>
-            '(x 1 (a b)) '(y 0 c) '(z 0 d))
+	(test-match '(_ a k b)   '(m 3 k 4) '=> '(a 0 3) '(b 0 4))
+	(test-match '(_ a ...)   '(m x y z) '=> '(a 1 (x y z)))
+	(test-match '(_ a ... b) '(m x y z) '=> '(a 1 (x y)) '(b 0 z))
+	(test-match '(_ (x y ...) ...)
+		    '(m (a) (b c) (d e f))
+		    '=>
+		    '(x 1 (a b d)) '(y 2 (() (c) (e f))))
+	(test-match '(_ (x ... y) ...)
+		    '(m (a) (b c) (d e f))
+		    '=>
+		    '(x 2 (() (b) (d e))) '(y 1 (a c f)))
+	(test-match '(_ x ... y z)
+		    '(m a b c d)
+		    '=>
+		    '(x 1 (a b)) '(y 0 c) '(z 0 d))
+    (vnewline)))
 
 ; syntax expansion  ------------------------------
 
@@ -829,7 +844,8 @@
       list
       (multi-ref (list-ref list (car indices)) (cdr indices))))
 
-#;(assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0))))
+(if self-test?
+    (assert (eq? 'c (multi-ref '((a b) (c d)) '(1 0)))))
 
 (define (sub-binding binding pos)
   ((lambda (val)
@@ -844,10 +860,14 @@
       (car val)))
    (binding-value binding)))
 
-;(assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b)))         '())))
-;(assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b)))         '(1))))
-;(assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d))))'(0 1))))
-;(assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))           '(0))))
+(if self-test?
+    (begin
+      (assert (struct-eqv? '(a b) (sub-binding (pat 'x '(1 . (a b))) '())))
+      (assert (struct-eqv? 'b     (sub-binding (pat 'x '(1 . (a b))) '(1))))
+      (assert (struct-eqv? 'c     (sub-binding (pat 'x '(2 . ((a b) (c d))))
+                                                                   '(0 1))))
+      (assert (struct-eqv? 'p     (sub-binding (pat 'pat '(0 . p))   '(0))))
+      ))
 
 (define (combine-counts m n)
   (if m
@@ -881,7 +901,7 @@
                    (repeat-count (cdr tmpl) pos mr))
                   #f)))))
 
-(if #f
+(if self-test?
     (begin
       (define e (make-environment '()))
       (env-add-binding! e (lex 42))
@@ -957,30 +977,30 @@
                             tmpl)))))))
   (_ tmpl '() #t))
 
-#;(define (test-expand input => expected)
-  (notrace 'test-expand input '=>? expected)
-  (assert (eq? => '=>))
-  ((lambda (actual)
-     (notrace 'expand-syntax input '=> actual)
-     (if (not (struct-eqv? actual expected))
-         (begin
-           (trace 'expand-syntax input '=> actual)
-           (assert (struct-eqv? actual expected)))))
-   (syntax->datum (expand-syntax (null-wrap input) e))))
+(if self-test?
+    (begin
+      (define (test-expand input => expected)
+	(notrace 'test-expand input '=>? expected)
+	(assert (eq? => '=>))
+	((lambda (actual)
+	   (vtrace 'expand-syntax input '=> actual)
+	   (if (not (struct-eqv? actual expected))
+	       (begin
+		 (trace 'expand-syntax input '=> actual)
+		 (assert (struct-eqv? actual expected)))))
+	 (syntax->datum (expand-syntax (null-wrap input) e))))
 
-(define (test-expand . args) #f)
-
-(test-expand 'lex                 '=> 'lex)
-(test-expand 'pat                 '=> 'p)
-(test-expand '(lex . pat)         '=> '(lex . p))
-(test-expand '(p3 ...)            '=> '(a b c))
-(test-expand '(p3 ... pat)        '=> '(a b c p))
-(test-expand '(p3 ... p3 ... pat) '=> '(a b c a b c p))
-(test-expand '((p3x ... pat) ...) '=> '((p) (a p) (a b p)))
-(test-expand '(... ...)           '=> '...)
-(test-expand '(x y (... ...))     '=> '(x y ...))
-(test-expand '(... (pat ...))     '=> '(p ...))
-;(newline)
+      (test-expand 'lex                 '=> 'lex)
+      (test-expand 'pat                 '=> 'p)
+      (test-expand '(lex . pat)         '=> '(lex . p))
+      (test-expand '(p3 ...)            '=> '(a b c))
+      (test-expand '(p3 ... pat)        '=> '(a b c p))
+      (test-expand '(p3 ... p3 ... pat) '=> '(a b c a b c p))
+      (test-expand '((p3x ... pat) ...) '=> '((p) (a p) (a b p)))
+      (test-expand '(... ...)           '=> '...)
+      (test-expand '(x y (... ...))     '=> '(x y ...))
+      (test-expand '(... (pat ...))     '=> '(p ...))
+      (vnewline)))
 
 ; expander	----------------------------------
 
@@ -1106,7 +1126,7 @@
 	    [arg-names (syntax->datum args)]
 	    [arg-name-list (listize arg-names)]
 	    [body (syntax-cddr x)]
-	    [labels (map (lambda (x) (make-label)) arg-name-list)]
+	    [labels (map any-label arg-name-list)]
 	    [new-args (map-improper (lambda (x) (make-anonymous-symbol))
 				    arg-names)]
 	    [new-vars (listize new-args)]
@@ -1143,7 +1163,7 @@
   (letrec* ([keywords (map car (syntax-object-expr (syntax-cadr x)))]
 	    [exprs (syntax-map syntax-cadr (syntax-cadr x))]
 	    [body (syntax-cddr x)]
-	    [labels (map (lambda (x) (make-label)) keywords)]
+	    [labels (map any-label keywords)]
 	    [substs (map subst-var keywords labels)]
 	    [expand-macro (lambda (x)
 			    (eval
@@ -1161,12 +1181,77 @@
 
 #;(define (exp-letrec* x r mr) ...)
 
+; exp-syntax-case: 
+;   expand expr using inherited wrap, r and mr.
+;   expand literals in literal list and pattern.
+;   expand pattern variable in its pattern, fender and output expression.
+
+#|
+(define (exp-syntax-case x r mr)
+  (if (< (length (syntax-object-expr x)) 3)
+      (syntax-error x "not enough arguments"))
+  (letrec*
+   ([XXX-0 (trace 'start)]
+    [expr (syntax-cadr x)]
+    [new-expr (exp expr r mr)]
+    [literals (syntax-caddr x)]
+    [literal-labels (map any-label (syntax-object-expr literals))]
+    [new-literals (literals)]
+    [literal-bindings ()]
+    [XXX-1 (trace 'datum datum)]
+    [evaled (eval datum (the-environment))])))
+|#
+(define (exp-syntax-case x r mr)
+  (notrace 'exp-syntax-case (sox x) 'r 'mr)
+  (if (< (length (syntax-object-expr x)) 3)
+      (syntax-error x "not enough arguments"))
+  (letrec*
+   (#;[XXX-0 (trace 'start)]
+    [datum (syntax->datum (exp (syntax-cadr x) r mr))]
+    #;[XXX-1 (trace 'datum datum)]
+    [evaled (eval datum (the-environment))]
+    #;[XXX-2 (trace 'evaled evaled)]
+    [expr (datum->syntax x evaled)]
+    #;[XXX-3 (trace 'expr expr '= (sox expr))]
+    [literals (syntax-caddr x)]
+    #;[XXX-4 (trace 'literals (sox literals))]
+    [clauses (syntax-cdddr x)]
+    #;[XXX-5 (trace 'clauses (sox clauses))]
+    [_ (lambda (clauses)
+	 (if (syntax-null? clauses)
+	     (syntax-error x "syntax-case: no patterns match")
+	     (letrec*
+	      ([clause (syntax-car clauses)]
+	       #;[XXX-1 (trace 'clause (sox clause))]
+	       [pattern (syntax-car clause)]
+	       #;[XXX-1 (trace 'pattern (sox pattern))]
+	       [has-fender (syntax-pair? (syntax-cddr clause))]
+	       #;[XXX-3 (trace 'has-fender has-fender)]
+	       [fender (if has-fender (syntax-cadr clause) #f)]
+	       #;[XXX-4 (trace 'fender fender)]
+	       [out-expr ((if has-fender syntax-caddr syntax-cadr) clause)]
+	       #;[XXX-5 (trace 'out-expr (sox out-expr))]
+	       [eee (match pattern expr literals)]
+	       #;[XXX-5 (trace 'eee eee)]
+	       [ee (push-environment eee mr)]
+	       #;[XXX-5 (trace 'ee ee)])
+	      (if (if eee
+		      (if has-fender
+			  (eval (syntax->datum fender) (the-environment))
+			  #t)
+		      #f)
+		  ; 
+		  #f
+		  (_ (syntax-cdr clauses))))))])
+   (_ clauses)))
+
 (define (exp-syntax x r mr)
   (if (= 2 (length (syntax-object-expr x)))
   (expand-syntax (syntax-cadr x) mr)
   (syntax-error x "invalid syntax")))
 
-(define (syntax x) (syntax-error "can't eval syntax"))
+(define (syntax-case   x) (syntax-error "can't eval syntax-case"))
+(define (syntax        x) (syntax-error "can't eval syntax"))
 (define (letrec-syntax x) (syntax-error "can't eval letrec-syntax"))
 
 ; The sne cache is a list of ((env1 . bindings) . (wrap . env2)),
@@ -1197,8 +1282,9 @@
        (cons (eval (car a) *root-environment*)
 	     (eval (cdr a) *root-environment*)))
      '((quote . exp-quote)
-       (syntax . exp-syntax)
        (lambda . exp-lambda)
+       (syntax-case . exp-syntax-case)
+       (syntax . exp-syntax)
 ;       (define . exp-define)
 ;       (define-syntax . exp-define-syntax)
 ;       (letrec* . exp-letrec*)
@@ -1262,30 +1348,34 @@
 	   (syntax->datum
 	    (exp (make-syntax-object form wrap) meta-env meta-env))))
 
-(define (xp x)
-  (trace 'expand x '=>
-	 (expandXXX x *root-environment*))
-  (newline))
+(if self-test?
+    (begin
+      (define (xp x)
+	(vtrace 'expand x '=>
+		(expandXXX x *root-environment*))
+	(vnewline))
 
-(define (xpe x)
-  (letrec* ([v (trace 'expand x '=>
-		      (expandXXX x *root-environment*))])
-	   (trace 'eval v '=> (eval v *root-environment*))
-	   (newline)))
+      (define (xpe x)
+	(letrec* ([v (vtrace 'expand x '=>
+			     (expandXXX x *root-environment*))])
+		 (vtrace 'eval v '=> (eval v *root-environment*))
+		 (vnewline)))
 
-;(xpe '123)
-;(xpe 'list)
-;(xpe '(list 1 2 3))
-;(xpe '(if 1 2 3))
-;(xpe '(quote abc))
-;(xpe '(lambda (a . b) (cons b a)))
-;(xpe '((lambda (a b) (cons b a)) 1 2))
-;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
-;(xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
-;(xpe '(syntax 123))
-;(xpe '(syntax '(a 1)))
-;(xpe '(syntax (list 1 2)))
-;(exit)
+      (xpe 123)
+      (xpe 'list)
+      (xpe '(list 1 2 3))
+      (xpe '(if 1 2 3))
+      (xpe '(quote abc))
+      (xpe '(lambda (a . b) (cons b a)))
+      (xpe '((lambda (a b) (cons b a)) 1 2))
+      (xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
+      (xpe '(letrec-syntax ([mac (lambda (x) (syntax-cadr x))]) (mac 123)))
+      (xpe '(syntax 123))
+      (xpe '(syntax '(a 1)))
+      (xpe '(syntax (list 1 2)))
+      (xpe '(syntax-case '(foo) () ((_) #'123)))
+      (xpe '(syntax-case '(a list) () ((_ x) (lambda () #t) #'x)))
+      #;(exit)))
 
 #|
 ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ; ;

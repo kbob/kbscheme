@@ -1185,7 +1185,7 @@ http://www.cs.indiana.edu/~dyb/pubs/LaSC-5-4-pp295-326.pdf
 [bc-syntax-case]
 R. Kent Dybvig. Syntactic abstraction: the syntax-case expander.
 In Andy Oram and Greg Wilson, editors, Beautiful Code: Leading
-Programmers Explain How They Think, chapter 25, 407–428.
+Programmers Explain How They Think, chapter 25, 407-428.
 O'Reilly and Associates, June 2007.
 http://www.cs.indiana.edu/~dyb/pubs/bc-syntax-case.pdf
 
@@ -1682,3 +1682,77 @@ The environment is set up as though...
 
 Now it's time to start rewriting to remove the non-core Scheme constructs
 so it'll run in my Scheme.
+
+----------------------------------
+11/28/2009
+
+Progress.  The code from expand.scm is merged into Scheme.  The
+expander handles the syntax form (syntax template).  It is noticeably
+slow converting the global environment to the form that the expander
+needs, but that can be fixed.
+
+Now I'm up against another hard place.  The expander uses two funny
+environments, r and mr.  mr is the compile-time environment.  It
+contains compile-time bindings: syntax-case pattern variables and
+macro definitions.  r is the run-time environment.  It contains
+a binding for every object that will be visible at run time.
+That means core interpreter forms and lexical bindings, including
+the global lexical environment.
+
+In r, the current expression under expansion is a "wrapped syntax
+object".  A wrapped syntax object is a normal Scheme datum plus a
+wrap.  A wrap is very much like an environment.  It maps <symbol, mark
+set> pairs to labels.  Then r, the environment, maps labels to
+bindings.  A label is just a cookie -- unique but no contents.  The
+indirection is because the same symbol, after macro expansion, can
+refer to different locations, depending on which macro it came from.
+And the mark set identifies the macro.
+
+The meta-environment, mr, is similar.  At the beginning of the
+expansion process, r and mr are identical.
+
+The problem is that compile time and run time are intermingled.  For
+example, when a macro is defined, its body is evaluated.  The body is
+evaluated in the definition's compile-time environment.  We've got
+that.  It's called mr.  But mr doesn't map symbols to values, it
+maps labels.
+
+So I'm kind of stuck.  I can see some ways I might be able to proceed,
+but I'm not sure which, if any, work.
+
+Alternative 1.  Use anonymous symbols as labels.  Then somehow process
+the form to be evaluated to replace the symbols with labels.
+
+Alternative 2.  Change the evaluator to understand syntax objects and
+lookup labels using the expander's rules.
+
+Alternative 3.  Build an eval-ready environment from r.  It seems like
+this would be slow.
+
+Alternative 4.  Expand the expression before evaluating it so that it
+only references symbols in the global environment.  Is that possible?
+
+Alternative 5 -- ???
+
+
+(let ([var 'value])
+  (letrec-syntax ([mac (lambda (x) (syntax (cons var x)))])
+    (mac 123)))
+
+----------------------------------
+11/29/2009
+
+I think I got confused about what happens when again.  When
+syntax-case is EXPANDED, it just gets passed through almost unchanged.
+The literals and patterns are unchanged (I think).  The fenders and
+output expressions get the normal expansion process.  (What happens to
+literals and pattern variables?  They have to be kept unchanged.)
+
+Then, when syntax-case is INVOKED (as part of a macro expansion), it
+pushes pattern variables onto the runtime environment, which is a real
+environment, before invoking the fenders and output expression.
+
+So what should happen to pattern variables at EXPAND time?
+At RUN time, they'll be used to fill in the environment.
+But they must not conflict with other variables.  So I think
+they should be handled like lexicals.

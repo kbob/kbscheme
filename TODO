@@ -2,7 +2,6 @@
  DONE	    Get rid of the MAKE_b_xxx_FRAME_ macros.
  DONE	    Clean up and comment second half of proc.h.
  DONE	    Change mem_init_op to allow NULL.
-	    Add prototypes of some sort to C procedures.
 	    Add macros to ref numbered args.
 		(e.g. #define ARG1 (pair_car(F_SUBJ)))
 		(also #define NARG (list_length(F_SUBJ)))
@@ -30,6 +29,7 @@
  DONE	    Debug call/cc.
  DONE	    Add test cases from r6rs chapter 11.
  drop	    Speed up TAIL_EVAL by reusing frame?  (Might break call/cc.)
+	    Add prototypes of some sort to C procedures.
 	    Make set! return zero values.  (See r6rs-rationale.)
 	    Implement exceptions w/ setjmp() and sigsetjmp().
 	      (N.B., setjmp 20x faster than sigsetjmp on Linux)

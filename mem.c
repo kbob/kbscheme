@@ -1,6 +1,7 @@
 #include "mem.h"
 
 #include <assert.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -11,7 +12,7 @@
 #include <stdio.h>
 #endif /* DEBUG_HEAP */
 
-#define INITIAL_HEAP_WORDS (1 << 17)
+#define INITIAL_HEAP_WORDS (1 << 19)
 #define INITIAL_HEAP_BYTES (INITIAL_HEAP_WORDS * sizeof (word_t))
 
 /* A word_t is big enough to hold a pointer.  That's all we know. */
@@ -209,6 +210,8 @@ static void copy_heap()
 	assert(next_scan == next_alloc);
 	if (debug_heap)
 	    alloc_end = next_alloc;
+	else if (alloc_end - next_alloc < (tospace_end - tospace) / 2)
+		 fprintf(stderr, "increase heap size\n");
     }
 }
 
