@@ -1756,3 +1756,34 @@ So what should happen to pattern variables at EXPAND time?
 At RUN time, they'll be used to fill in the environment.
 But they must not conflict with other variables.  So I think
 they should be handled like lexicals.
+
+----------------------------------
+01/04/2010
+
+I've been thinking about handling exceptions with setjmp/longjmp, and
+it just occurred to me that if triggering a GC were an exception too,
+it would not be necessary to keep track of root pointers on the C
+stack.
+
+That implies that every C operation is restartable.  Using setjmp and
+longjmp for exceptions has the same requirement, though.
+
+Just a thought...
+
+----------------------------------
+01/09/2010
+
+Analyzing the code base for places where longjmp could break
+interpreter consistency, I found that symbol_name() needs to be
+redesigned to be consistent if its allocation fails.  I think it just
+needs the order of the two assignments inside the lock to be reversed.
+
+Also, b_accum_arg() is using pair_set_cdr() to build a list of args in
+place.  That needs to be rewritten anyway.
+
+The same anti-pattern occurs thrice in lib/base.c, where a list is
+constructed left-to-right with set-car! .  The offending functions are
+let_get_args(), let_get_inits(), and the apply procedure.
+
+Those are the only places I found where having longjmp restart the
+current operation could cause problems.
