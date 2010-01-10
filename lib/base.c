@@ -272,7 +272,7 @@ static obj_t *let_get_args(obj_t *bindings)
     AUTO_ROOT(args, NIL);
     AUTO_ROOT(last_arg, NIL);
     AUTO_ROOT(t, NIL);
-    while (bindings) {
+    while (!is_null(bindings)) {
 	obj_t *var = pair_caar(bindings);
 	if (args) {
 	    t = make_pair(var, NIL);
@@ -293,7 +293,7 @@ static obj_t *let_get_inits(obj_t *bindings)
     AUTO_ROOT(inits, NIL);
     AUTO_ROOT(last_init, NIL);
     AUTO_ROOT(t, NIL);
-    while (bindings) {
+    while (!is_null(bindings)) {
 	obj_t *init = pair_cadar(bindings);
 	if (inits) {
 	    t = make_pair(init, NIL);
