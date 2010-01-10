@@ -36,11 +36,13 @@ void load_scheme(const char *dir_path)
 	perror("scheme.scm");
 	exit(1);
     }
+#if 0
     instream_t *in = make_file_instream(f);
     obj_t *form;
     while (read_stream(in, &form)) {
 	eval(form, root_environment());
     }    
     delete_instream(in);
+#endif
     fclose(f);
 }
