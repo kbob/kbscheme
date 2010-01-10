@@ -6,7 +6,7 @@
 
 LIBRARY(L"(rnrs programs (6))")
 
-obj_t *make_string_from_narrow_C_str(const char *p)
+static obj_t *make_string_from_narrow_C_str(const char *p)
 {
     size_t i, len = strlen(p);
     obj_t *str = make_string(len, L'\0');
